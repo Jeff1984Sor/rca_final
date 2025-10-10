@@ -60,12 +60,12 @@
 <body>
 
     <div class="navbar">
-        <div class="navbar-links">
-            <a href="{% url 'core:home' %}">Início</a>
-            <a href="{% url 'clientes:lista_clientes' %}">Clientes</a>
-            <a href="#">Equipamentos</a> <!-- Link temporário -->
-            <a href="#">Casos</a>       <!-- Link temporário -->
-        </div>
+            <div class="navbar-links">
+                <a href="{% url 'core:home' %}">Início</a>
+                <a href="#">Casos</a>       <!-- Link temporário -->
+                <a href="{% url 'clientes:lista_clientes' %}">Clientes</a>
+                <a href="#">Equipamentos</a> <!-- Link temporário -->
+            </div>
 
         <div class="navbar-auth">
             {% if user.is_authenticated %}

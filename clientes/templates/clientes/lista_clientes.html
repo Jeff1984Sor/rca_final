@@ -3,30 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <title>Lista de Clientes</title>
-    <!-- Um pouco de estilo para ficar mais agradável -->
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { max-width: 960px; margin: auto; }
+        body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f4f9; }
+        .navbar { background-color: #333; overflow: hidden; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; }
+        .navbar-links a { color: white; padding: 20px 16px; text-decoration: none; font-size: 17px; display: inline-block; }
+        .navbar-links a:hover { background-color: #ddd; color: black; }
+        .navbar-auth { display: flex; align-items: center; }
+        .navbar-auth span { color: #ccc; padding-right: 15px; }
+        .navbar-auth a { color: white; padding: 20px 16px; text-decoration: none; font-size: 17px; display: inline-block; }
+        .navbar-auth a:hover { background-color: #007BFF; color: white; }
+        .container { max-width: 1000px; margin: auto; padding: 20px; }
         h1 { color: #333; }
-        .filters { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-        .btn { background-color: #007BFF; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
+        .toolbar { background-color: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .filter-form { display: flex; align-items: center; gap: 10px; }
+        .filter-form input[type="text"], .filter-form select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
+        .btn, .btn-filter, .btn-clear, .btn-export { text-decoration: none; color: white; padding: 8px 15px; border-radius: 5px; border: none; cursor: pointer; font-size: 14px; }
+        .btn { background-color: #007BFF; }
+        .btn-filter { background-color: #28a745; }
+        .btn-clear { background-color: #6c757d; }
+        .btn-export { background-color: #17a2b8; margin-right: 10px; }
+        .action-btn { padding: 5px 10px; font-size: 14px; text-decoration: none; border-radius: 4px; color: white; display: inline-block; text-align: center; }
+        .btn-edit { background-color: #ffc107; color: black; }
+        .btn-delete { background-color: #dc3545; color: white; margin-left: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        th, td { border-bottom: 1px solid #ddd; padding: 12px; text-align: left; }
+        thead th { background-color: #f8f9fa; font-weight: bold; }
+        tbody tr:hover { background-color: #f1f1f1; }
+        td.actions { white-space: nowrap; }
     </style>
 </head>
 <body>
+
+    <div class="navbar">
+        <div class="navbar-links">
+            <a href="{% url 'core:home' %}">Início</a>
+            <a href="#">Casos</a>       <!-- Link temporário -->
+            <a href="{% url 'clientes:lista_clientes' %}">Clientes</a>
+            <a href="#">Equipamentos</a> <!-- Link temporário -->
+        </div>
+        <div class="navbar-auth">
+            {% if user.is_authenticated %}
+                <span>Olá, {{ user.username }}</span>
+                <a href="{% url 'logout' %}">Sair</a>
+            {% else %}
+                <a href="{% url 'login' %}">Entrar</a>
+            {% endif %}
+        </div>
+    </div>
+
     <div class="container">
         <h1>Gestão de Clientes</h1>
 
-        <!-- Vamos deixar o espaço para os filtros e o botão aqui -->
-        <div class="filters">
-            <form method="get">
-                <!-- Os filtros virão aqui no futuro -->
-                <span>Filtros (em breve)</span>
+        <div class="toolbar">
+            <form method="GET" action="{% url 'clientes:lista_clientes' %}" class="filter-form">
+                <input type="text" name="filtro_nome" placeholder="Filtrar por nome..." value="{{ filtro_nome }}">
+                
+                <select name="filtro_tipo">
+                    <option value="">Todos os Tipos</option>
+                    <option value="PF" {% if filtro_tipo == 'PF' %}selected{% endif %}>Pessoa Física</option>
+                    <option value="PJ" {% if filtro_tipo == 'PJ' %}selected{% endif %}>Pessoa Jurídica</option>
+                </select>
+                
+                <button type="submit" class="btn-filter">Filtrar</button>
+                <a href="{% url 'clientes:lista_clientes' %}" class="btn-clear">Limpar</a>
             </form>
-            <br>
-            <a href="#" class="btn">Criar Novo Cliente</a> <!-- O link para criar virá aqui -->
+            
+            <div>
+                <a href="{% url 'clientes:exportar_excel' %}?filtro_nome={{ filtro_nome }}&filtro_tipo={{ filtro_tipo }}" class="btn-export">Exportar Excel</a>
+                <a href="{% url 'clientes:criar_cliente' %}" class="btn">Criar Novo Cliente</a>
+            </div>
         </div>
 
         <table>
@@ -36,19 +81,24 @@
                     <th>Tipo</th>
                     <th>Cidade/UF</th>
                     <th>Contato</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody>
                 {% for cliente in clientes %}
                 <tr>
                     <td>{{ cliente.nome }}</td>
-                    <td>{{ cliente.get_tipo_display }}</td> <!-- Mostra o texto amigável (Pessoa Física) -->
+                    <td>{{ cliente.get_tipo_display }}</td>
                     <td>{{ cliente.cidade|default:"-" }}/{{ cliente.uf|default:"-" }}</td>
                     <td>{{ cliente.contato_empresa|default:"-" }}</td>
+                    <td class="actions">
+                        <a href="{% url 'clientes:editar_cliente' pk=cliente.pk %}" class="action-btn btn-edit">Editar</a>
+                        <a href="{% url 'clientes:deletar_cliente' pk=cliente.pk %}" class="action-btn btn-delete">Deletar</a>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4">Nenhum cliente cadastrado.</td>
+                    <td colspan="5" style="text-align: center; padding: 20px;">Nenhum cliente encontrado.</td>
                 </tr>
                 {% endfor %}
             </tbody>

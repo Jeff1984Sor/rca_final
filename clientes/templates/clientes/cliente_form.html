@@ -1,0 +1,63 @@
+<!-- clientes/templates/clientes/cliente_form.html -->
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Formulário de Cliente</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; margin: 20px; }
+        .form-container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .btn-container { margin-top: 20px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn-primary { background-color: #007BFF; color: white; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1>{% if form.instance.pk %}Editar Cliente{% else %}Criar Novo Cliente{% endif %}</h1>
+
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Renderiza cada campo manualmente para melhor controle -->
+            <div class="form-group">
+                <label for="{{ form.nome.id_for_label }}">Nome:</label>
+                {{ form.nome }}
+            </div>
+            <div class="form-group">
+                <label for="{{ form.tipo.id_for_label }}">Tipo:</label>
+                {{ form.tipo }}
+            </div>
+            <div class="form-group">
+                <label for="{{ form.contato_empresa.id_for_label }}">Contato (se for PJ):</label>
+                {{ form.contato_empresa }}
+            </div>
+            <hr>
+            <h3>Endereço</h3>
+            <div class="form-group">
+                <label for="{{ form.logradouro.id_for_label }}">Logradouro:</label>
+                {{ form.logradouro }}
+            </div>
+            <!-- ... Adicione os outros campos de endereço aqui se quiser... -->
+            <div class="form-group">
+                <label for="{{ form.cidade.id_for_label }}">Cidade:</label>
+                {{ form.cidade }}
+            </div>
+            <div class="form-group">
+                <label for="{{ form.uf.id_for_label }}">UF:</label>
+                {{ form.uf }}
+            </div>
+
+            <div class="btn-container">
+                <button type="submit" class="btn btn-primary">Salvar</button>
+                <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-secondary">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
