@@ -12,11 +12,7 @@ db.sqlite3
 # Arquivos de IDE (VS Code)
 .vscode/
 
-# Arquivos de dependências (se usar)
-pip-freeze.txt
-requirements.txt
-
-# Arquivos de Mídia e Estáticos (geralmente não versionados)
+# Arquivos de Mídia e Estáticos
 /media/
 /static/
 
