@@ -4,7 +4,9 @@ from django.shortcuts import render
 # clientes/views.py
 from django.shortcuts import render
 from .models import Cliente
+from django.contrib.auth.decorators import login_required
 
+@login_required
 def lista_clientes(request):
     clientes = Cliente.objects.all().order_by('nome') # Pega todos os clientes e ordena por nome
     context = {

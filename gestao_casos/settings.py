@@ -63,7 +63,7 @@ ROOT_URLCONF = 'gestao_casos.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -143,3 +143,6 @@ STATIC_URL = 'static/'
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+LOGIN_REDIRECT_URL = '/'  # Para onde ir após o login (nossa home)
+LOGOUT_REDIRECT_URL = '/' # Para onde ir após o logout (nossa home)

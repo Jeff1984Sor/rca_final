@@ -6,7 +6,7 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    # A raiz do site agora aponta para o app 'core'
+    path('accounts/', include('django.contrib.auth.urls')),
     path('', include('core.urls', namespace='core')),
 
     # Os outros apps continuam em seus próprios caminhos
