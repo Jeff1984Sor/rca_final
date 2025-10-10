@@ -1,0 +1,24 @@
+# Arquivos do Python
+__pycache__/
+*.pyc
+
+# Ambiente Virtual
+venv/
+
+# Banco de dados
+*.sqlite3
+db.sqlite3
+
+# Arquivos de IDE (VS Code)
+.vscode/
+
+# Arquivos de dependências (se usar)
+pip-freeze.txt
+requirements.txt
+
+# Arquivos de Mídia e Estáticos (geralmente não versionados)
+/media/
+/static/
+
+# Arquivos de ambiente
+.env
