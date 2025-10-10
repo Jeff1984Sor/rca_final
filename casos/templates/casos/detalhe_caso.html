@@ -4,6 +4,7 @@
 
 {% block extra_css %}
 <style>
+    /* Estilos Gerais */
     .case-header { background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .case-header-content { display: flex; justify-content: space-between; align-items: center; }
     .case-header h1 { margin: 0; font-size: 1.8em; color: #333; }
@@ -11,20 +12,21 @@
     .case-header p { margin: 5px 0 0; color: #555; font-size: 1.1em; }
     .btn-edit-header { background-color: #ffc107; color: black; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; white-space: nowrap; }
     .btn-edit-header:hover { background-color: #e0a800; }
+
+    /* Navegação por Abas com a Lógica Robusta */
     .tab-nav { border-bottom: 2px solid #dee2e6; margin-bottom: 20px; }
-    .tab-nav button { background-color: transparent; border: none; padding: 15px 20px; cursor: pointer; font-size: 16px; margin-bottom: -2px; }
+    .tab-nav button { background-color: transparent; border: none; padding: 15px 20px; cursor: pointer; font-size: 16px; margin-bottom: -2px; color: #555; }
     .tab-nav button.active { border-bottom: 2px solid #007BFF; color: #007BFF; font-weight: bold; }
-    .tab-content { display: none; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .tab-content.active { display: block; }
-    .details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px 30px; }
-    .detail-item { margin-bottom: 10px; }
-    .detail-item label { font-weight: bold; display: block; color: #555; }
-    .detail-item span { display: block; margin-top: 4px; font-size: 1.1em; }
+    
+    .tab-content { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .js-enabled .tab-content:not(.active) {
+        display: none; /* Só esconde as abas inativas se o JavaScript estiver funcionando */
+    }
 
     /* Estilos genéricos de formulário e botões */
-    .form-section, .andamento-form-section, .timesheet-form-section { padding-bottom: 20px; }
-    .form-row { display: flex; gap: 20px; }
-    .form-group { flex-grow: 1; margin-bottom: 15px; }
+    .form-section { padding-bottom: 20px; }
+    .form-row { display: flex; flex-wrap: wrap; gap: 20px; }
+    .form-group { flex: 1; min-width: 200px; margin-bottom: 15px; }
     .form-group label { font-weight: bold; display: block; margin-bottom: 5px; }
     .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; font-size: 1rem; }
     .btn-submit { padding: 10px 20px; font-size: 16px; color: white; border: none; border-radius: 5px; cursor: pointer; }
@@ -32,55 +34,56 @@
     .btn-submit.timesheet { background-color: #007BFF; }
     .btn-submit.acordo { background-color: #17a2b8; }
     
-    /* Estilos específicos de Andamentos */
-    .andamento-list { margin-top: 20px; }
-    .andamento-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-    .andamento-toolbar h3 { margin: 0; }
+    .list-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .list-toolbar h3 { margin: 0; }
     .btn-export { background-color: #17a2b8; color: white; padding: 8px 15px; text-decoration: none; border-radius: 5px; font-size: 14px; }
     .btn-pdf { background-color: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 5px; font-size: 14px; margin-left: 5px; }
+
+    .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .data-table th, .data-table td { border-bottom: 1px solid #ddd; padding: 12px; text-align: left; }
+    .data-table thead { background-color: #f8f9fa; font-weight: bold; }
+    td.actions { white-space: nowrap; }
+    .action-btn { padding: 5px 10px; font-size: 14px; text-decoration: none; border-radius: 4px; color: white; display: inline-block; text-align: center; }
+    .btn-edit { background-color: #ffc107; color: black; }
+    .btn-delete { background-color: #dc3545; color: white; margin-left: 5px; }
+    .summary-box { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 20px; }
+    .summary-box h3 { margin: 0 0 10px; color: #333; }
+    .summary-box p { margin: 0; font-size: 2em; font-weight: bold; color: #007BFF; }
+
+    /* Estilos Específicos */
+    .details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px 30px; }
     .andamento-item { border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 15px; }
     .andamento-header { background-color: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; }
     .author-info { font-size: 0.9em; color: #6c757d; }
     .andamento-body { padding: 15px; white-space: pre-wrap; }
-
-    /* Estilos específicos de Timesheet */
-    .timesheet-summary { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; text-align: center; }
-    .timesheet-summary h3 { margin: 0 0 10px; color: #333; }
-    .timesheet-summary p { margin: 0; font-size: 2em; font-weight: bold; color: #007BFF; }
-    .timesheet-list table, .acordo-body table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    .timesheet-list th, .timesheet-list td, .acordo-body th, .acordo-body td { border-bottom: 1px solid #ddd; padding: 12px; text-align: left; }
-    .timesheet-list thead th, .acordo-body thead { background-color: #f8f9fa; font-weight: bold; }
-    .action-btn { padding: 5px 10px; font-size: 14px; text-decoration: none; border-radius: 4px; color: white; display: inline-block; text-align: center; }
-    .btn-edit { background-color: #ffc107; color: black; }
-    .btn-delete { background-color: #dc3545; color: white; margin-left: 5px; }
-    td.actions { white-space: nowrap; }
-
-    /* Estilos para a aba de Acordos */
-    .acordo-list { margin-top: 20px; }
     .acordo-item { border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 20px; }
     .acordo-header { background-color: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; }
+    .acordo-header-info { display: flex; flex-direction: column; }
+    .acordo-header-info strong { font-size: 1.1em; }
+    .acordo-header-info small { font-size: 0.8em; color: #6c757d; }
     .acordo-body { padding: 0; }
+    .acordo-body table tbody tr { cursor: pointer; }
+    .parcela-quitada { background-color: #d4edda !important; color: #155724; text-decoration: line-through; }
+    .btn-submit.despesa { background-color: #fd7e14; } /* Uma cor laranja */
 </style>
 {% endblock %}
 
 {% block content %}
+    <!-- CABEÇALHO DO CASO -->
     <div class="case-header">
         <div class="case-header-content">
-            <div>
-                <h1><span>#{{ caso.id }}</span> - {{ caso.titulo|default:"(Caso sem título)" }}</h1>
-                <p><strong>Cliente:</strong> {{ caso.cliente.nome }} | <strong>Produto:</strong> {{ caso.produto.nome }}</p>
-            </div>
-            <div>
-                <a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="btn-edit-header">Editar Caso</a>
-            </div>
+            <div><h1><span>#{{ caso.id }}</span> - {{ caso.titulo|default:"(Caso sem título)" }}</h1><p><strong>Cliente:</strong> {{ caso.cliente.nome }} | <strong>Produto:</strong> {{ caso.produto.nome }}</p></div>
+            <div><a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="btn-edit-header">Editar Caso</a></div>
         </div>
     </div>
 
+    <!-- NAVEGAÇÃO POR ABAS -->
     <div class="tab-nav">
-        <button class="tab-button" onclick="openTab(event, 'detalhes')">Detalhes do Caso</button>
-        <button class="tab-button" onclick="openTab(event, 'andamentos')">Andamentos</button>
-        <button class="tab-button" onclick="openTab(event, 'timesheet')">Timesheet</button>
-        <button class="tab-button" onclick="openTab(event, 'acordos')">Acordos</button>
+        <button class="tab-button" data-tab="detalhes">Detalhes do Caso</button>
+        <button class="tab-button" data-tab="andamentos">Andamentos</button>
+        <button class="tab-button" data-tab="timesheet">Timesheet</button>
+        <button class="tab-button" data-tab="acordos">Acordos</button>
+        <button class="tab-button" data-tab="despesas">Despesas</button>
     </div>
 
     <!-- Aba 1: Detalhes do Caso -->
@@ -97,7 +100,7 @@
 
     <!-- Aba 2: Andamentos -->
     <div id="andamentos" class="tab-content">
-        <div class="andamento-form-section">
+        <div class="form-section">
             <h3>Registrar Novo Andamento</h3>
             <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
                 {% csrf_token %}
@@ -109,7 +112,7 @@
         </div>
         <hr style="margin: 30px 0;">
         <div class="andamento-list">
-            <div class="andamento-toolbar">
+            <div class="list-toolbar">
                 <h3>Histórico de Andamentos</h3>
                 <div><a href="{% url 'casos:exportar_andamentos_excel' pk=caso.pk %}" class="btn-export">Exportar Excel</a></div>
             </div>
@@ -119,7 +122,7 @@
 
     <!-- Aba 3: Timesheet -->
     <div id="timesheet" class="tab-content">
-        <div class="timesheet-form-section">
+        <div class="form-section">
             <h3>Registrar Novo Lançamento</h3>
             <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
                 {% csrf_token %}
@@ -129,11 +132,11 @@
                 <button type="submit" name="submit_timesheet" class="btn-submit timesheet">Salvar Lançamento</button>
             </form>
         </div>
-        <div class="timesheet-summary"><h3>Tempo Total Gasto no Caso</h3><p>{{ tempo_total|default:"00:00:00" }}</p></div>
+        <div class="summary-box"><h3>Tempo Total Gasto no Caso</h3><p>{{ tempo_total|default:"00:00:00" }}</p></div>
         <hr style="margin: 30px 0;">
         <div class="timesheet-list">
-            <div class="andamento-toolbar"><h3>Histórico de Lançamentos</h3><div><a href="{% url 'casos:exportar_timesheet_excel' pk=caso.pk %}" class="btn-export">Exportar Excel</a><a href="{% url 'casos:exportar_timesheet_pdf' pk=caso.pk %}" class="btn-pdf">Exportar PDF</a></div></div>
-            <table><thead><tr><th>Data</th><th>Tempo Gasto</th><th>Advogado</th><th>Descrição</th><th>Ações</th></tr></thead>
+            <div class="list-toolbar"><h3>Histórico de Lançamentos</h3><div><a href="{% url 'casos:exportar_timesheet_excel' pk=caso.pk %}" class="btn-export">Exportar Excel</a><a href="{% url 'casos:exportar_timesheet_pdf' pk=caso.pk %}" class="btn-pdf">Exportar PDF</a></div></div>
+            <table class="data-table"><thead><tr><th>Data</th><th>Tempo Gasto</th><th>Advogado</th><th>Descrição</th><th>Ações</th></tr></thead>
                 <tbody>
                     {% for ts in timesheets %}<tr><td>{{ ts.data_execucao|date:"d/m/Y" }}</td><td>{{ ts.tempo }}</td><td>{% if ts.advogado %}{{ ts.advogado.get_full_name|default:ts.advogado.username }}{% else %}-{% endif %}</td><td>{{ ts.descricao|linebreaksbr }}</td><td class="actions"><a href="{% url 'casos:editar_timesheet' pk=ts.pk %}" class="action-btn btn-edit">Editar</a><a href="{% url 'casos:deletar_timesheet' pk=ts.pk %}" class="action-btn btn-delete">Deletar</a></td></tr>{% empty %}<tr><td colspan="5" style="text-align: center; padding: 20px;">Nenhum lançamento de horas para este caso.</td></tr>{% endfor %}
                 </tbody>
@@ -141,7 +144,7 @@
         </div>
     </div>
     
-    <!-- NOVA ABA 4: ACORDOS -->
+    <!-- Aba 4: Acordos -->
     <div id="acordos" class="tab-content">
         <div class="form-section">
             <h3>Registrar Novo Acordo</h3>
@@ -153,54 +156,137 @@
             </form>
         </div>
         <hr style="margin: 30px 0;">
+        <div class="summary-box"><h3>Saldo Devedor Total (Acordos)</h3><p>R$ {{ saldo_devedor_total|default:"0.00" }}</p></div>
         <div class="acordo-list">
             <h3>Acordos Registrados</h3>
-            {% for acordo in acordos %}<div class="acordo-item"><div class="acordo-header"><strong>Acordo de R$ {{ acordo.valor_total }} em {{ acordo.numero_parcelas }}x</strong><span>Criado em {{ acordo.data_criacao|date:"d/m/Y" }} por {% if acordo.advogado_acordo %}{{ acordo.advogado_acordo.get_full_name|default:acordo.advogado_acordo.username }}{% else %}-{% endif %}</span></div><div class="acordo-body"><table><thead><tr><th>Nº Parcela</th><th>Vencimento</th><th>Valor</th><th>Status</th></tr></thead><tbody>{% for parcela in acordo.parcelas.all %}<tr><td>{{ parcela.numero_parcela }}</td><td>{{ parcela.data_vencimento|date:"d/m/Y" }}</td><td>R$ {{ parcela.valor_parcela }}</td><td>{{ parcela.get_status_display }}</td></tr>{% endfor %}</tbody></table></div></div>{% empty %}<p>Nenhum acordo registrado para este caso.</p>{% endfor %}
+            {% for acordo in acordos %}
+                <div class="acordo-item">
+                    <div class="acordo-header"><div class="acordo-header-info"><strong>Acordo de R$ {{ acordo.valor_total }} em {{ acordo.numero_parcelas }}x</strong><small>Criado em {{ acordo.data_criacao|date:"d/m/Y" }} por {% if acordo.advogado_acordo %}{{ acordo.advogado_acordo.get_full_name|default:acordo.advogado_acordo.username }}{% else %}-{% endif %}</small></div><a href="{% url 'casos:editar_acordo' pk=acordo.pk %}" class="action-btn btn-edit">Editar</a></div>
+                    <div class="acordo-body"><table class="data-table"><thead><tr><th>Nº Parcela</th><th>Vencimento</th><th>Pagamento</th><th>Valor</th><th>Status</th></tr></thead>
+                            <tbody>
+                                {% for parcela in acordo.parcelas.all %}
+                                    {% include 'casos/partials/parcela_linha.html' %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% empty %}
+                <p>Nenhum acordo registrado para este caso.</p>
+            {% endfor %}
         </div>
     </div>
 
+  
+<!-- Aba 5: Despesas (CONTEÚDO ATUALIZADO) -->
+<div id="despesas" class="tab-content">
+    <div class="form-section">
+        <h3>Registrar Nova Despesa</h3>
+        <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
+            {% csrf_token %}
+            <div class="form-row">
+                <div class="form-group">{{ form_despesa.data_despesa.label_tag }}{{ form_despesa.data_despesa }}</div>
+                <div class="form-group">{{ form_despesa.valor.label_tag }}{{ form_despesa.valor }}</div>
+            </div>
+            <div class="form-group">{{ form_despesa.descricao.label_tag }}{{ form_despesa.descricao }}</div>
+            <div class="form-group">{{ form_despesa.advogado.label_tag }}{{ form_despesa.advogado }}</div>
+            
+            <button type="submit" name="submit_despesa" class="btn-submit despesa">Salvar Despesa</button>
+        </form>
+    </div>
+    <div class="summary-box">
+        <h3>Total de Despesas do Caso</h3>
+        <p>R$ {{ total_despesas|default:"0.00" }}</p>
+    </div>
+    <hr style="margin: 30px 0;">
+    <div class="despesas-list">
+        <div class="list-toolbar">
+            <h3>Histórico de Despesas</h3>
+            <div><!-- Botões de exportação virão aqui --></div>
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Advogado</th>
+                    <th>Descrição</th>
+                    <th>Valor (R$)</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for despesa in despesas %}
+                    <tr>
+                        <td>{{ despesa.data_despesa|date:"d/m/Y" }}</td>
+                        <td>{% if despesa.advogado %}{{ despesa.advogado.get_full_name|default:despesa.advogado.username }}{% else %}-{% endif %}</td>
+                        <td>{{ despesa.descricao }}</td>
+                        <td>{{ despesa.valor }}</td>
+                        <td class="actions">
+                            <a href="{% url 'casos:editar_despesa' pk=despesa.pk %}" class="action-btn btn-edit">Editar</a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5" style="text-align: center; padding: 20px;">Nenhuma despesa registrada para este caso.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-function openTab(evt, tabName) {
-    var i, tabcontent, tablinks;
-    tabcontent = document.getElementsByClassName("tab-content");
-    for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
-    tablinks = document.getElementsByClassName("tab-button");
-    for (i = 0; i < tablinks.length; i++) { tablinks[i].className = tablinks[i].className.replace(" active", ""); }
-    document.getElementById(tabName).style.display = "block";
-    if (evt) {
-        evt.currentTarget.className += " active";
-    } else {
-        var buttonToActivate = document.querySelector(`.tab-button[onclick*="'${tabName}'"]`);
-        if (buttonToActivate) { buttonToActivate.className += " active"; }
-    }
-}
 document.addEventListener('DOMContentLoaded', function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const abaAtiva = urlParams.get('aba');
-    if (abaAtiva) {
-        openTab(null, abaAtiva);
-    } else {
-        var firstTabButton = document.querySelector('.tab-button');
-        if (firstTabButton) { firstTabButton.className += " active"; }
-        var firstTabContent = document.querySelector('.tab-content');
-        if (firstTabContent) { firstTabContent.style.display = "block"; }
+    // Adiciona uma classe ao body para o CSS saber que o JS está ativo.
+    // Isso habilita a regra que esconde as abas inativas.
+    document.body.classList.add('js-enabled');
+
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    // Função central para ativar uma aba
+    function activateTab(tabId) {
+        // Ativa o botão correto
+        tabButtons.forEach(button => {
+            button.classList.toggle('active', button.dataset.tab === tabId);
+        });
+        // Mostra o conteúdo correto
+        tabContents.forEach(content => {
+            content.classList.toggle('active', content.id === tabId);
+        });
     }
+
+    // Adiciona o evento de clique a cada botão de aba
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            activateTab(button.dataset.tab);
+        });
+    });
+
+    // Lógica de Ativação Inicial
+    const urlParams = new URLSearchParams(window.location.search);
+    const abaUrl = urlParams.get('aba');
+    const abaInicial = (abaUrl && document.getElementById(abaUrl)) ? abaUrl : 'detalhes';
+    activateTab(abaInicial);
+
+
+    // --- Lógica para os modelos de andamento ---
     const modelos = {
         {% for modelo in modelos_andamento %}
             "{{ modelo.id }}": "{{ modelo.descricao|escapejs }}"{% if not forloop.last %},{% endif %}
         {% endfor %}
     };
-    const selectModelo = document.querySelector('[name=modelo_andamento]');
-    const textareaDescricao = document.querySelector('[name=descricao]');
+    const selectModelo = document.querySelector('#andamentos select[name=modelo_andamento]');
+    const textareaDescricao = document.querySelector('#andamentos textarea[name=descricao]');
     if (selectModelo && textareaDescricao) {
         selectModelo.addEventListener('change', function() {
             const modeloId = this.value;
-            if (modeloId && modelos[modeloId]) {
-                textareaDescricao.value = modelos[modeloId];
-            }
+            textareaDescricao.value = modelos[modeloId] || '';
         });
     }
-    const tempoInput = document.querySelector('input[name="tempo"]');
+
+    // --- Lógica para máscara de tempo HH:MM ---
+    const tempoInput = document.querySelector('#timesheet input[name="tempo"]');
     if (tempoInput) {
         tempoInput.addEventListener('input', function (e) {
             let value = e.target.value.replace(/\D/g, '');

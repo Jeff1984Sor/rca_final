@@ -2,8 +2,9 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <!-- O título pode ser dinâmico -->
     <title>{% block title %}Gestão de Casos{% endblock %}</title>
+    <!-- SCRIPT DO HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
     <style>
         /* Colocamos todo o CSS comum aqui */
         body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f4f9; }
@@ -19,11 +20,11 @@
     {% block extra_css %}{% endblock %} <!-- Espaço para CSS específico da página -->
 </head>
 <body>
+    {% csrf_token %}
 
     <div class="navbar">
         <div class="navbar-links">
             <a href="{% url 'core:home' %}">Início</a>
-            <!-- LINHA ATUALIZADA ABAIXO -->
             <a href="{% url 'casos:lista_casos' %}">Casos</a>
             <a href="{% url 'clientes:lista_clientes' %}">Clientes</a>
             <a href="#">Equipamentos</a>
@@ -39,10 +40,19 @@
     </div>
 
     <div class="container">
-        <!-- Este é o bloco que cada página irá preencher com seu conteúdo -->
         {% block content %}
         {% endblock %}
     </div>
+
+    <!-- SCRIPT DE CONFIGURAÇÃO DO HTMX PARA CSRF -->
+    <script>
+        document.body.addEventListener('htmx:configRequest', (event) => {
+            event.detail.headers['X-CSRFToken'] = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+        })
+    </script>
+
+    <!-- ESPAÇO PARA O JAVASCRIPT DAS PÁGINAS FILHAS -->
+    {% block extra_js %}{% endblock %}
 
 </body>
 </html>

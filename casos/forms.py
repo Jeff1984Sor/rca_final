@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from datetime import date
 from .models import Acordo 
-from .models import Caso, Andamento, ModeloAndamento, Timesheet
+from .models import Caso, Andamento, ModeloAndamento, Timesheet, Despesa
 from campos_custom.models import CampoPersonalizado
 
 User = get_user_model()
@@ -126,3 +126,26 @@ class AcordoForm(forms.ModelForm):
         # Sugere o usuário logado como valor inicial para o campo 'advogado'
         if user:
             self.fields['advogado_acordo'].initial = user
+
+class DespesaForm(forms.ModelForm):
+    data_despesa = forms.DateField(
+        label="Data da Despesa",
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        initial=date.today
+    )
+
+    class Meta:
+        model = Despesa
+        fields = ['data_despesa', 'descricao', 'valor', 'advogado']
+        widgets = {
+            'descricao': forms.TextInput(attrs={'placeholder': 'Ex: Cópia, Autenticação, Deslocamento'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        if user:
+            self.fields['advogado'].initial = user
+        
+        self.order_fields(['data_despesa', 'descricao', 'valor', 'advogado'])

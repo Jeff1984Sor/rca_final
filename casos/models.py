@@ -139,6 +139,11 @@ class Parcela(models.Model):
     numero_parcela = models.PositiveIntegerField(verbose_name="Nº da Parcela")
     valor_parcela = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Valor da Parcela")
     data_vencimento = models.DateField(verbose_name="Data de Vencimento")
+    data_pagamento = models.DateField(
+        verbose_name="Data de Pagamento",
+        null=True, # Permite que o campo seja nulo
+        blank=True # Permite que seja vazio
+    )
     
     status = models.CharField(
         max_length=10,
@@ -153,3 +158,25 @@ class Parcela(models.Model):
 
     def __str__(self):
         return f"Parcela {self.numero_parcela}/{self.acordo.numero_parcelas} - Venc: {self.data_vencimento}"
+    
+
+class Despesa(models.Model):
+    caso = models.ForeignKey(Caso, on_delete=models.CASCADE, related_name='despesas')
+    data_despesa = models.DateField(verbose_name="Data da Despesa")
+    valor = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Valor da Despesa")
+    descricao = models.CharField(max_length=255, verbose_name="Descrição da Despesa")
+    
+    advogado = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        verbose_name="Advogado"
+    )
+    
+    data_criacao = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-data_despesa']
+
+    def __str__(self):
+        return f"Despesa de R$ {self.valor} para o Caso #{self.caso.id}"

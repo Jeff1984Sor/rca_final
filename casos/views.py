@@ -18,13 +18,16 @@ from .forms import AcordoForm # Adicione a importação
 from .models import Parcela # Adicione a importação
 from dateutil.relativedelta import relativedelta # Garanta que está importado
 from decimal import Decimal # Para cálculos precisos com dinheiro
+from django.views.decorators.http import require_POST
+from datetime import date
+from .forms import DespesaForm
 
 # Importações de modelos de outros apps
 from clientes.models import Cliente
 from produtos.models import Produto
 
 # Importações de modelos locais
-from .models import Caso, Andamento, ModeloAndamento, Timesheet
+from .models import Caso, Andamento, ModeloAndamento, Timesheet, Acordo, Parcela, Despesa
 from campos_custom.models import CampoPersonalizado, ValorCampoPersonalizado 
 
 # Importações de formulários locais
@@ -187,9 +190,17 @@ def detalhe_caso(request, pk):
                         ultima_parcela.valor_parcela += diferenca
                         ultima_parcela.save()
                 
+        if 'submit_despesa' in request.POST:
+            form_despesa = DespesaForm(request.POST, user=request.user)
+            if form_despesa.is_valid():
+                nova_despesa = form_despesa.save(commit=False)
+                nova_despesa.caso = caso
+                nova_despesa.save()
+                
                 url_destino = reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})
-                return redirect(f'{url_destino}?aba=acordos')
-
+                return redirect(f'{url_destino}?aba=despesas')
+              
+               
     # Lógica GET (executada sempre que a página é carregada ou se um form POST for inválido)
     form_andamento = AndamentoForm()
     form_timesheet = TimesheetForm(user=request.user)
@@ -206,6 +217,19 @@ def detalhe_caso(request, pk):
     soma_total_obj = timesheets.aggregate(total_tempo=Sum('tempo'))
     tempo_total = soma_total_obj['total_tempo']
 
+    saldo_devedor_total = Decimal('0.00')
+    for acordo in acordos:
+            # Soma o valor de todas as parcelas com status 'EMITIDA'
+                    saldo_acordo = acordo.parcelas.filter(status='EMITIDA').aggregate(soma=Sum('valor_parcela'))['soma']
+                    if saldo_acordo:
+                            saldo_devedor_total += saldo_acordo
+    despesas = caso.despesas.select_related('advogado').all()
+    
+    # 2. Calcula o somatório total do campo 'valor'
+    soma_despesas_obj = despesas.aggregate(total_despesas=Sum('valor'))
+    total_despesas = soma_despesas_obj['total_despesas'] or Decimal('0.00')
+    form_despesa = DespesaForm(user=request.user) # Cria um formulário de despesa em branco
+
     context = {
         'caso': caso,
         'valores_personalizados': valores_personalizados,
@@ -213,10 +237,14 @@ def detalhe_caso(request, pk):
         'modelos_andamento': modelos_andamento,
         'timesheets': timesheets,
         'acordos': acordos,
+        'saldo_devedor_total': saldo_devedor_total,
         'tempo_total': tempo_total,
         'form_andamento': form_andamento,
         'form_timesheet': form_timesheet,
         'form_acordo': form_acordo,
+        'form_despesa': form_despesa,
+        'despesas': despesas,
+        'total_despesas': total_despesas,
     }
     return render(request, 'casos/detalhe_caso.html', context)
 
@@ -528,3 +556,94 @@ def deletar_timesheet(request, pk):
     }
     return render(request, 'casos/timesheet_confirm_delete.html', context)
 
+@require_POST
+@login_required
+def quitar_parcela(request, pk):
+    parcela = get_object_or_404(Parcela, pk=pk)
+    
+    # Lógica de "toggle" aprimorada
+    if parcela.status == 'QUITADA':
+        parcela.status = 'EMITIDA'
+        parcela.data_pagamento = None # Limpa a data de pagamento
+    else:
+        parcela.status = 'QUITADA'
+        parcela.data_pagamento = date.today() # Define a data de pagamento como hoje
+    
+    parcela.save()
+    
+    # Retorna o template parcial com a linha atualizada
+    return render(request, 'casos/partials/parcela_linha.html', {'parcela': parcela})
+
+
+
+@login_required
+def editar_acordo(request, pk):
+    acordo = get_object_or_404(Acordo, pk=pk)
+    caso = acordo.caso
+
+    if request.method == 'POST':
+        form = AcordoForm(request.POST, instance=acordo, user=request.user)
+        if form.is_valid():
+            # Salva as alterações no acordo principal
+            acordo_editado = form.save()
+
+            # --- LÓGICA DE RECRIAÇÃO DAS PARCELAS ---
+            # 1. Deleta todas as parcelas antigas deste acordo
+            acordo_editado.parcelas.all().delete()
+
+            # 2. Recria as parcelas com os novos dados (mesma lógica da criação)
+            valor_total = acordo_editado.valor_total
+            num_parcelas = acordo_editado.numero_parcelas
+            valor_parcela = round(Decimal(valor_total) / num_parcelas, 2)
+            
+            for i in range(num_parcelas):
+                data_vencimento = acordo_editado.data_primeira_parcela + relativedelta(months=i)
+                Parcela.objects.create(
+                    acordo=acordo_editado,
+                    numero_parcela=i + 1,
+                    valor_parcela=valor_parcela,
+                    data_vencimento=data_vencimento,
+                )
+            
+            soma_parcelas = valor_parcela * num_parcelas
+            diferenca = valor_total - soma_parcelas
+            if diferenca != 0:
+                ultima_parcela = acordo_editado.parcelas.order_by('-numero_parcela').first()
+                if ultima_parcela:
+                    ultima_parcela.valor_parcela += diferenca
+                    ultima_parcela.save()
+            
+            url_destino = reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})
+            return redirect(f'{url_destino}?aba=acordos')
+    else:
+        # Cria o formulário preenchido com os dados do acordo existente
+        form = AcordoForm(instance=acordo, user=request.user)
+    
+    context = {
+        'form_acordo': form,
+        'acordo': acordo,
+        'caso': caso,
+    }
+    # Vamos criar um novo template para a edição do acordo
+    return render(request, 'casos/acordo_form.html', context)
+
+@login_required
+def editar_despesa(request, pk):
+    despesa = get_object_or_404(Despesa, pk=pk)
+    caso = despesa.caso
+
+    if request.method == 'POST':
+        form = DespesaForm(request.POST, instance=despesa, user=request.user)
+        if form.is_valid():
+            form.save()
+            url_destino = reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})
+            return redirect(f'{url_destino}?aba=despesas')
+    else:
+        form = DespesaForm(instance=despesa, user=request.user)
+
+    context = {
+        'form_despesa': form,
+        'despesa': despesa,
+        'caso': caso,
+    }
+    return render(request, 'casos/despesa_form.html', context)

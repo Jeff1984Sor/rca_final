@@ -1,0 +1,14 @@
+<!-- casos/templates/casos/partials/parcela_linha.html -->
+<tr hx-post="{% url 'casos:quitar_parcela' pk=parcela.pk %}"
+    hx-trigger="dblclick"
+    hx-target="this"
+    hx-swap="outerHTML"
+    class="{% if parcela.status == 'QUITADA' %}parcela-quitada{% endif %}"
+    title="Clique duas vezes para quitar esta parcela">
+    
+    <td>{{ parcela.numero_parcela }}</td>
+    <td>{{ parcela.data_vencimento|date:"d/m/Y" }}</td>
+    <td>{{ parcela.data_pagamento|date:"d/m/Y"|default:"-" }}</td>
+    <td>R$ {{ parcela.valor_parcela }}</td>
+    <td>{{ parcela.get_status_display }}</td>
+</tr>

@@ -1,6 +1,6 @@
 # casos/admin.py
 from django.contrib import admin
-from .models import Caso, ModeloAndamento, Andamento, Timesheet, Acordo, Parcela
+from .models import Caso, ModeloAndamento, Andamento, Timesheet, Acordo, Parcela, Despesa
 
 @admin.register(Caso)
 class CasoAdmin(admin.ModelAdmin):
@@ -38,3 +38,10 @@ class ParcelaAdmin(admin.ModelAdmin):
     list_display = ('acordo', 'numero_parcela', 'valor_parcela', 'data_vencimento', 'status')
     list_filter = ('status',)
     list_editable = ('status',) # Permite mudar o status diretamente na lista do admin
+
+@admin.register(Despesa)
+class DespesaAdmin(admin.ModelAdmin):
+    list_display = ('caso', 'data_despesa', 'valor', 'advogado', 'descricao')
+    list_filter = ('advogado', 'data_despesa')
+    search_fields = ('descricao',)
+    raw_id_fields = ('caso',)
