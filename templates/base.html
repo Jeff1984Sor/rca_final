@@ -1,4 +1,3 @@
-<!-- templates/base.html -->
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -24,7 +23,8 @@
     <div class="navbar">
         <div class="navbar-links">
             <a href="{% url 'core:home' %}">Início</a>
-            <a href="#">Casos</a>
+            <!-- LINHA ATUALIZADA ABAIXO -->
+            <a href="{% url 'casos:lista_casos' %}">Casos</a>
             <a href="{% url 'clientes:lista_clientes' %}">Clientes</a>
             <a href="#">Equipamentos</a>
         </div>

@@ -1,0 +1,60 @@
+<!-- casos/templates/casos/lista_casos.html -->
+{% extends 'base.html' %}
+
+{% block title %}Lista de Casos{% endblock %}
+
+{% block extra_css %}
+<style>
+    .container { max-width: 1200px; }
+    .toolbar { background-color: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .btn { background-color: #007BFF; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    th, td { border-bottom: 1px solid #ddd; padding: 12px; text-align: left; }
+    thead th { background-color: #f8f9fa; font-weight: bold; }
+    tbody tr:hover { background-color: #f1f1f1; }
+</style>
+{% endblock %}
+
+{% block content %}
+    <h1>Gestão de Casos</h1>
+
+    <div class="toolbar">
+        <div><!-- Espaço para futuros filtros --></div>
+        <div>
+            <a href="{% url 'casos:selecionar_produto_cliente' %}" class="btn">Abrir Novo Caso</a>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Título</th>
+                <th>Cliente</th>
+                <th>Produto</th>
+                <th>Status</th>
+                <th>Data de Entrada</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for caso in casos %}
+            <tr>
+                <td>{{ caso.id }}</td>
+                <td>{{ caso.titulo|default:"(sem título)" }}</td>
+                <td>{{ caso.cliente.nome }}</td>
+                <td>{{ caso.produto.nome }}</td>
+                <td>{{ caso.get_status_display }}</td>
+                <td>{{ caso.data_entrada|date:"d/m/Y" }}</td>
+                <td>
+                    <!-- Botões de Editar/Deletar virão aqui -->
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 20px;">Nenhum caso cadastrado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

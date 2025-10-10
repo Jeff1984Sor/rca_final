@@ -1,0 +1,69 @@
+<!-- casos/templates/casos/selecionar_produto_cliente.html -->
+{% extends 'base.html' %}
+
+{% block title %}Novo Caso - Passo 1: Seleção{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos específicos para este formulário */
+    .selection-container {
+        display: flex; /* A mágica acontece aqui! */
+        gap: 30px; /* Cria um espaço entre os campos */
+        align-items: flex-end; /* Alinha os itens na base */
+        margin-bottom: 20px;
+    }
+    .selection-group {
+        display: flex;
+        flex-direction: column; /* Coloca o label em cima do select */
+    }
+    .selection-group label {
+        font-weight: bold;
+        display: block;
+        margin-bottom: 5px;
+    }
+    .selection-group select {
+        width: 350px; /* Largura dos campos */
+        padding: 8px;
+        font-size: 16px;
+    }
+    .submit-button {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+
+{% block content %}
+    <h1>Abrir Novo Caso</h1>
+    <p style="font-size: 1.1em;">Por favor, selecione o cliente e o produto para iniciar o cadastro do caso.</p>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="selection-container">
+            <div class="selection-group">
+                <label for="cliente">Cliente:</label>
+                <select name="cliente" id="cliente" required>
+                    <option value="">Selecione um cliente...</option>
+                    {% for cliente in clientes %}
+                        <option value="{{ cliente.id }}">{{ cliente.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="selection-group">
+                <label for="produto">Produto:</label>
+                <select name="produto" id="produto" required>
+                    <option value="">Selecione um produto...</option>
+                    {% for produto in produtos %}
+                        <option value="{{ produto.id }}">{{ produto.nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <button type="submit" class="submit-button">Continuar</button>
+    </form>
+{% endblock %}
