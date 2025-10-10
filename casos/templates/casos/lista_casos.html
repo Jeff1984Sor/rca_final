@@ -1,17 +1,27 @@
-<!-- casos/templates/casos/lista_casos.html -->
 {% extends 'base.html' %}
 
 {% block title %}Lista de Casos{% endblock %}
 
 {% block extra_css %}
 <style>
-    .container { max-width: 1200px; }
-    .toolbar { background-color: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .btn { background-color: #007BFF; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; }
+    .container { max-width: 1400px; } /* Aumenta a largura para caber mais filtros */
+    .toolbar { background-color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
+    .filter-group input, .filter-group select { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; box-sizing: border-box; }
+    .filter-actions { margin-top: 15px; }
+    .btn, .btn-filter, .btn-clear, .btn-export { text-decoration: none; color: white; padding: 8px 15px; border-radius: 5px; border: none; cursor: pointer; font-size: 14px; display: inline-block; }
+    .btn { background-color: #007BFF; }
+    .btn-filter { background-color: #28a745; }
+    .btn-clear { background-color: #6c757d; }
+    .btn-export { background-color: #17a2b8; }
+    .action-btn { padding: 5px 10px; font-size: 14px; text-decoration: none; border-radius: 4px; color: white; display: inline-block; text-align: center; }
+    .btn-details { background-color: #17a2b8; }
+    .btn-edit { background-color: #ffc107; color: black; margin-left: 5px; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     th, td { border-bottom: 1px solid #ddd; padding: 12px; text-align: left; }
     thead th { background-color: #f8f9fa; font-weight: bold; }
     tbody tr:hover { background-color: #f1f1f1; }
+    td.actions { white-space: nowrap; }
 </style>
 {% endblock %}
 
@@ -19,13 +29,60 @@
     <h1>Gestão de Casos</h1>
 
     <div class="toolbar">
-        <div><!-- Espaço para futuros filtros --></div>
+        <form method="GET" action="{% url 'casos:lista_casos' %}">
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <input type="text" name="filtro_titulo" placeholder="Filtrar por título..." value="{{ valores_filtro.filtro_titulo }}">
+                </div>
+                <div class="filter-group">
+                    <select name="filtro_cliente">
+                        <option value="">Todos os Clientes</option>
+                        {% for cliente in todos_clientes %}
+                            <option value="{{ cliente.id }}" {% if valores_filtro.filtro_cliente == cliente.id|stringformat:"s" %}selected{% endif %}>{{ cliente.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <select name="filtro_produto">
+                        <option value="">Todos os Produtos</option>
+                        {% for produto in todos_produtos %}
+                            <option value="{{ produto.id }}" {% if valores_filtro.filtro_produto == produto.id|stringformat:"s" %}selected{% endif %}>{{ produto.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <select name="filtro_status">
+                        <option value="">Todos os Status</option>
+                        {% for value, display in status_choices %}
+                            <option value="{{ value }}" {% if valores_filtro.filtro_status == value %}selected{% endif %}>{{ display }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <select name="filtro_advogado">
+                        <option value="">Todos os Advogados</option>
+                        {% for advogado in todos_advogados %}
+                            <option value="{{ advogado.id }}" {% if valores_filtro.filtro_advogado == advogado.id|stringformat:"s" %}selected{% endif %}>{{ advogado.get_full_name|default:advogado.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button type="submit" class="btn-filter">Filtrar</button>
+                <a href="{% url 'casos:lista_casos' %}" class="btn-clear">Limpar</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="toolbar" style="justify-content: flex-end;">
         <div>
+            <a href="{% url 'casos:exportar_excel' %}?{{ request.GET.urlencode }}" class="btn-export">Exportar Excel</a>
             <a href="{% url 'casos:selecionar_produto_cliente' %}" class="btn">Abrir Novo Caso</a>
         </div>
     </div>
 
     <table>
+        <!-- ... (o resto da sua tabela permanece igual) ... -->
         <thead>
             <tr>
                 <th>ID</th>
@@ -34,6 +91,7 @@
                 <th>Produto</th>
                 <th>Status</th>
                 <th>Data de Entrada</th>
+                <th>Responsável</th>
                 <th>Ações</th>
             </tr>
         </thead>
@@ -41,18 +99,26 @@
             {% for caso in casos %}
             <tr>
                 <td>{{ caso.id }}</td>
-                <td>{{ caso.titulo|default:"(sem título)" }}</td>
+                <td>{{ caso.titulo|default:"(sem título)"|truncatechars:50 }}</td>
                 <td>{{ caso.cliente.nome }}</td>
                 <td>{{ caso.produto.nome }}</td>
                 <td>{{ caso.get_status_display }}</td>
                 <td>{{ caso.data_entrada|date:"d/m/Y" }}</td>
                 <td>
-                    <!-- Botões de Editar/Deletar virão aqui -->
+                    {% if caso.advogado_responsavel %}
+                        {{ caso.advogado_responsavel.get_full_name|default:caso.advogado_responsavel.username }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="actions">
+                    <a href="{% url 'casos:detalhe_caso' pk=caso.pk %}" class="action-btn btn-details">Ver Detalhes</a>
+                    <a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="action-btn btn-edit">Editar</a>
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="7" style="text-align: center; padding: 20px;">Nenhum caso cadastrado.</td>
+                <td colspan="8" style="text-align: center; padding: 20px;">Nenhum caso encontrado.</td>
             </tr>
             {% endfor %}
         </tbody>

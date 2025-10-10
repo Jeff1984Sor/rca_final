@@ -1,6 +1,12 @@
 {% extends 'base.html' %}
 
-{% block title %}Novo Caso - Formulário de Criação{% endblock %}
+{% block title %}
+    {% if caso %}
+        Editando Caso #{{ caso.id }}
+    {% else %}
+        Novo Caso - Formulário
+    {% endif %}
+{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -10,21 +16,35 @@
     .form-group { flex-grow: 1; margin-bottom: 15px; }
     .form-group label { font-weight: bold; display: block; margin-bottom: 5px; }
     .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; font-size: 1rem; }
+    .form-group input[disabled] { background-color: #e9ecef; cursor: not-allowed; }
+    .readonly-field { background-color: #e9ecef; padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 1rem; min-height: 21.5px; } /* Estilo para campo somente leitura */
     .btn-submit { padding: 10px 20px; font-size: 16px; background-color: #007BFF; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px; }
     .btn-submit:hover { background-color: #0056b3; }
 </style>
 {% endblock %}
 
 {% block content %}
-    <h1>Novo Caso para: <span style="color: #007BFF;">{{ cliente.nome }}</span></h1>
+    
+    {% if caso %}
+        <h1>Editando Caso #{{ caso.id }}</h1>
+    {% else %}
+        <h1>Novo Caso para: <span style="color: #007BFF;">{{ cliente.nome }}</span></h1>
+    {% endif %}
 
     <form method="post">
         {% csrf_token %}
         
-        <!-- SEÇÃO 1: DADOS PRINCIPAIS -->
         <div class="form-section">
             <h3>Dados Principais do Caso</h3>
             
+            <!-- SE ESTAMOS EDITANDO E HÁ UM PADRÃO DE TÍTULO, MOSTRA O TÍTULO FORMATADO -->
+            {% if caso and produto.padrao_titulo %}
+            <div class="form-group">
+                <label>Título do Caso (gerado automaticamente):</label>
+                <div class="readonly-field">{{ caso.titulo }}</div>
+            </div>
+            {% endif %}
+
             <div class="form-row">
                 <div class="form-group">
                     <label>Cliente:</label>
@@ -37,50 +57,29 @@
             </div>
 
             <div class="form-row">
-                <!-- Renderiza os campos do formulário Django -->
-                <div class="form-group">
-                    {{ form.status.label_tag }}
-                    {{ form.status }}
-                    {{ form.status.errors }}
-                </div>
-                <div class="form-group">
-                    {{ form.data_entrada.label_tag }}
-                    {{ form.data_entrada }}
-                    {{ form.data_entrada.errors }}
-                </div>
-                <div class="form-group">
-                    {{ form.data_encerramento.label_tag }}
-                    {{ form.data_encerramento }}
-                    {{ form.data_encerramento.errors }}
-                </div>
+                <div class="form-group">{{ form.status.label_tag }}{{ form.status }}{{ form.status.errors }}</div>
+                <div class="form-group">{{ form.data_entrada.label_tag }}{{ form.data_entrada }}{{ form.data_entrada.errors }}</div>
+                <div class="form-group">{{ form.data_encerramento.label_tag }}{{ form.data_encerramento }}{{ form.data_encerramento.errors }}</div>
             </div>
             
-            <!-- O campo de título manual só existe no form se não houver padrão -->
+            <div class="form-group" style="margin-top: 15px;">{{ form.advogado_responsavel.label_tag }}{{ form.advogado_responsavel }}{{ form.advogado_responsavel.errors }}</div>
+            
+            <!-- O campo de título manual só é renderizado se existir no objeto 'form' -->
             {% if form.titulo_manual %}
-                <div class="form-group">
-                    {{ form.titulo_manual.label_tag }}
-                    {{ form.titulo_manual }}
-                    {{ form.titulo_manual.errors }}
-                </div>
+                <div class="form-group">{{ form.titulo_manual.label_tag }}{{ form.titulo_manual }}{{ form.titulo_manual.errors }}</div>
             {% endif %}
         </div>
 
         <!-- SEÇÃO 2: DADOS ADICIONAIS -->
         <div class="form-section">
             <h3>Dados Adicionais</h3>
-            
-            <!-- Itera sobre os campos do formulário para encontrar os personalizados -->
             {% for field in form %}
                 {% if field.name|slice:":19" == 'campo_personalizado' %}
-                    <div class="form-group">
-                        {{ field.label_tag }}
-                        {{ field }}
-                        {{ field.errors }}
-                    </div>
+                    <div class="form-group">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>
                 {% endif %}
             {% endfor %}
         </div>
         
-        <button type="submit" class="btn-submit">Salvar Caso</button>
+        <button type="submit" class="btn-submit">Salvar Alterações</button>
     </form>
 {% endblock %}

@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalhes do Caso #{{ caso.id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .case-header { background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .case-header-content { display: flex; justify-content: space-between; align-items: center; }
+    .case-header h1 { margin: 0; font-size: 1.8em; color: #333; }
+    .case-header h1 span { color: #007BFF; font-weight: bold; }
+    .case-header p { margin: 5px 0 0; color: #555; font-size: 1.1em; }
+    .btn-edit-header { background-color: #ffc107; color: black; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; white-space: nowrap; }
+    .btn-edit-header:hover { background-color: #e0a800; }
+    .tab-nav { border-bottom: 2px solid #dee2e6; margin-bottom: 20px; }
+    .tab-nav button { background-color: transparent; border: none; padding: 15px 20px; cursor: pointer; font-size: 16px; margin-bottom: -2px; }
+    .tab-nav button.active { border-bottom: 2px solid #007BFF; color: #007BFF; font-weight: bold; }
+    .tab-content { display: none; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .tab-content.active { display: block; }
+    .details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px 30px; }
+    .detail-item { margin-bottom: 10px; }
+    .detail-item label { font-weight: bold; display: block; color: #555; }
+    .detail-item span { display: block; margin-top: 4px; font-size: 1.1em; }
+
+    /* Estilos genéricos de formulário e botões */
+    .form-section, .andamento-form-section, .timesheet-form-section { padding-bottom: 20px; }
+    .form-row { display: flex; gap: 20px; }
+    .form-group { flex-grow: 1; margin-bottom: 15px; }
+    .form-group label { font-weight: bold; display: block; margin-bottom: 5px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; font-size: 1rem; }
+    .btn-submit { padding: 10px 20px; font-size: 16px; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .btn-submit.andamento { background-color: #28a745; }
+    .btn-submit.timesheet { background-color: #007BFF; }
+    .btn-submit.acordo { background-color: #17a2b8; }
+    
+    /* Estilos específicos de Andamentos */
+    .andamento-list { margin-top: 20px; }
+    .andamento-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .andamento-toolbar h3 { margin: 0; }
+    .btn-export { background-color: #17a2b8; color: white; padding: 8px 15px; text-decoration: none; border-radius: 5px; font-size: 14px; }
+    .btn-pdf { background-color: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 5px; font-size: 14px; margin-left: 5px; }
+    .andamento-item { border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 15px; }
+    .andamento-header { background-color: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; }
+    .author-info { font-size: 0.9em; color: #6c757d; }
+    .andamento-body { padding: 15px; white-space: pre-wrap; }
+
+    /* Estilos específicos de Timesheet */
+    .timesheet-summary { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; text-align: center; }
+    .timesheet-summary h3 { margin: 0 0 10px; color: #333; }
+    .timesheet-summary p { margin: 0; font-size: 2em; font-weight: bold; color: #007BFF; }
+    .timesheet-list table, .acordo-body table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .timesheet-list th, .timesheet-list td, .acordo-body th, .acordo-body td { border-bottom: 1px solid #ddd; padding: 12px; text-align: left; }
+    .timesheet-list thead th, .acordo-body thead { background-color: #f8f9fa; font-weight: bold; }
+    .action-btn { padding: 5px 10px; font-size: 14px; text-decoration: none; border-radius: 4px; color: white; display: inline-block; text-align: center; }
+    .btn-edit { background-color: #ffc107; color: black; }
+    .btn-delete { background-color: #dc3545; color: white; margin-left: 5px; }
+    td.actions { white-space: nowrap; }
+
+    /* Estilos para a aba de Acordos */
+    .acordo-list { margin-top: 20px; }
+    .acordo-item { border: 1px solid #e9ecef; border-radius: 8px; margin-bottom: 20px; }
+    .acordo-header { background-color: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; }
+    .acordo-body { padding: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="case-header">
+        <div class="case-header-content">
+            <div>
+                <h1><span>#{{ caso.id }}</span> - {{ caso.titulo|default:"(Caso sem título)" }}</h1>
+                <p><strong>Cliente:</strong> {{ caso.cliente.nome }} | <strong>Produto:</strong> {{ caso.produto.nome }}</p>
+            </div>
+            <div>
+                <a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="btn-edit-header">Editar Caso</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-nav">
+        <button class="tab-button" onclick="openTab(event, 'detalhes')">Detalhes do Caso</button>
+        <button class="tab-button" onclick="openTab(event, 'andamentos')">Andamentos</button>
+        <button class="tab-button" onclick="openTab(event, 'timesheet')">Timesheet</button>
+        <button class="tab-button" onclick="openTab(event, 'acordos')">Acordos</button>
+    </div>
+
+    <!-- Aba 1: Detalhes do Caso -->
+    <div id="detalhes" class="tab-content">
+        <h2>Dados do Caso</h2>
+        <div class="details-grid">
+            <div class="detail-item"><label>Status</label><span>{{ caso.get_status_display }}</span></div>
+            <div class="detail-item"><label>Data de Entrada</label><span>{{ caso.data_entrada|date:"d/m/Y" }}</span></div>
+            <div class="detail-item"><label>Advogado Responsável</label><span>{% if caso.advogado_responsavel %}{{ caso.advogado_responsavel.get_full_name|default:caso.advogado_responsavel.username }}{% else %}Não atribuído{% endif %}</span></div>
+            <div class="detail-item"><label>Data de Encerramento</label><span>{{ caso.data_encerramento|date:"d/m/Y"|default:"-" }}</span></div>
+        </div>
+        {% if valores_personalizados %}<hr style="margin: 20px 0;"><h3>Dados Adicionais</h3><div class="details-grid">{% for valor in valores_personalizados %}<div class="detail-item"><label>{{ valor.campo.nome_campo }}</label><span>{{ valor.valor|default:"-" }}</span></div>{% endfor %}</div>{% endif %}
+    </div>
+
+    <!-- Aba 2: Andamentos -->
+    <div id="andamentos" class="tab-content">
+        <div class="andamento-form-section">
+            <h3>Registrar Novo Andamento</h3>
+            <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
+                {% csrf_token %}
+                <div class="form-group">{{ form_andamento.modelo_andamento.label_tag }}{{ form_andamento.modelo_andamento }}</div>
+                <div class="form-group">{{ form_andamento.data_andamento.label_tag }}{{ form_andamento.data_andamento }}</div>
+                <div class="form-group">{{ form_andamento.descricao.label_tag }}{{ form_andamento.descricao }}</div>
+                <button type="submit" name="submit_andamento" class="btn-submit andamento">Salvar Andamento</button>
+            </form>
+        </div>
+        <hr style="margin: 30px 0;">
+        <div class="andamento-list">
+            <div class="andamento-toolbar">
+                <h3>Histórico de Andamentos</h3>
+                <div><a href="{% url 'casos:exportar_andamentos_excel' pk=caso.pk %}" class="btn-export">Exportar Excel</a></div>
+            </div>
+            {% for andamento in andamentos %}<div class="andamento-item"><div class="andamento-header"><strong>Data: {{ andamento.data_andamento|date:"d/m/Y" }}</strong><span class="author-info">por {% if andamento.autor %}{{ andamento.autor.get_full_name|default:andamento.autor.username }}{% else %}(usuário removido){% endif %} em {{ andamento.data_criacao|date:"d/m/Y H:i" }}</span></div><div class="andamento-body">{{ andamento.descricao|linebreaksbr }}</div></div>{% empty %}<p>Nenhum andamento registrado para este caso.</p>{% endfor %}
+        </div>
+    </div>
+
+    <!-- Aba 3: Timesheet -->
+    <div id="timesheet" class="tab-content">
+        <div class="timesheet-form-section">
+            <h3>Registrar Novo Lançamento</h3>
+            <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
+                {% csrf_token %}
+                <div class="form-row"><div class="form-group">{{ form_timesheet.data_execucao.label_tag }}{{ form_timesheet.data_execucao }}</div><div class="form-group">{{ form_timesheet.tempo.label_tag }}{{ form_timesheet.tempo }}</div></div>
+                <div class="form-group">{{ form_timesheet.advogado.label_tag }}{{ form_timesheet.advogado }}</div>
+                <div class="form-group">{{ form_timesheet.descricao.label_tag }}{{ form_timesheet.descricao }}</div>
+                <button type="submit" name="submit_timesheet" class="btn-submit timesheet">Salvar Lançamento</button>
+            </form>
+        </div>
+        <div class="timesheet-summary"><h3>Tempo Total Gasto no Caso</h3><p>{{ tempo_total|default:"00:00:00" }}</p></div>
+        <hr style="margin: 30px 0;">
+        <div class="timesheet-list">
+            <div class="andamento-toolbar"><h3>Histórico de Lançamentos</h3><div><a href="{% url 'casos:exportar_timesheet_excel' pk=caso.pk %}" class="btn-export">Exportar Excel</a><a href="{% url 'casos:exportar_timesheet_pdf' pk=caso.pk %}" class="btn-pdf">Exportar PDF</a></div></div>
+            <table><thead><tr><th>Data</th><th>Tempo Gasto</th><th>Advogado</th><th>Descrição</th><th>Ações</th></tr></thead>
+                <tbody>
+                    {% for ts in timesheets %}<tr><td>{{ ts.data_execucao|date:"d/m/Y" }}</td><td>{{ ts.tempo }}</td><td>{% if ts.advogado %}{{ ts.advogado.get_full_name|default:ts.advogado.username }}{% else %}-{% endif %}</td><td>{{ ts.descricao|linebreaksbr }}</td><td class="actions"><a href="{% url 'casos:editar_timesheet' pk=ts.pk %}" class="action-btn btn-edit">Editar</a><a href="{% url 'casos:deletar_timesheet' pk=ts.pk %}" class="action-btn btn-delete">Deletar</a></td></tr>{% empty %}<tr><td colspan="5" style="text-align: center; padding: 20px;">Nenhum lançamento de horas para este caso.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- NOVA ABA 4: ACORDOS -->
+    <div id="acordos" class="tab-content">
+        <div class="form-section">
+            <h3>Registrar Novo Acordo</h3>
+            <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
+                {% csrf_token %}
+                <div class="form-row"><div class="form-group">{{ form_acordo.valor_total.label_tag }}{{ form_acordo.valor_total }}</div><div class="form-group">{{ form_acordo.numero_parcelas.label_tag }}{{ form_acordo.numero_parcelas }}</div></div>
+                <div class="form-row"><div class="form-group">{{ form_acordo.data_primeira_parcela.label_tag }}{{ form_acordo.data_primeira_parcela }}</div><div class="form-group">{{ form_acordo.advogado_acordo.label_tag }}{{ form_acordo.advogado_acordo }}</div></div>
+                <button type="submit" name="submit_acordo" class="btn-submit acordo">Salvar Acordo</button>
+            </form>
+        </div>
+        <hr style="margin: 30px 0;">
+        <div class="acordo-list">
+            <h3>Acordos Registrados</h3>
+            {% for acordo in acordos %}<div class="acordo-item"><div class="acordo-header"><strong>Acordo de R$ {{ acordo.valor_total }} em {{ acordo.numero_parcelas }}x</strong><span>Criado em {{ acordo.data_criacao|date:"d/m/Y" }} por {% if acordo.advogado_acordo %}{{ acordo.advogado_acordo.get_full_name|default:acordo.advogado_acordo.username }}{% else %}-{% endif %}</span></div><div class="acordo-body"><table><thead><tr><th>Nº Parcela</th><th>Vencimento</th><th>Valor</th><th>Status</th></tr></thead><tbody>{% for parcela in acordo.parcelas.all %}<tr><td>{{ parcela.numero_parcela }}</td><td>{{ parcela.data_vencimento|date:"d/m/Y" }}</td><td>R$ {{ parcela.valor_parcela }}</td><td>{{ parcela.get_status_display }}</td></tr>{% endfor %}</tbody></table></div></div>{% empty %}<p>Nenhum acordo registrado para este caso.</p>{% endfor %}
+        </div>
+    </div>
+
+<script>
+function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tab-content");
+    for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
+    tablinks = document.getElementsByClassName("tab-button");
+    for (i = 0; i < tablinks.length; i++) { tablinks[i].className = tablinks[i].className.replace(" active", ""); }
+    document.getElementById(tabName).style.display = "block";
+    if (evt) {
+        evt.currentTarget.className += " active";
+    } else {
+        var buttonToActivate = document.querySelector(`.tab-button[onclick*="'${tabName}'"]`);
+        if (buttonToActivate) { buttonToActivate.className += " active"; }
+    }
+}
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const abaAtiva = urlParams.get('aba');
+    if (abaAtiva) {
+        openTab(null, abaAtiva);
+    } else {
+        var firstTabButton = document.querySelector('.tab-button');
+        if (firstTabButton) { firstTabButton.className += " active"; }
+        var firstTabContent = document.querySelector('.tab-content');
+        if (firstTabContent) { firstTabContent.style.display = "block"; }
+    }
+    const modelos = {
+        {% for modelo in modelos_andamento %}
+            "{{ modelo.id }}": "{{ modelo.descricao|escapejs }}"{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    };
+    const selectModelo = document.querySelector('[name=modelo_andamento]');
+    const textareaDescricao = document.querySelector('[name=descricao]');
+    if (selectModelo && textareaDescricao) {
+        selectModelo.addEventListener('change', function() {
+            const modeloId = this.value;
+            if (modeloId && modelos[modeloId]) {
+                textareaDescricao.value = modelos[modeloId];
+            }
+        });
+    }
+    const tempoInput = document.querySelector('input[name="tempo"]');
+    if (tempoInput) {
+        tempoInput.addEventListener('input', function (e) {
+            let value = e.target.value.replace(/\D/g, '');
+            let formattedValue = '';
+            if (value.length > 2) {
+                formattedValue = value.substring(0, 2) + ':' + value.substring(2, 4);
+            } else {
+                formattedValue = value;
+            }
+            e.target.value = formattedValue.substring(0, 5);
+        });
+    }
+});
+</script>
+{% endblock %}
