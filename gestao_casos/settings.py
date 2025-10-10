@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-y*d6udw4@%r741^6%retxtu&7js=ra92mv)hevk7(zozca0lj$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['gesta-rca.onrender.com']
+ALLOWED_HOSTS = ['gesta-rca.onrender.com' , '127.0.0.1', 'localhost']
 
 
 # Application definition
@@ -39,6 +39,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+     # Meus Apps
+    'core.apps.CoreConfig', # Nosso novo app!
+    'clientes.apps.ClientesConfig',
+    'equipamentos.apps.EquipamentosConfig',
+    'casos.apps.CasosConfig',
 ]
 
 MIDDLEWARE = [
