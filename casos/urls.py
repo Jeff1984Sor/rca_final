@@ -21,6 +21,11 @@ urlpatterns = [
     path('parcela/<int:pk>/quitar/', views.quitar_parcela, name='quitar_parcela'),
     path('acordo/editar/<int:pk>/', views.editar_acordo, name='editar_acordo'),
     path('despesa/editar/<int:pk>/', views.editar_despesa, name='editar_despesa'),
+    path('pasta/<str:folder_id>/conteudo/', views.carregar_conteudo_pasta, name='carregar_conteudo_pasta'),
+    path('pasta/<str:folder_id>/upload/', views.upload_arquivo_sharepoint, name='upload_arquivo'),
+    path('anexo/preview/<str:item_id>/', views.preview_anexo, name='preview_anexo'),
+    path('pasta/<str:parent_folder_id>/criar/', views.criar_pasta_sharepoint, name='criar_pasta'),
+    path('anexo/excluir/<str:item_id>/', views.excluir_anexo_sharepoint, name='excluir_anexo'),
 
 
 ]

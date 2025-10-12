@@ -13,6 +13,11 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 import dj_database_url
+import dotenv
+
+def main():
+    dotenv.read_dotenv() # Adicione esta linha para carregar as variáveis
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestao_casos.settings')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,6 +38,7 @@ ALLOWED_HOSTS = ['gesta-rca.onrender.com' , '127.0.0.1', 'localhost']
 # Application definition
 
 INSTALLED_APPS = [
+    'nested_admin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -46,8 +52,10 @@ INSTALLED_APPS = [
     'clientes.apps.ClientesConfig',
     'equipamentos.apps.EquipamentosConfig',
     'casos.apps.CasosConfig',
+    'pastas.apps.PastasConfig',
     'campos_custom.apps.CamposCustomConfig',
     'produtos.apps.ProdutosConfig',
+    'workflow.apps.WorkflowConfig',
 ]
 
 MIDDLEWARE = [
@@ -150,3 +158,19 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 LOGIN_REDIRECT_URL = '/'  # Para onde ir após o login (nossa home)
 LOGOUT_REDIRECT_URL = '/' # Para onde ir após o logout (nossa home)
+
+# CONFIGURAÇÃO DE ENVIO DE E-MAIL
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.office365.com'  # Servidor SMTP da Microsoft
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True  # Obrigatório para a Microsoft
+EMAIL_HOST_USER = 'suportefinanceiro@rcostaadv.com.br'  # SEU E-MAIL COMPLETO AQUI
+EMAIL_HOST_PASSWORD = 'Maya2024@@'      # SUA SENHA AQUI
+
+
+STATUS_CASO_CHOICES = [
+    ('Ativo', 'Ativo'),
+    ('Encerrado', 'Encerrado'),
+    ('Em monitoramento', 'Aguardando Documentação'),
+    # Adicione outros status que precisar aqui
+]

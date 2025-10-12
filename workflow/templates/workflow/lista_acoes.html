@@ -1,0 +1,84 @@
+<!-- workflow/templates/workflow/lista_acoes.html -->
+{% extends 'base.html' %}
+
+{% block title %}Todas as Ações{% endblock %}
+
+{% block content %}
+    <h1 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 24px;">Painel de Ações</h1>
+
+    <!-- Card de Filtros -->
+    <div class="card">
+        <form method="GET" action="{% url 'workflow:lista_todas_acoes' %}">
+            <div class="form-row" style="align-items: flex-end;">
+                <div class="form-group">
+                    <label for="id_filtro_responsavel">Responsável</label>
+                    <select id="id_filtro_responsavel" name="filtro_responsavel">
+                        <option value="">Todos</option>
+                        {% for resp in todos_responsaveis %}
+                            <option value="{{ resp.id }}" {% if valores_filtro.filtro_responsavel == resp.id|stringformat:"s" %}selected{% endif %}>{{ resp.get_full_name|default:resp.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="id_filtro_status">Status</label>
+                    <select id="id_filtro_status" name="filtro_status">
+                        <option value="">Todos</option>
+                        {% for value, display in status_choices %}
+                            <option value="{{ value }}" {% if valores_filtro.filtro_status == value %}selected{% endif %}>{{ display }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="id_prazo_de">Prazo (de)</label>
+                    <input id="id_prazo_de" type="date" name="filtro_prazo_de" value="{{ valores_filtro.filtro_prazo_de }}">
+                </div>
+                <div class="form-group">
+                    <label for="id_prazo_ate">Prazo (até)</label>
+                    <input id="id_prazo_ate" type="date" name="filtro_prazo_ate" value="{{ valores_filtro.filtro_prazo_ate }}">
+                </div>
+                <div class="form-group">
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" class="btn btn-success">Filtrar</button>
+                        <a href="{% url 'workflow:lista_todas_acoes' %}" class="btn btn-secondary">Limpar</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Card da Tabela -->
+    <div class="data-table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Caso</th>
+                    <th>Ação</th>
+                    <th>Status</th>
+                    <th>Responsável</th>
+                    <th>Prazo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for acao_inst in acoes %}
+                <tr>
+                    <td>
+                        <a href="{% url 'casos:detalhe_caso' pk=acao_inst.caso.pk %}?aba=acoes">
+                            #{{ acao_inst.caso.id|stringformat:"05d" }} - {{ acao_inst.caso.titulo|truncatechars:40 }}
+                        </a>
+                    </td>
+                    <td>{{ acao_inst.acao.titulo }}</td>
+                    <td>{{ acao_inst.get_status_display }}</td>
+                    <td>{% if acao_inst.responsavel %}{{ acao_inst.responsavel.get_full_name|default:acao_inst.responsavel.username }}{% else %}-{% endif %}</td>
+                    <td>{{ acao_inst.data_prazo|date:"d/m/Y"|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">
+                        <div class="empty-state"><p>Nenhuma ação encontrada com os filtros aplicados.</p></div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

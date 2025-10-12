@@ -1,0 +1,86 @@
+<!-- workflow/templates/workflow/partials/painel_acoes.html -->
+
+<h2>Ações do Workflow: <span class="fase-atual-nome">{{ caso.fase_atual_wf.nome|default:"Não iniciado" }}</span></h2>
+<!-- Seção de Ações Pendentes -->
+<div class="acoes-section">
+    <h3 class="section-title">Ações Pendentes</h3>
+    {% for acao_inst in acoes_pendentes %}
+        <div class="card acao-pendente">
+            <div class="card-header">
+                <i class="fa-solid fa-hourglass-start icon-pendente"></i>
+                <strong>{{ acao_inst.acao.titulo }}</strong>
+            </div>
+            <div class="card-body">
+                <div class="acao-meta">
+                    <span>
+                        <strong>Responsável:</strong>
+                        {% if acao_inst.responsavel %}
+                            {{ acao_inst.responsavel.get_full_name|default:acao_inst.responsavel.username }}
+                        {% else %}
+                            Não definido
+                        {% endif %}
+                    </span>
+                    {% if acao_inst.data_prazo %}
+                        <span><strong>Prazo:</strong> {{ acao_inst.data_prazo|date:"d/m/Y" }}</span>
+                    {% endif %}
+                </div>
+
+                {% if acao_inst.acao.tipo != 'AGUARDAR_DIAS' %}
+                    <form hx-post="{% url 'workflow:executar_acao' pk=acao_inst.pk %}" hx-target="#painel-acoes" hx-swap="outerHTML" hx-indicator="#spinner-{{ acao_inst.pk }}">
+                        {% csrf_token %}
+                        <div class="form-comentario">
+                            <textarea name="comentario" placeholder="Adicione um comentário sobre a execução..." rows="3"></textarea>
+                        </div>
+                        <div class="acao-botoes">
+                            <span id="spinner-{{ acao_inst.pk }}" class="htmx-indicator"><i class="fa-solid fa-spinner fa-spin"></i></span>
+                            {% if acao_inst.acao.tipo == 'SIMPLES' %}
+                                <button type="submit" class="btn-submit andamento">Confirmar Execução</button>
+                            {% elif acao_inst.acao.tipo == 'DECISAO_SN' %}
+                                <button type="submit" name="resposta" value="SIM" class="btn-sim">Sim</button>
+                                <button type="submit" name="resposta" value="NAO" class="btn-nao">Não</button>
+                            {% endif %}
+                        </div>
+                    </form>
+                {% else %}
+                    <p class="aguardo-info"><i>Aguardando {{ acao_inst.acao.dias_aguardar }} dia(s). O sistema prosseguirá automaticamente.</i></p>
+                {% endif %}
+            </div>
+        </div>
+    {% empty %}
+        <div class="card empty-state">
+            <p>Nenhuma ação pendente nesta fase.</p>
+        </div>
+    {% endfor %}
+</div>
+
+<!-- Seção de Ações Concluídas -->
+<div class="acoes-section">
+    <h3 class="section-title">Ações Concluídas</h3>
+    {% for acao_inst in acoes_concluidas %}
+        <div class="card acao-concluida">
+            <div class="card-header">
+                <i class="fa-solid fa-check-circle icon-concluida"></i>
+                <strong>{{ acao_inst.acao.titulo }}</strong>
+                <small class="concluida-info">
+                    (por {{ acao_inst.concluida_por.username }} em {{ acao_inst.data_conclusao|date:"d/m/Y H:i" }})
+                </small>
+            </div>
+            {% if acao_inst.resposta or acao_inst.comentario %}
+                <div class="card-body">
+                    {% if acao_inst.resposta %}
+                        <p><strong>Resposta:</strong> {{ acao_inst.resposta }}</p>
+                    {% endif %}
+                    {% if acao_inst.comentario %}
+                        <div class="comentario-concluido">
+                            {{ acao_inst.comentario|linebreaksbr }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    {% empty %}
+        <div class="card empty-state">
+            <p>Nenhuma ação foi concluída para este caso ainda.</p>
+        </div>
+    {% endfor %}
+</div>

@@ -1,6 +1,6 @@
 # casos/admin.py
 from django.contrib import admin
-from .models import Caso, ModeloAndamento, Andamento, Timesheet, Acordo, Parcela, Despesa
+from .models import Caso, ModeloAndamento, Andamento, Timesheet, Acordo, Parcela, Despesa, FluxoInterno
 
 @admin.register(Caso)
 class CasoAdmin(admin.ModelAdmin):
@@ -44,4 +44,10 @@ class DespesaAdmin(admin.ModelAdmin):
     list_display = ('caso', 'data_despesa', 'valor', 'advogado', 'descricao')
     list_filter = ('advogado', 'data_despesa')
     search_fields = ('descricao',)
+    raw_id_fields = ('caso',)
+
+@admin.register(FluxoInterno)
+class FluxoInternoAdmin(admin.ModelAdmin):
+    list_display = ('caso', 'tipo_evento', 'autor', 'data_evento')
+    list_filter = ('tipo_evento', 'autor')
     raw_id_fields = ('caso',)

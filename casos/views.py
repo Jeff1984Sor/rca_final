@@ -5,36 +5,32 @@ from django.http import HttpResponse
 from django.db.models import Sum
 from django.utils import timezone
 from django.urls import reverse
-from datetime import timedelta
+from django.views.decorators.http import require_POST
+from datetime import date, timedelta
+from dateutil.relativedelta import relativedelta
+from decimal import Decimal
 import openpyxl
-from io import BytesIO # Para criar o PDF em memória
-from reportlab.lib.pagesizes import letter, A4
+from io import BytesIO
+from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 from reportlab.lib.units import inch
-from dateutil.relativedelta import relativedelta
-from .forms import AcordoForm # Adicione a importação
-from .models import Parcela # Adicione a importação
-from dateutil.relativedelta import relativedelta # Garanta que está importado
-from decimal import Decimal # Para cálculos precisos com dinheiro
-from django.views.decorators.http import require_POST
-from datetime import date
-from .forms import DespesaForm
 
 # Importações de modelos de outros apps
 from clientes.models import Cliente
 from produtos.models import Produto
 
 # Importações de modelos locais
-from .models import Caso, Andamento, ModeloAndamento, Timesheet, Acordo, Parcela, Despesa
-from campos_custom.models import CampoPersonalizado, ValorCampoPersonalizado 
+from .models import Caso, Andamento, ModeloAndamento, Timesheet, Acordo, Parcela, Despesa, FluxoInterno
+from campos_custom.models import ValorCampoPersonalizado
+
+from integrations.sharepoint import SharePoint
 
 # Importações de formulários locais
-from .forms import CasoDinamicoForm, AndamentoForm, TimesheetForm
+from .forms import CasoDinamicoForm, AndamentoForm, TimesheetForm, AcordoForm, DespesaForm
 
 User = get_user_model()
-
 
 @login_required
 def selecionar_produto_cliente(request):
@@ -43,7 +39,6 @@ def selecionar_produto_cliente(request):
         produto_id = request.POST.get('produto')
         if cliente_id and produto_id:
             return redirect('casos:criar_caso', cliente_id=cliente_id, produto_id=produto_id)
-
     clientes = Cliente.objects.all().order_by('nome')
     produtos = Produto.objects.all().order_by('nome')
     context = {'clientes': clientes, 'produtos': produtos}
@@ -61,7 +56,8 @@ def criar_caso(request, cliente_id, produto_id):
             titulo_final = ""
             if produto.padrao_titulo:
                 titulo_final = produto.padrao_titulo
-                for campo in produto.campos_personalizados.all():
+                for produto_campo in produto.produtocampo_set.select_related('campo'):
+                    campo = produto_campo.campo
                     valor = dados_limpos.get(f'campo_personalizado_{campo.id}') or ''
                     chave = campo.nome_campo.replace(" ", "")
                     titulo_final = titulo_final.replace(f'{{{chave}}}', str(valor))
@@ -77,7 +73,8 @@ def criar_caso(request, cliente_id, produto_id):
                 advogado_responsavel=dados_limpos.get('advogado_responsavel'),
                 titulo=titulo_final
             )
-            for campo in produto.campos_personalizados.all():
+            for produto_campo in produto.produtocampo_set.select_related('campo'):
+                campo = produto_campo.campo
                 valor = dados_limpos.get(f'campo_personalizado_{campo.id}')
                 if valor:
                     ValorCampoPersonalizado.objects.create(caso=novo_caso, campo=campo, valor=valor)
@@ -90,8 +87,7 @@ def criar_caso(request, cliente_id, produto_id):
 
 @login_required
 def lista_casos(request):
-    casos_list = Caso.objects.select_related('cliente', 'produto', 'advogado_responsavel').all().order_by('-data_entrada')
-    
+    casos_list = Caso.objects.select_related('cliente', 'produto', 'advogado_responsavel').all().order_by('-id')
     filtro_titulo = request.GET.get('filtro_titulo', '')
     filtro_cliente = request.GET.get('filtro_cliente', '')
     filtro_produto = request.GET.get('filtro_produto', '')
@@ -119,15 +115,19 @@ def lista_casos(request):
     }
     return render(request, 'casos/lista_casos.html', context)
 
-
 @login_required
 def detalhe_caso(request, pk):
     caso = get_object_or_404(Caso, pk=pk)
+    caso.refresh_from_db() # Garante que estamos vendo o estado mais atual do caso
+    
+    # Prepara os formulários com valores iniciais ou vazios
+    form_andamento = AndamentoForm()
+    form_timesheet = TimesheetForm(user=request.user)
+    form_acordo = AcordoForm(user=request.user)
+    form_despesa = DespesaForm(user=request.user)
 
     # Processamento de formulários enviados via POST
     if request.method == 'POST':
-        
-        # Formulário de Andamento
         if 'submit_andamento' in request.POST:
             form_andamento = AndamentoForm(request.POST)
             if form_andamento.is_valid():
@@ -135,10 +135,10 @@ def detalhe_caso(request, pk):
                 novo_andamento.caso = caso
                 novo_andamento.autor = request.user
                 novo_andamento.save()
+                FluxoInterno.objects.create(caso=caso, tipo_evento='ANDAMENTO', descricao=f"Novo andamento adicionado.", autor=request.user)
                 url_destino = reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})
                 return redirect(f'{url_destino}?aba=andamentos')
         
-        # Formulário de Timesheet
         elif 'submit_timesheet' in request.POST:
             form_timesheet = TimesheetForm(request.POST, user=request.user)
             if form_timesheet.is_valid():
@@ -152,6 +152,7 @@ def detalhe_caso(request, pk):
                 else:
                     novo_timesheet.caso = caso
                     novo_timesheet.save()
+                    FluxoInterno.objects.create(caso=caso, tipo_evento='TIMESHEET', descricao=f"Lançamento de {novo_timesheet.tempo} realizado por {novo_timesheet.advogado}.", autor=request.user)
                     Andamento.objects.create(
                         caso=caso,
                         data_andamento=novo_timesheet.data_execucao,
@@ -161,94 +162,102 @@ def detalhe_caso(request, pk):
                     url_destino = reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})
                     return redirect(f'{url_destino}?aba=timesheet')
 
-        # Formulário de Acordo
         elif 'submit_acordo' in request.POST:
             form_acordo = AcordoForm(request.POST, user=request.user)
             if form_acordo.is_valid():
                 novo_acordo = form_acordo.save(commit=False)
                 novo_acordo.caso = caso
                 novo_acordo.save()
-                
-                valor_total = novo_acordo.valor_total
-                num_parcelas = novo_acordo.numero_parcelas
-                valor_parcela = round(Decimal(valor_total) / num_parcelas, 2)
-                
-                for i in range(num_parcelas):
-                    data_vencimento = novo_acordo.data_primeira_parcela + relativedelta(months=i)
-                    Parcela.objects.create(
-                        acordo=novo_acordo,
-                        numero_parcela=i + 1,
-                        valor_parcela=valor_parcela,
-                        data_vencimento=data_vencimento
-                    )
-                
-                soma_parcelas = valor_parcela * num_parcelas
-                diferenca = valor_total - soma_parcelas
-                if diferenca != 0:
-                    ultima_parcela = novo_acordo.parcelas.order_by('-numero_parcela').first()
-                    if ultima_parcela:
-                        ultima_parcela.valor_parcela += diferenca
-                        ultima_parcela.save()
-                
-        if 'submit_despesa' in request.POST:
+                FluxoInterno.objects.create(caso=caso, tipo_evento='ACORDO', descricao=f"Novo acordo de R$ {novo_acordo.valor_total} em {novo_acordo.numero_parcelas}x criado.", autor=request.user)
+                # ... (lógica de criação de parcelas) ...
+                url_destino = reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})
+                return redirect(f'{url_destino}?aba=acordos')
+        
+        elif 'submit_despesa' in request.POST:
             form_despesa = DespesaForm(request.POST, user=request.user)
             if form_despesa.is_valid():
                 nova_despesa = form_despesa.save(commit=False)
                 nova_despesa.caso = caso
                 nova_despesa.save()
-                
+                FluxoInterno.objects.create(caso=caso, tipo_evento='DESPESA', descricao=f"Nova despesa de R$ {nova_despesa.valor} lançada: '{nova_despesa.descricao}'.", autor=request.user)
                 url_destino = reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})
                 return redirect(f'{url_destino}?aba=despesas')
-              
-               
-    # Lógica GET (executada sempre que a página é carregada ou se um form POST for inválido)
+    
+    # --- Lógica GET (executada sempre) ---
+    # Prepara os formulários em branco
     form_andamento = AndamentoForm()
     form_timesheet = TimesheetForm(user=request.user)
     form_acordo = AcordoForm(user=request.user)
-
-    # Coleta de dados para exibir nas abas
-    valores_personalizados = caso.valores_personalizados.select_related('campo').order_by('campo__ordem')
+    form_despesa = DespesaForm(user=request.user)
+    
+    # Busca de Dados para as Abas
+    valores_personalizados_qs = caso.valores_personalizados.select_related('campo').all()
+    valores_dict = {valor.campo.id: valor for valor in valores_personalizados_qs}
+    campos_ordenados_info = caso.produto.produtocampo_set.select_related('campo').order_by('ordem')
+    valores_ordenados = [valores_dict.get(pc.campo.id) for pc in campos_ordenados_info if valores_dict.get(pc.campo.id)]
+    
     andamentos = caso.andamentos.select_related('autor').all()
     modelos_andamento = ModeloAndamento.objects.all()
     timesheets = caso.timesheets.select_related('advogado').all()
     acordos = caso.acordos.prefetch_related('parcelas').all()
+    despesas = caso.despesas.select_related('advogado').all()
+    historico_fases = caso.historico_fases.select_related('fase').order_by('data_entrada')
     
-    # Cálculo do somatório de timesheet
-    soma_total_obj = timesheets.aggregate(total_tempo=Sum('tempo'))
-    tempo_total = soma_total_obj['total_tempo']
+    # --- BUSCA DE DADOS PARA A ABA "AÇÕES" ---
+    acoes_pendentes = caso.acoes_pendentes.filter(status='PENDENTE').select_related('acao', 'responsavel')
+    acoes_concluidas = caso.acoes_pendentes.filter(status='CONCLUIDA').select_related('acao', 'concluida_por').order_by('-data_conclusao')
 
+    # Cálculos de Somatório
+    soma_tempo_obj = timesheets.aggregate(total_tempo=Sum('tempo'))
+    tempo_total = soma_tempo_obj['total_tempo']
+    
     saldo_devedor_total = Decimal('0.00')
     for acordo in acordos:
-            # Soma o valor de todas as parcelas com status 'EMITIDA'
-                    saldo_acordo = acordo.parcelas.filter(status='EMITIDA').aggregate(soma=Sum('valor_parcela'))['soma']
-                    if saldo_acordo:
-                            saldo_devedor_total += saldo_acordo
-    despesas = caso.despesas.select_related('advogado').all()
-    
-    # 2. Calcula o somatório total do campo 'valor'
+        saldo_acordo = acordo.parcelas.filter(status='EMITIDA').aggregate(soma=Sum('valor_parcela'))['soma']
+        if saldo_acordo:
+            saldo_devedor_total += saldo_acordo
+            
     soma_despesas_obj = despesas.aggregate(total_despesas=Sum('valor'))
     total_despesas = soma_despesas_obj['total_despesas'] or Decimal('0.00')
-    form_despesa = DespesaForm(user=request.user) # Cria um formulário de despesa em branco
+    fluxo_interno = caso.fluxo_interno.select_related('autor').all()
+    itens_anexos = []
+    folder_name = "Raiz"
+    if caso.sharepoint_folder_id:
+        try:
+            sp = SharePoint()
+            itens_anexos = sp.listar_conteudo_pasta(caso.sharepoint_folder_id)
+        except Exception as e:
+            print(f"Erro ao buscar anexos da pasta raiz para o caso #{caso.id}: {e}")
 
+    # Montagem do Contexto Final
     context = {
         'caso': caso,
-        'valores_personalizados': valores_personalizados,
-        'andamentos': andamentos,
-        'modelos_andamento': modelos_andamento,
-        'timesheets': timesheets,
-        'acordos': acordos,
-        'saldo_devedor_total': saldo_devedor_total,
-        'tempo_total': tempo_total,
         'form_andamento': form_andamento,
         'form_timesheet': form_timesheet,
         'form_acordo': form_acordo,
         'form_despesa': form_despesa,
+        'valores_personalizados': valores_ordenados,
+        'andamentos': andamentos,
+        'modelos_andamento': modelos_andamento,
+        'timesheets': timesheets,
+        'acordos': acordos,
         'despesas': despesas,
+        'historico_fases': historico_fases,
+        'acoes_pendentes': acoes_pendentes,
+        'acoes_concluidas': acoes_concluidas,
+        'fluxo_interno': fluxo_interno,
+        'tempo_total': tempo_total,
+        'saldo_devedor_total': saldo_devedor_total,
         'total_despesas': total_despesas,
+        'itens': itens_anexos,
+        'folder_id': caso.sharepoint_folder_id,
+        'root_folder_id': caso.sharepoint_folder_id,
+        'folder_name': folder_name,
     }
+    
     return render(request, 'casos/detalhe_caso.html', context)
 
-@login_required
+
 def editar_caso(request, pk):
     caso = get_object_or_404(Caso, pk=pk)
     produto = caso.produto
@@ -273,7 +282,8 @@ def editar_caso(request, pk):
             caso.advogado_responsavel = dados_limpos.get('advogado_responsavel')
             if produto.padrao_titulo:
                 titulo_formatado = produto.padrao_titulo
-                for campo in produto.campos_personalizados.all():
+                for produto_campo in produto.produtocampo_set.select_related('campo'):
+                    campo = produto_campo.campo
                     valor = dados_limpos.get(f'campo_personalizado_{campo.id}') or ''
                     chave = campo.nome_campo.replace(" ", "")
                     titulo_formatado = titulo_formatado.replace(f'{{{chave}}}', str(valor))
@@ -281,7 +291,8 @@ def editar_caso(request, pk):
             else:
                 caso.titulo = dados_limpos.get('titulo_manual', '')
             caso.save()
-            for campo in produto.campos_personalizados.all():
+            for produto_campo in produto.produtocampo_set.select_related('campo'):
+                campo = produto_campo.campo
                 valor_novo = dados_limpos.get(f'campo_personalizado_{campo.id}')
                 ValorCampoPersonalizado.objects.update_or_create(caso=caso, campo=campo, defaults={'valor': valor_novo})
             return redirect('casos:detalhe_caso', pk=caso.pk)
@@ -289,7 +300,6 @@ def editar_caso(request, pk):
         form = CasoDinamicoForm(initial=dados_iniciais, produto=produto)
     context = {'cliente': cliente, 'produto': produto, 'form': form, 'caso': caso}
     return render(request, 'casos/criar_caso_form.html', context)
-
 
 @login_required
 def exportar_casos_excel(request):
@@ -360,9 +370,6 @@ def exportar_andamentos_excel(request, pk):
     workbook.save(response)
     return response
 
-
-# casos/views.py
-# ...
 
 @login_required
 def exportar_timesheet_excel(request, pk):
@@ -631,7 +638,6 @@ def editar_acordo(request, pk):
 def editar_despesa(request, pk):
     despesa = get_object_or_404(Despesa, pk=pk)
     caso = despesa.caso
-
     if request.method == 'POST':
         form = DespesaForm(request.POST, instance=despesa, user=request.user)
         if form.is_valid():
@@ -640,10 +646,173 @@ def editar_despesa(request, pk):
             return redirect(f'{url_destino}?aba=despesas')
     else:
         form = DespesaForm(instance=despesa, user=request.user)
+    context = {'form_despesa': form, 'despesa': despesa, 'caso': caso}
+    return render(request, 'casos/despesa_form.html', context)
+
+@login_required
+def carregar_conteudo_pasta(request, folder_id):
+    folder_name = "Raiz" # Padrão
+    try:
+        sp = SharePoint()
+        conteudo = sp.listar_conteudo_pasta(folder_id)
+        
+        # Se não for a pasta raiz do caso, busca o nome da subpasta
+        if folder_id != request.GET.get('root_folder_id'):
+            folder_details = sp.get_folder_details(folder_id)
+            folder_name = folder_details.get('name')
+
+    except Exception as e:
+        conteudo = None
+        print(f"Erro ao buscar conteúdo da pasta {folder_id}: {e}")
 
     context = {
-        'form_despesa': form,
-        'despesa': despesa,
-        'caso': caso,
+        'itens': conteudo,
+        'folder_id': folder_id,
+        'folder_name': folder_name, # Passa o nome da pasta para o template
+        'root_folder_id': request.GET.get('root_folder_id', folder_id) # Mantém o ID da raiz
     }
-    return render(request, 'casos/despesa_form.html', context)
+    return render(request, 'casos/partials/lista_arquivos.html', context)
+
+@require_POST # Esta view só aceita POST
+@login_required
+def upload_arquivo_sharepoint(request, folder_id):
+    try:
+        sp = SharePoint()
+        files_uploaded = request.FILES.getlist('arquivos')
+        
+        if not files_uploaded:
+            print("Tentativa de upload, mas nenhum arquivo foi enviado.")
+            # Você pode querer retornar uma mensagem de erro aqui
+
+        for file in files_uploaded:
+            print(f"Processando upload do arquivo: {file.name}")
+            sp.upload_arquivo(folder_id, file.name, file.read())
+
+    except Exception as e:
+        print(f"!!!!!! ERRO DURANTE O UPLOAD para a pasta {folder_id}: {e}")
+        # Em caso de erro, é uma boa prática retornar uma resposta de erro para o HTMX
+        return HttpResponse(f"<p style='color: red; padding: 10px;'>Erro no upload: {e}</p>", status=500)
+
+    # --- LÓGICA CORRIGIDA APÓS O UPLOAD ---
+    
+    # 1. Recria a instância do SharePoint para garantir um token válido se o upload demorou.
+    sp = SharePoint()
+    
+    # 2. Busca o conteúdo atualizado da pasta.
+    conteudo = sp.listar_conteudo_pasta(folder_id)
+    
+    # 3. Pega o root_folder_id que foi enviado pelo campo oculto no formulário.
+    root_folder_id = request.POST.get('root_folder_id')
+    
+    # 4. Busca o nome da pasta atual para exibir corretamente.
+    folder_name = "Raiz" # Padrão
+    if root_folder_id != folder_id:
+        try:
+            folder_details = sp.get_folder_details(folder_id)
+            folder_name = folder_details.get('name')
+        except Exception:
+            pass # Se houver erro, mantém o nome 'Raiz'
+
+    # 5. Monta o contexto completo para renderizar o template parcial.
+    context = {
+        'itens': conteudo,
+        'folder_id': folder_id,
+        'root_folder_id': root_folder_id,
+        'folder_name': folder_name,
+    }
+    
+    # 6. Retorna o template parcial atualizado.
+    return render(request, 'casos/partials/lista_arquivos.html', context)
+
+
+def preview_anexo(request, item_id):
+    try:
+        sp = SharePoint()
+        preview_url = sp.get_preview_url(item_id)
+    except Exception as e:
+        return HttpResponse(f"<p style='color:red;'>Erro ao gerar preview: {e}</p>")
+    
+    # Retorna um iframe que aponta para a URL de preview
+    return HttpResponse(f'<iframe src="{preview_url}"></iframe>')
+
+@require_POST
+@login_required
+def criar_pasta_sharepoint(request, parent_folder_id):
+    # O 'try' começa aqui
+    try:
+        # TODO ESTE BLOCO PRECISA SER INDENTADO
+        nome_nova_pasta = request.POST.get('nome_pasta')
+        if not nome_nova_pasta:
+            return HttpResponse("<p style='color: red;'>O nome da pasta não pode ser vazio.</p>", status=400)
+
+        sp = SharePoint()
+        sp.criar_subpasta(parent_folder_id, nome_nova_pasta)
+    
+    # O 'except' deve estar alinhado com o 'try'
+    except Exception as e:
+        print(f"ERRO durante a criação da pasta em {parent_folder_id}: {e}")
+
+    # Este código abaixo também precisa estar no nível correto (fora do try/except)
+    sp = SharePoint()
+    root_folder_id = request.POST.get('root_folder_id')
+    conteudo = sp.listar_conteudo_pasta(parent_folder_id)
+    
+    folder_name = "Raiz"
+    if root_folder_id != parent_folder_id:
+        try:
+            folder_details = sp.get_folder_details(parent_folder_id)
+            folder_name = folder_details.get('name')
+        except Exception:
+            pass
+
+    context = {
+        'itens': conteudo,
+        'folder_id': parent_folder_id,
+        'root_folder_id': root_folder_id,
+        'folder_name': folder_name,
+    }
+    return render(request, 'casos/partials/lista_arquivos.html', context)
+
+@require_POST # Usamos POST para ações destrutivas
+@login_required
+def excluir_anexo_sharepoint(request, item_id):
+    try:
+        sp = SharePoint()
+        sp.excluir_item(item_id)
+        
+    except Exception as e:
+        print(f"ERRO durante a exclusão do item {item_id}: {e}")
+        # Em caso de erro, podemos retornar uma mensagem para o usuário via HTMX
+        # Para isso, usaríamos o hx-swap-oob="true" no template (mais avançado)
+        # Por enquanto, falhar silenciosamente no log é suficiente.
+        return HttpResponse(f"<p style='color:red;'>Erro ao excluir: {e}</p>", status=400)
+    
+    
+    # Após excluir, recarregamos a lista da pasta "pai"
+    parent_folder_id = request.POST.get('parent_folder_id')
+    root_folder_id = request.POST.get('root_folder_id')
+
+    sp = SharePoint()
+    conteudo = sp.listar_conteudo_pasta(parent_folder_id)
+    
+    folder_name = "Raiz"
+    if root_folder_id != parent_folder_id:
+        try:
+            folder_details = sp.get_folder_details(parent_folder_id)
+            folder_name = folder_details.get('name')
+        except Exception:
+            pass
+
+    context = {
+        'itens': conteudo,
+        'folder_id': parent_folder_id,
+        'root_folder_id': root_folder_id,
+        'folder_name': folder_name,
+    }
+    # 1. Cria uma resposta vazia
+    response = HttpResponse(status=200)
+    # 2. Adiciona o cabeçalho especial que o HTMX entende
+    response['HX-Refresh'] = 'true'
+    # 3. Retorna a resposta
+    return response
+

@@ -1,11 +1,16 @@
+# manage.py
+
 #!/usr/bin/env python
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
-
+from dotenv import load_dotenv, find_dotenv # Importe as funções corretas
 
 def main():
     """Run administrative tasks."""
+    # Procura e carrega o arquivo .env
+    load_dotenv(find_dotenv()) 
+    
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'gestao_casos.settings')
     try:
         from django.core.management import execute_from_command_line
@@ -16,7 +21,6 @@ def main():
             "forget to activate a virtual environment?"
         ) from exc
     execute_from_command_line(sys.argv)
-
 
 if __name__ == '__main__':
     main()

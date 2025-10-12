@@ -12,13 +12,19 @@ class Caso(models.Model):
     STATUS_CHOICES = [
         ('ATIVO', 'Ativo'),
         ('ENCERRADO', 'Encerrado'),
+        ('AGUARDANDO_DOC', 'Aguardando Documentação'),
+        ('EM_NEGOCIACAO', 'Em Negociação'),
     ]
 
     # --- CAMPOS PADRÃO OBRIGATÓRIOS ---
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='casos')
-    produto = models.ForeignKey(Produto, on_delete=models.PROTECT, related_name='casos')
+    
+    produto = models.ForeignKey('produtos.Produto', on_delete=models.PROTECT, related_name='casos')
+
     data_entrada = models.DateField(verbose_name="Data de Entrada RCA")
+ 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ATIVO')
+    sharepoint_folder_id = models.CharField(max_length=255, blank=True, null=True, editable=False)
 
     # --- CAMPOS PADRÃO OPCIONAIS ---
     titulo = models.CharField(max_length=255, blank=True)
@@ -33,6 +39,13 @@ class Caso(models.Model):
         related_name='casos_responsaveis'
     )
     
+    fase_atual_wf = models.ForeignKey(
+        'workflow.Fase',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Fase Atual do Workflow"
+    )
     # Campo de controle
     data_criacao = models.DateTimeField(auto_now_add=True)
 
@@ -180,3 +193,44 @@ class Despesa(models.Model):
 
     def __str__(self):
         return f"Despesa de R$ {self.valor} para o Caso #{self.caso.id}"
+    
+class FluxoInterno(models.Model):
+    TIPO_EVENTO_CHOICES = [
+        ('CRIACAO_CASO', 'Criação do Caso'),
+        ('MUDANCA_FASE_WF', 'Mudança de Fase do Workflow'),
+        ('ACAO_WF_CONCLUIDA', 'Ação de Workflow Concluída'),
+        ('ANDAMENTO', 'Andamento Adicionado'),
+        ('TIMESHEET', 'Timesheet Lançado'),
+        ('ACORDO', 'Acordo Criado'),
+        ('DESPESA', 'Despesa Lançada'),
+        ('EMAIL', 'E-mail Enviado'),
+        ('ANEXO', 'Anexo Adicionado'),
+    ]
+
+    caso = models.ForeignKey(Caso, on_delete=models.CASCADE, related_name='fluxo_interno')
+    
+    # O que aconteceu?
+    tipo_evento = models.CharField(max_length=20, choices=TIPO_EVENTO_CHOICES, verbose_name="Tipo do Evento")
+    
+    # Descrição detalhada do evento
+    descricao = models.TextField(verbose_name="Descrição")
+
+    # Quem fez a ação?
+    autor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Autor da Ação"
+    )
+    
+    # Quando aconteceu?
+    data_evento = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-data_evento'] # Mais recentes primeiro
+        verbose_name = "Evento do Fluxo Interno"
+        verbose_name_plural = "Eventos do Fluxo Interno"
+
+    def __str__(self):
+        return f"{self.get_tipo_evento_display()} no Caso #{self.caso.id} em {self.data_evento.strftime('%d/%m/%Y')}"

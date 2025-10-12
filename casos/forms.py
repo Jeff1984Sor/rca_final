@@ -1,14 +1,15 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from datetime import date
-from .models import Acordo 
-from .models import Caso, Andamento, ModeloAndamento, Timesheet, Despesa
-from campos_custom.models import CampoPersonalizado
 
+# UMA ÚNICA LINHA PARA TODOS OS MODELOS DO APP 'casos'
+from .models import Acordo, Caso, Andamento, ModeloAndamento, Timesheet, Despesa
+
+from campos_custom.models import CampoPersonalizado
 User = get_user_model()
 
-
 class CasoDinamicoForm(forms.Form):
+    # Campos Padrão (permanecem os mesmos)
     status = forms.ChoiceField(choices=Caso.STATUS_CHOICES, required=True)
     data_entrada = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=True)
     data_encerramento = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=False)
@@ -31,54 +32,64 @@ class CasoDinamicoForm(forms.Form):
                     widget=forms.TextInput(attrs={'placeholder': 'Descreva o caso resumidamente...'})
                 )
 
-            campos_personalizados = CampoPersonalizado.objects.filter(produto=produto).order_by('ordem')
+            # --- LÓGICA DE BUSCA E LOOP CORRIGIDA ---
+
+            # 1. Buscamos a relação através do modelo intermediário
+            campos_info = produto.produtocampo_set.select_related('campo').order_by('ordem')
             
-            for campo in campos_personalizados:
+            # 2. Iteramos sobre o resultado correto ('campos_info')
+            for produto_campo in campos_info:
+                # 3. Pegamos o objeto CampoPersonalizado de dentro do modelo intermediário
+                campo = produto_campo.campo
+                
                 field_name = f'campo_personalizado_{campo.id}'
                 field_label = campo.nome_campo
-                field_required = campo.obrigatorio
+                # 4. Pegamos 'obrigatorio' do modelo intermediário
+                field_required = produto_campo.obrigatorio
 
                 if campo.tipo_campo == 'TEXTO':
                     self.fields[field_name] = forms.CharField(label=field_label, required=field_required)
+                
                 elif campo.tipo_campo == 'NUMERO_INT':
                     self.fields[field_name] = forms.IntegerField(label=field_label, required=field_required)
+                
                 elif campo.tipo_campo == 'NUMERO_DEC':
                     self.fields[field_name] = forms.DecimalField(label=field_label, required=field_required)
+
                 elif campo.tipo_campo == 'DATA':
                     self.fields[field_name] = forms.DateField(label=field_label, required=field_required, widget=forms.DateInput(attrs={'type': 'date'}))
+                
                 elif campo.tipo_campo == 'LISTA_UNICA':
                     opcoes = [('', '---------')] + [(opt, opt) for opt in campo.get_opcoes_como_lista]
                     self.fields[field_name] = forms.ChoiceField(label=field_label, required=field_required, choices=opcoes)
 
-
 class AndamentoForm(forms.ModelForm):
+    # Campo "virtual" para selecionar um modelo pré-definido
     modelo_andamento = forms.ModelChoiceField(
         queryset=ModeloAndamento.objects.all(),
         required=False,
         label="Usar Modelo de Andamento",
-        empty_label="-- Selecione um modelo para preencher a descrição --"
-    )
-
-    # Definimos o campo aqui fora para adicionar o 'initial'
-    data_andamento = forms.DateField(
-        label="Data do Andamento",
-        widget=forms.DateInput(attrs={'type': 'date'}),
-        initial=date.today
+        empty_label="-- Selecione um modelo --"
     )
 
     class Meta:
         model = Andamento
-        # 'data_andamento' já foi definido, então não precisa estar aqui
-        fields = ['descricao']
+        # 1. TODOS os campos do modelo que queremos no form estão aqui
+        fields = ['data_andamento', 'descricao']
         widgets = {
+            'data_andamento': forms.DateInput(attrs={'type': 'date'}),
             'descricao': forms.Textarea(attrs={'rows': 5}),
         }
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Reordenamos para garantir que 'modelo_andamento' apareça primeiro
-        self.order_fields(['modelo_andamento', 'data_andamento', 'descricao'])
+        
+        # 2. MODIFICAMOS o campo que o ModelForm já criou
+        self.fields['data_andamento'].initial = date.today
+        self.fields['data_andamento'].label = "Data do Andamento"
 
+        # 3. Reordenamos os campos para colocar o 'modelo_andamento' no topo
+        self.order_fields(['modelo_andamento', 'data_andamento', 'descricao'])
 
 class TimesheetForm(forms.ModelForm):
     # Definimos o campo aqui fora para ter mais controle
