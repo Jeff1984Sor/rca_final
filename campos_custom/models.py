@@ -14,8 +14,10 @@ class CampoPersonalizado(models.Model):
         ('TEXTO', 'Texto Curto (String)'),
         ('NUMERO_INT', 'Número Inteiro'),
         ('NUMERO_DEC', 'Número Decimal'),
-        ('LISTA_UNICA', 'Lista de Escolha Única'),
-        ('LISTA_MULTIPLA', 'Lista de Escolha Múltipla'),
+        ('MOEDA', 'Moeda (R$)'),                  # <-- NOVO TIPO ADICIONADO
+        ('LISTA_USUARIOS', 'Lista de Usuários'),   # <-- NOVO TIPO ADICIONADO
+        ('LISTA_UNICA', 'Lista de Opções (Escolha Única)'),
+        ('LISTA_MULTIPLA', 'Lista de Opções (Escolha Múltipla)'),
         ('DATA', 'Data'),
     ]
     nome_campo = models.CharField(max_length=100, unique=True, verbose_name="Nome do Campo na Biblioteca")

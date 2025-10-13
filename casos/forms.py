@@ -1,68 +1,101 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from datetime import date
-
+from django.contrib.auth import get_user_model
 # UMA ÚNICA LINHA PARA TODOS OS MODELOS DO APP 'casos'
 from .models import Acordo, Caso, Andamento, ModeloAndamento, Timesheet, Despesa
+from campos_custom.models import ConfiguracaoCampoPersonalizado
 
-from campos_custom.models import CampoPersonalizado
 User = get_user_model()
 
 class CasoDinamicoForm(forms.Form):
-    # Campos Padrão (permanecem os mesmos)
-    status = forms.ChoiceField(choices=Caso.STATUS_CHOICES, required=True)
-    data_entrada = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=True)
-    data_encerramento = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=False)
+    # Campos Padrão do Caso (não precisam mudar)
+    status = forms.ChoiceField(choices=Caso.STATUS_CHOICES, required=True, label="Status do Caso")
+    data_entrada = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=True, label="Data de Entrada")
+    data_encerramento = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=False, label="Data de Encerramento")
     advogado_responsavel = forms.ModelChoiceField(
-        queryset=User.objects.all().order_by('first_name', 'last_name', 'username'),
+        queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username'),
         required=False,
         label="Advogado Responsável"
     )
     
     def __init__(self, *args, **kwargs):
+        # ==============================================================================
+        # LÓGICA DE INICIALIZAÇÃO ATUALIZADA
+        # Agora o formulário precisa receber o 'cliente' e o 'produto'
+        # ==============================================================================
+        cliente = kwargs.pop('cliente', None)
         produto = kwargs.pop('produto', None)
         super().__init__(*args, **kwargs)
 
-        if produto:
-            if not produto.padrao_titulo:
-                self.fields['titulo_manual'] = forms.CharField(
-                    label="Título Manual", 
-                    max_length=255, 
-                    required=False,
-                    widget=forms.TextInput(attrs={'placeholder': 'Descreva o caso resumidamente...'})
-                )
+        # Se o produto não tiver um padrão de título, adicionamos o campo de título manual
+        if produto and not produto.padrao_titulo:
+            self.fields['titulo_manual'] = forms.CharField(
+                label="Título Manual", 
+                max_length=255, 
+                required=False,
+                widget=forms.TextInput(attrs={'placeholder': 'Descreva o caso resumidamente...'})
+            )
 
-            # --- LÓGICA DE BUSCA E LOOP CORRIGIDA ---
-
-            # 1. Buscamos a relação através do modelo intermediário
-            campos_info = produto.produtocampo_set.select_related('campo').order_by('ordem')
+        # A mágica acontece aqui: só adicionamos campos se tivermos um cliente e um produto
+        if cliente and produto:
+            # 1. Buscamos as configurações de campos para esta combinação específica de Cliente + Produto
+            configuracoes = ConfiguracaoCampoPersonalizado.objects.filter(
+                cliente=cliente, 
+                produto=produto
+            ).select_related('campo').order_by('ordem')
             
-            # 2. Iteramos sobre o resultado correto ('campos_info')
-            for produto_campo in campos_info:
-                # 3. Pegamos o objeto CampoPersonalizado de dentro do modelo intermediário
-                campo = produto_campo.campo
+            # 2. Iteramos sobre as configurações encontradas
+            for config in configuracoes:
+                # 3. Pegamos o objeto CampoPersonalizado de dentro da configuração
+                campo = config.campo
                 
                 field_name = f'campo_personalizado_{campo.id}'
                 field_label = campo.nome_campo
-                # 4. Pegamos 'obrigatorio' do modelo intermediário
-                field_required = produto_campo.obrigatorio
+                # 4. Pegamos 'obrigatorio' da configuração
+                field_required = config.obrigatorio
 
+                # ==============================================================================
+                # LÓGICA ATUALIZADA PARA CRIAR OS CAMPOS DO FORMULÁRIO
+                # Incluindo os novos tipos 'MOEDA' e 'LISTA_USUARIOS'
+                # ==============================================================================
                 if campo.tipo_campo == 'TEXTO':
-                    self.fields[field_name] = forms.CharField(label=field_label, required=field_required)
+                    self.fields[field_name] = forms.CharField(label=field_label, required=field_required, widget=forms.TextInput(attrs={'class': 'form-control'}))
                 
                 elif campo.tipo_campo == 'NUMERO_INT':
-                    self.fields[field_name] = forms.IntegerField(label=field_label, required=field_required)
+                    self.fields[field_name] = forms.IntegerField(label=field_label, required=field_required, widget=forms.NumberInput(attrs={'class': 'form-control'}))
                 
                 elif campo.tipo_campo == 'NUMERO_DEC':
-                    self.fields[field_name] = forms.DecimalField(label=field_label, required=field_required)
-
-                elif campo.tipo_campo == 'DATA':
-                    self.fields[field_name] = forms.DateField(label=field_label, required=field_required, widget=forms.DateInput(attrs={'type': 'date'}))
+                    self.fields[field_name] = forms.DecimalField(label=field_label, required=field_required, widget=forms.NumberInput(attrs={'class': 'form-control'}))
                 
+                # --- NOVO TIPO: MOEDA ---
+                elif campo.tipo_campo == 'MOEDA':
+                    self.fields[field_name] = forms.DecimalField(
+                        label=field_label, 
+                        required=field_required, 
+                        decimal_places=2,
+                        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+                    )
+                
+                elif campo.tipo_campo == 'DATA':
+                    self.fields[field_name] = forms.DateField(label=field_label, required=field_required, widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
+                
+                # --- NOVO TIPO: LISTA DE USUÁRIOS ---
+                elif campo.tipo_campo == 'LISTA_USUARIOS':
+                    self.fields[field_name] = forms.ModelChoiceField(
+                        label=field_label,
+                        queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name'),
+                        required=field_required,
+                        widget=forms.Select(attrs={'class': 'form-select'})
+                    )
+
                 elif campo.tipo_campo == 'LISTA_UNICA':
                     opcoes = [('', '---------')] + [(opt, opt) for opt in campo.get_opcoes_como_lista]
-                    self.fields[field_name] = forms.ChoiceField(label=field_label, required=field_required, choices=opcoes)
-
+                    self.fields[field_name] = forms.ChoiceField(label=field_label, required=field_required, choices=opcoes, widget=forms.Select(attrs={'class': 'form-select'}))
+                
+                elif campo.tipo_campo == 'LISTA_MULTIPLA':
+                    opcoes = [(opt, opt) for opt in campo.get_opcoes_como_lista]
+                    self.fields[field_name] = forms.MultipleChoiceField(label=field_label, required=field_required, choices=opcoes, widget=forms.SelectMultiple(attrs={'class': 'form-select'}))
 class AndamentoForm(forms.ModelForm):
     # Campo "virtual" para selecionar um modelo pré-definido
     modelo_andamento = forms.ModelChoiceField(
