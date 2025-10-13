@@ -9,7 +9,6 @@
 {% endblock %}
 
 {% block content %}
-    <!-- A div que centralizava e limitava a largura foi REMOVIDA -->
     
     {% if caso %}
         <h1 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 24px;">Editando Caso #{{ caso.id|stringformat:"05d" }}</h1>
@@ -24,13 +23,6 @@
         <div class="card" style="padding: 32px;">
             <h3 class="section-title">Dados Principais do Caso</h3>
             
-            {% if caso and produto.padrao_titulo %}
-            <div class="form-group">
-                <label>Título do Caso (gerado automaticamente)</label>
-                <div style="background-color: var(--bg-subtle); padding: 10px; border-radius: 5px; border: 1px solid var(--border-color); font-weight: 500;">{{ caso.titulo }}</div>
-            </div>
-            {% endif %}
-
             <div class="form-row">
                 <div class="form-group">
                     <label>Cliente</label>
@@ -55,18 +47,31 @@
             {% endif %}
         </div>
 
+        <!-- ============================================================================== -->
+        <!-- A CORREÇÃO MÁGICA ESTÁ AQUI                                                     -->
+        <!-- ============================================================================== -->
+        
         <!-- Card 2: DADOS ADICIONAIS -->
         <div class="card" style="padding: 32px; margin-top: 24px;">
             <h3 class="section-title">Dados Adicionais</h3>
             
-            {% for field in form %}
-                {% if field.name|slice:":19" == 'campo_personalizado' %}
-                    <div class="form-group">{{ field.label_tag }}{{ field }}</div>
-                {% endif %}
-            {% endfor %}
-
-            
+            <div class="form-row">
+                {% for field in form %}
+                    {# Itera por TODOS os campos do formulário #}
+                    {% if field.name|slice:":19" == 'campo_personalizado' %}
+                        {# E mostra apenas os que são personalizados AQUI DENTRO #}
+                        <div class="form-group">
+                            {{ field.label_tag }}
+                            {{ field }}
+                            {% for error in field.errors %}
+                                <div class="error-message">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
         </div>
+        <!-- ============================================================================== -->
         
         <!-- BOTÕES DE AÇÃO -->
         <div style="margin-top: 30px; display: flex; justify-content: flex-end; gap: 10px;">

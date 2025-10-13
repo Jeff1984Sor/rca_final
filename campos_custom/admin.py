@@ -1,7 +1,7 @@
 # campos_custom/admin.py
 
 from django.contrib import admin
-from .models import CampoPersonalizado, ConfiguracaoCampoPersonalizado, ValorCampoPersonalizado
+from .models import CampoPersonalizado, ConfiguracaoCampoPersonalizado, ValorCampoPersonalizado, EstruturaDeCampos
 
 # ==============================================================================
 # ADMIN PARA A BIBLIOTECA DE CAMPOS
@@ -9,10 +9,22 @@ from .models import CampoPersonalizado, ConfiguracaoCampoPersonalizado, ValorCam
 # ==============================================================================
 @admin.register(CampoPersonalizado)
 class CampoPersonalizadoAdmin(admin.ModelAdmin):
-    list_display = ('nome_campo', 'tipo_campo')
-    list_filter = ('tipo_campo',)
-    search_fields = ('nome_campo',)
+    # ATUALIZADO PARA MOSTRAR OS DOIS NOMES
+    list_display = ('nome_campo', 'nome_variavel', 'tipo_campo')
+    search_fields = ('nome_campo', 'nome_variavel')
+    # Adicionamos a ordenação por nome visível
     ordering = ('nome_campo',)
+    
+    # Organiza os campos no formulário para melhor entendimento
+    fieldsets = (
+        (None, {
+            'fields': ('nome_campo', 'nome_variavel', 'tipo_campo')
+        }),
+        ('Configuração para Listas', {
+            'classes': ('collapse',), # Começa recolhido
+            'fields': ('opcoes_lista',),
+        }),
+    )
 
 
 # ==============================================================================
@@ -23,7 +35,7 @@ class CampoPersonalizadoAdmin(admin.ModelAdmin):
 class ConfiguracaoCampoAdmin(admin.ModelAdmin):
 
     change_list_template = "admin/campos_custom/configuracaocampopersonalizado/change_list.html"
-    
+
     # Mostra as colunas principais na lista
     list_display = ('cliente', 'produto', 'campo', 'ordem', 'obrigatorio')
     
@@ -63,3 +75,22 @@ class ValorCampoAdmin(admin.ModelAdmin):
         if obj.caso and obj.caso.cliente:
             return obj.caso.cliente.nome_razao_social
         return "N/A"
+    
+@admin.register(EstruturaDeCampos)
+class EstruturaDeCamposAdmin(admin.ModelAdmin):
+    # Adicionamos as funções que mostram os IDs
+    list_display = ('cliente', 'get_cliente_id', 'produto', 'get_produto_id')
+    search_fields = ('cliente__nome_razao_social', 'produto__nome')
+    autocomplete_fields = ['cliente', 'produto']
+    filter_horizontal = ('campos',)
+    ordering = ('cliente', 'produto')
+
+    # Função para criar a coluna "ID Cliente"
+    @admin.display(description='ID Cliente', ordering='cliente__id')
+    def get_cliente_id(self, obj):
+        return obj.cliente.id
+
+    # Função para criar a coluna "ID Produto"
+    @admin.display(description='ID Produto', ordering='produto__id')
+    def get_produto_id(self, obj):
+        return obj.produto.id

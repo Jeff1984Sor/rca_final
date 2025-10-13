@@ -16,6 +16,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 from reportlab.lib.units import inch
+from campos_custom.models import EstruturaDeCampos
 
 # Importações de modelos de outros apps
 from clientes.models import Cliente
@@ -49,40 +50,54 @@ def selecionar_produto_cliente(request):
 def criar_caso(request, cliente_id, produto_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
     produto = get_object_or_404(Produto, id=produto_id)
+    
     if request.method == 'POST':
-        form = CasoDinamicoForm(request.POST, produto=produto)
+        # 1. Passamos o CLIENTE e o PRODUTO para o formulário
+        form = CasoDinamicoForm(request.POST, cliente=cliente, produto=produto)
         if form.is_valid():
             dados_limpos = form.cleaned_data
+            
+            # --- LÓGICA DE GERAÇÃO DE TÍTULO ATUALIZADA ---
             titulo_final = ""
             if produto.padrao_titulo:
                 titulo_final = produto.padrao_titulo
-                for produto_campo in produto.produtocampo_set.select_related('campo'):
-                    campo = produto_campo.campo
-                    valor = dados_limpos.get(f'campo_personalizado_{campo.id}') or ''
-                    chave = campo.nome_campo.replace(" ", "")
-                    titulo_final = titulo_final.replace(f'{{{chave}}}', str(valor))
+                estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
+                if estrutura:
+                    for campo in estrutura.campos.all():
+                        valor = dados_limpos.get(f'campo_personalizado_{campo.id}') or ''
+                        # 2. Usamos o NOME DA VARIÁVEL para a substituição!
+                        chave_variavel = campo.nome_variavel 
+                        titulo_final = titulo_final.replace(f'{{{chave_variavel}}}', str(valor))
             else:
                 titulo_final = dados_limpos.get('titulo_manual', '')
+            # --- FIM DA LÓGICA DE TÍTULO ---
 
             novo_caso = Caso.objects.create(
                 cliente=cliente,
                 produto=produto,
                 data_entrada=dados_limpos['data_entrada'],
                 status=dados_limpos['status'],
-                data_encerramento=dados_limpos.get('data_encerramento'),
-                advogado_responsavel=dados_limpos.get('advogado_responsavel'),
+                # ... outros campos ...
                 titulo=titulo_final
             )
-            for produto_campo in produto.produtocampo_set.select_related('campo'):
-                campo = produto_campo.campo
-                valor = dados_limpos.get(f'campo_personalizado_{campo.id}')
-                if valor:
-                    ValorCampoPersonalizado.objects.create(caso=novo_caso, campo=campo, valor=valor)
+
+            # --- LÓGICA DE SALVAR VALORES ATUALIZADA ---
+            estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
+            if estrutura:
+                for campo in estrutura.campos.all():
+                    valor = dados_limpos.get(f'campo_personalizado_{campo.id}')
+                    if valor is not None: # Salva mesmo que o valor seja vazio (ex: string vazia)
+                        ValorCampoPersonalizado.objects.create(caso=novo_caso, campo=campo, valor=str(valor))
+            # --- FIM DA LÓGICA DE SALVAR ---
+            
             return redirect('casos:lista_casos')
     else:
-        form = CasoDinamicoForm(produto=produto)
+        # 3. Passamos também na requisição GET para o formulário ser montado corretamente
+        form = CasoDinamicoForm(cliente=cliente, produto=produto)
+        
     context = {'cliente': cliente, 'produto': produto, 'form': form}
     return render(request, 'casos/criar_caso_form.html', context)
+
 
 
 @login_required
@@ -126,7 +141,7 @@ def detalhe_caso(request, pk):
     form_acordo = AcordoForm(user=request.user)
     form_despesa = DespesaForm(user=request.user)
 
-    # Processamento de formulários enviados via POST
+    # Processamento de formulários enviados via POST (ESTA PARTE NÃO MUDA)
     if request.method == 'POST':
         if 'submit_andamento' in request.POST:
             form_andamento = AndamentoForm(request.POST)
@@ -184,18 +199,38 @@ def detalhe_caso(request, pk):
                 return redirect(f'{url_destino}?aba=despesas')
     
     # --- Lógica GET (executada sempre) ---
-    # Prepara os formulários em branco
+    # Prepara os formulários em branco (NÃO MUDA)
     form_andamento = AndamentoForm()
     form_timesheet = TimesheetForm(user=request.user)
     form_acordo = AcordoForm(user=request.user)
     form_despesa = DespesaForm(user=request.user)
     
-    # Busca de Dados para as Abas
-    valores_personalizados_qs = caso.valores_personalizados.select_related('campo').all()
-    valores_dict = {valor.campo.id: valor for valor in valores_personalizados_qs}
-    campos_ordenados_info = caso.produto.produtocampo_set.select_related('campo').order_by('ordem')
-    valores_ordenados = [valores_dict.get(pc.campo.id) for pc in campos_ordenados_info if valores_dict.get(pc.campo.id)]
+    # ==============================================================================
+    # A ÚNICA MUDANÇA ESTÁ AQUI: BUSCA DE DADOS PARA AS ABAS
+    # ==============================================================================
     
+    # 1. Busca todos os valores que já foram salvos para este caso.
+    valores_salvos_qs = caso.valores_personalizados.select_related('campo').all()
+    # Cria um dicionário para acesso rápido: {id_do_campo: objeto_valor}
+    valores_salvos_dict = {valor.campo.id: valor for valor in valores_salvos_qs}
+
+    # 2. Busca a ESTRUTURA de campos correta para o cliente e produto deste caso.
+    estrutura = EstruturaDeCampos.objects.filter(cliente=caso.cliente, produto=caso.produto).first()
+
+    # 3. Monta a lista final de valores a serem exibidos, na ordem correta.
+    valores_para_template = []
+    if estrutura:
+        # Itera sobre os campos definidos na estrutura.
+        for campo in estrutura.campos.all():
+            # Verifica se existe um valor salvo para este campo.
+            valor_salvo = valores_salvos_dict.get(campo.id)
+            if valor_salvo:
+                valores_para_template.append(valor_salvo)
+    
+    # ==============================================================================
+    # O RESTO DO CÓDIGO CONTINUA EXATAMENTE IGUAL
+    # ==============================================================================
+
     andamentos = caso.andamentos.select_related('autor').all()
     modelos_andamento = ModeloAndamento.objects.all()
     timesheets = caso.timesheets.select_related('advogado').all()
@@ -203,11 +238,9 @@ def detalhe_caso(request, pk):
     despesas = caso.despesas.select_related('advogado').all()
     historico_fases = caso.historico_fases.select_related('fase').order_by('data_entrada')
     
-    # --- BUSCA DE DADOS PARA A ABA "AÇÕES" ---
     acoes_pendentes = caso.acoes_pendentes.filter(status='PENDENTE').select_related('acao', 'responsavel')
     acoes_concluidas = caso.acoes_pendentes.filter(status='CONCLUIDA').select_related('acao', 'concluida_por').order_by('-data_conclusao')
 
-    # Cálculos de Somatório
     soma_tempo_obj = timesheets.aggregate(total_tempo=Sum('tempo'))
     tempo_total = soma_tempo_obj['total_tempo']
     
@@ -236,7 +269,7 @@ def detalhe_caso(request, pk):
         'form_timesheet': form_timesheet,
         'form_acordo': form_acordo,
         'form_despesa': form_despesa,
-        'valores_personalizados': valores_ordenados,
+        'valores_personalizados': valores_para_template, # <<< Usamos a nossa nova variável aqui
         'andamentos': andamentos,
         'modelos_andamento': modelos_andamento,
         'timesheets': timesheets,
@@ -257,11 +290,12 @@ def detalhe_caso(request, pk):
     
     return render(request, 'casos/detalhe_caso.html', context)
 
-
+@login_required
 def editar_caso(request, pk):
     caso = get_object_or_404(Caso, pk=pk)
     produto = caso.produto
     cliente = caso.cliente
+    
     dados_iniciais = {
         'status': caso.status,
         'data_entrada': caso.data_entrada,
@@ -272,34 +306,51 @@ def editar_caso(request, pk):
     dados_iniciais.update(valores_existentes)
     if not produto.padrao_titulo:
         dados_iniciais['titulo_manual'] = caso.titulo
+        
     if request.method == 'POST':
-        form = CasoDinamicoForm(request.POST, produto=produto)
+        # CORREÇÃO: Passamos o CLIENTE e o PRODUTO para o formulário
+        form = CasoDinamicoForm(request.POST, cliente=cliente, produto=produto)
         if form.is_valid():
             dados_limpos = form.cleaned_data
             caso.status = dados_limpos['status']
             caso.data_entrada = dados_limpos['data_entrada']
             caso.data_encerramento = dados_limpos.get('data_encerramento')
             caso.advogado_responsavel = dados_limpos.get('advogado_responsavel')
+            
+            # Lógica de atualizar o título (precisa ser corrigida também)
             if produto.padrao_titulo:
                 titulo_formatado = produto.padrao_titulo
-                for produto_campo in produto.produtocampo_set.select_related('campo'):
-                    campo = produto_campo.campo
-                    valor = dados_limpos.get(f'campo_personalizado_{campo.id}') or ''
-                    chave = campo.nome_campo.replace(" ", "")
-                    titulo_formatado = titulo_formatado.replace(f'{{{chave}}}', str(valor))
+                estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
+                if estrutura:
+                    for campo in estrutura.campos.all():
+                        valor = dados_limpos.get(f'campo_personalizado_{campo.id}') or ''
+                        chave_variavel = campo.nome_variavel
+                        titulo_formatado = titulo_formatado.replace(f'{{{chave_variavel}}}', str(valor))
                 caso.titulo = titulo_formatado
             else:
                 caso.titulo = dados_limpos.get('titulo_manual', '')
+                
             caso.save()
-            for produto_campo in produto.produtocampo_set.select_related('campo'):
-                campo = produto_campo.campo
-                valor_novo = dados_limpos.get(f'campo_personalizado_{campo.id}')
-                ValorCampoPersonalizado.objects.update_or_create(caso=caso, campo=campo, defaults={'valor': valor_novo})
+
+            # Lógica de atualizar valores
+            estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
+            if estrutura:
+                for campo in estrutura.campos.all():
+                    valor_novo = dados_limpos.get(f'campo_personalizado_{campo.id}')
+                    ValorCampoPersonalizado.objects.update_or_create(
+                        caso=caso, 
+                        campo=campo, 
+                        defaults={'valor': str(valor_novo) if valor_novo is not None else ''}
+                    )
+                    
             return redirect('casos:detalhe_caso', pk=caso.pk)
     else:
-        form = CasoDinamicoForm(initial=dados_iniciais, produto=produto)
+        # CORREÇÃO: Passamos também no GET
+        form = CasoDinamicoForm(initial=dados_iniciais, cliente=cliente, produto=produto)
+        
     context = {'cliente': cliente, 'produto': produto, 'form': form, 'caso': caso}
     return render(request, 'casos/criar_caso_form.html', context)
+
 
 @login_required
 def exportar_casos_excel(request):

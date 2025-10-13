@@ -5,11 +5,12 @@ from django.contrib.auth import get_user_model
 # UMA ÚNICA LINHA PARA TODOS OS MODELOS DO APP 'casos'
 from .models import Acordo, Caso, Andamento, ModeloAndamento, Timesheet, Despesa
 from campos_custom.models import ConfiguracaoCampoPersonalizado
+from campos_custom.models import EstruturaDeCampos
 
 User = get_user_model()
 
 class CasoDinamicoForm(forms.Form):
-    # Campos Padrão do Caso (não precisam mudar)
+    # Campos Padrão do Caso (não mudam)
     status = forms.ChoiceField(choices=Caso.STATUS_CHOICES, required=True, label="Status do Caso")
     data_entrada = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=True, label="Data de Entrada")
     data_encerramento = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=False, label="Data de Encerramento")
@@ -20,15 +21,25 @@ class CasoDinamicoForm(forms.Form):
     )
     
     def __init__(self, *args, **kwargs):
-        # ==============================================================================
-        # LÓGICA DE INICIALIZAÇÃO ATUALIZADA
-        # Agora o formulário precisa receber o 'cliente' e o 'produto'
-        # ==============================================================================
         cliente = kwargs.pop('cliente', None)
         produto = kwargs.pop('produto', None)
         super().__init__(*args, **kwargs)
 
-        # Se o produto não tiver um padrão de título, adicionamos o campo de título manual
+        # ==============================================================================
+        # NOSSO ESPIÃO ESTÁ AQUI
+        # ==============================================================================
+        print("\n--- INICIANDO DIAGNÓSTICO DO CasoDinamicoForm ---")
+        if cliente:
+            print(f"1. RECEBIDO: Cliente ID={cliente.id}, Nome='{cliente}'")
+        else:
+            print("1. [ALERTA] Nenhum objeto 'cliente' foi recebido pela view.")
+
+        if produto:
+            print(f"2. RECEBIDO: Produto ID={produto.id}, Nome='{produto}'")
+        else:
+            print("2. [ALERTA] Nenhum objeto 'produto' foi recebido pela view.")
+        # ==============================================================================
+
         if produto and not produto.padrao_titulo:
             self.fields['titulo_manual'] = forms.CharField(
                 label="Título Manual", 
@@ -37,65 +48,47 @@ class CasoDinamicoForm(forms.Form):
                 widget=forms.TextInput(attrs={'placeholder': 'Descreva o caso resumidamente...'})
             )
 
-        # A mágica acontece aqui: só adicionamos campos se tivermos um cliente e um produto
         if cliente and produto:
-            # 1. Buscamos as configurações de campos para esta combinação específica de Cliente + Produto
-            configuracoes = ConfiguracaoCampoPersonalizado.objects.filter(
-                cliente=cliente, 
-                produto=produto
-            ).select_related('campo').order_by('ordem')
+            # ==============================================================================
+            print(f"3. BUSCANDO: EstruturaDeCampos para Cliente ID={cliente.id} E Produto ID={produto.id}")
+            estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
             
-            # 2. Iteramos sobre as configurações encontradas
-            for config in configuracoes:
-                # 3. Pegamos o objeto CampoPersonalizado de dentro da configuração
-                campo = config.campo
+            if estrutura:
+                print(f"4. [SUCESSO] Estrutura encontrada! ID={estrutura.id}")
+                campos_da_estrutura = list(estrutura.campos.all())
+                print(f"5. CAMPOS NA ESTRUTURA: {[campo.nome_campo for campo in campos_da_estrutura]}")
                 
-                field_name = f'campo_personalizado_{campo.id}'
-                field_label = campo.nome_campo
-                # 4. Pegamos 'obrigatorio' da configuração
-                field_required = config.obrigatorio
+                for i, campo in enumerate(campos_da_estrutura):
+                    print(f"   -> Processando campo {i+1}/{len(campos_da_estrutura)}: '{campo.nome_campo}' (ID: {campo.id})")
+                    field_name = f'campo_personalizado_{campo.id}'
+                    field_label = campo.nome_campo
+                    field_required = False 
 
-                # ==============================================================================
-                # LÓGICA ATUALIZADA PARA CRIAR OS CAMPOS DO FORMULÁRIO
-                # Incluindo os novos tipos 'MOEDA' e 'LISTA_USUARIOS'
-                # ==============================================================================
-                if campo.tipo_campo == 'TEXTO':
-                    self.fields[field_name] = forms.CharField(label=field_label, required=field_required, widget=forms.TextInput(attrs={'class': 'form-control'}))
-                
-                elif campo.tipo_campo == 'NUMERO_INT':
-                    self.fields[field_name] = forms.IntegerField(label=field_label, required=field_required, widget=forms.NumberInput(attrs={'class': 'form-control'}))
-                
-                elif campo.tipo_campo == 'NUMERO_DEC':
-                    self.fields[field_name] = forms.DecimalField(label=field_label, required=field_required, widget=forms.NumberInput(attrs={'class': 'form-control'}))
-                
-                # --- NOVO TIPO: MOEDA ---
-                elif campo.tipo_campo == 'MOEDA':
-                    self.fields[field_name] = forms.DecimalField(
-                        label=field_label, 
-                        required=field_required, 
-                        decimal_places=2,
-                        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
-                    )
-                
-                elif campo.tipo_campo == 'DATA':
-                    self.fields[field_name] = forms.DateField(label=field_label, required=field_required, widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
-                
-                # --- NOVO TIPO: LISTA DE USUÁRIOS ---
-                elif campo.tipo_campo == 'LISTA_USUARIOS':
-                    self.fields[field_name] = forms.ModelChoiceField(
-                        label=field_label,
-                        queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name'),
-                        required=field_required,
-                        widget=forms.Select(attrs={'class': 'form-select'})
-                    )
+                    if campo.tipo_campo == 'TEXTO':
+                        self.fields[field_name] = forms.CharField(label=field_label, required=field_required)
+                    elif campo.tipo_campo == 'NUMERO_INT':
+                        self.fields[field_name] = forms.IntegerField(label=field_label, required=field_required)
+                    elif campo.tipo_campo == 'NUMERO_DEC':
+                        self.fields[field_name] = forms.DecimalField(label=field_label, required=field_required)
+                    elif campo.tipo_campo == 'MOEDA':
+                        self.fields[field_name] = forms.DecimalField(label=field_label, required=field_required, decimal_places=2, widget=forms.NumberInput(attrs={'step': '0.01'}))
+                    elif campo.tipo_campo == 'DATA':
+                        self.fields[field_name] = forms.DateField(label=field_label, required=field_required, widget=forms.DateInput(attrs={'type': 'date'}))
+                    elif campo.tipo_campo == 'LISTA_USUARIOS':
+                        self.fields[field_name] = forms.ModelChoiceField(label=field_label, queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name'), required=field_required)
+                    elif campo.tipo_campo == 'LISTA_UNICA':
+                        opcoes = [('', '---------')] + [(opt, opt) for opt in campo.get_opcoes_como_lista]
+                        self.fields[field_name] = forms.ChoiceField(label=field_label, required=field_required, choices=opcoes)
 
-                elif campo.tipo_campo == 'LISTA_UNICA':
-                    opcoes = [('', '---------')] + [(opt, opt) for opt in campo.get_opcoes_como_lista]
-                    self.fields[field_name] = forms.ChoiceField(label=field_label, required=field_required, choices=opcoes, widget=forms.Select(attrs={'class': 'form-select'}))
-                
-                elif campo.tipo_campo == 'LISTA_MULTIPLA':
-                    opcoes = [(opt, opt) for opt in campo.get_opcoes_como_lista]
-                    self.fields[field_name] = forms.MultipleChoiceField(label=field_label, required=field_required, choices=opcoes, widget=forms.SelectMultiple(attrs={'class': 'form-select'}))
+            else:
+                print("4. [FALHA] Nenhuma 'EstruturaDeCampos' encontrada para esta combinação de Cliente e Produto.")
+            
+            print("--- FIM DO DIAGNÓSTICO ---\n")
+            # ==============================================================================
+        else:
+            print("3. [PULANDO] Busca de campos personalizados não realizada por falta de Cliente ou Produto.")
+            print("--- FIM DO DIAGNÓSTICO ---\n")
+
 class AndamentoForm(forms.ModelForm):
     # Campo "virtual" para selecionar um modelo pré-definido
     modelo_andamento = forms.ModelChoiceField(
