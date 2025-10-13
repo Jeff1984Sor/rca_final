@@ -1,0 +1,60 @@
+{% extends 'base.html' %} {# Ou o seu template base principal #}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+    <h1 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 24px;">{{ titulo }}</h1>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-success">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card">
+        <form method="post">
+            {% csrf_token %}
+
+            <!-- Campos Cliente e Produto -->
+            <div class="form-group">
+                <label for="{{ form.cliente.id_for_label }}">{{ form.cliente.label }}</label>
+                {{ form.cliente }}
+            </div>
+            <div class="form-group">
+                <label for="{{ form.produto.id_for_label }}">{{ form.produto.label }}</label>
+                {{ form.produto }}
+            </div>
+
+            <hr>
+
+            <!-- Lista de Campos com Checkboxes -->
+            <div class="form-group">
+                <label>{{ form.campos.label }}</label>
+                <div class="checkbox-list-container">
+                    {{ form.campos }}
+                </div>
+                 {% for error in form.campos.errors %}
+                    <div class="error-message">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 24px;">
+                <button type="submit" class="btn btn-primary">Salvar Configuração</button>
+            </div>
+        </form>
+    </div>
+
+<style>
+    /* Estilo simples para organizar os checkboxes */
+    .checkbox-list-container ul {
+        list-style: none;
+        padding: 0;
+        columns: 3; /* Tente ajustar para 2, 3 ou 4 colunas */
+        -webkit-columns: 3;
+        -moz-columns: 3;
+    }
+    .checkbox-list-container li {
+        padding: 5px 0;
+    }
+</style>
+{% endblock %}

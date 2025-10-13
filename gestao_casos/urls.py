@@ -15,4 +15,5 @@ urlpatterns = [
     path('pastas/', include('pastas.urls', namespace='pastas')),
     path('workflow/', include('workflow.urls', namespace='workflow')),
     path('equipamentos/', include('equipamentos.urls', namespace='equipamentos')),
+    path('campos-custom/', include('campos_custom.urls', namespace='campos_custom')),
 ]

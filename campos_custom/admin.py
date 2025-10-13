@@ -21,6 +21,9 @@ class CampoPersonalizadoAdmin(admin.ModelAdmin):
 # ==============================================================================
 @admin.register(ConfiguracaoCampoPersonalizado)
 class ConfiguracaoCampoAdmin(admin.ModelAdmin):
+
+    change_list_template = "admin/campos_custom/configuracaocampopersonalizado/change_list.html"
+    
     # Mostra as colunas principais na lista
     list_display = ('cliente', 'produto', 'campo', 'ordem', 'obrigatorio')
     

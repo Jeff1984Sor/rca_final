@@ -1,0 +1,16 @@
+<!-- templates/admin/campos_custom/configuracaocampopersonalizado/change_list.html -->
+
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block object-tools-items %}
+  {# Mantém os botões originais (como o "Adicionar...") #}
+  {{ block.super }}
+
+  {# Adiciona o nosso novo botão/link para a página de configuração em massa #}
+  <li>
+    <a href="{% url 'campos_custom:configuracao_em_massa' %}" class="addlink">
+      {% translate 'Adicionar em Massa' %}
+    </a>
+  </li>
+{% endblock %}
