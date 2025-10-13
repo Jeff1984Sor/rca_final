@@ -33,7 +33,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         # Garante que esta migração rode depois da migração inicial do app 'core'
-        ('core', '0001_initial'), 
+        
     ]
 
     operations = [
