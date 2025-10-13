@@ -1,0 +1,28 @@
+<!-- core/templates/core/partials/kpi_casos_mensal_produto.html -->
+{% load file_icons %}
+<div class="data-table-container" style="box-shadow: none; border: none; overflow-x: auto;">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="text-align: left; min-width: 150px;">Mês</th>
+                {% for produto in produtos %}
+                    <th style="text-align: center;">{{ produto.nome }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in "123456789012" %}
+                {% with mes_numero=forloop.counter %}
+                <tr>
+                    <td><strong>{{ meses_nomes|get_item:forloop.counter0 }}</strong></td>
+                    {% for produto in produtos %}
+                        {% with contagem=dados_tabela|get_item:mes_numero|get_item:produto.nome %}
+                        <td style="text-align: center;">{{ contagem|default:0 }}</td>
+                        {% endwith %}
+                    {% endfor %}
+                </tr>
+                {% endwith %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalhes: {{ equipamento.nome_item }}{% endblock %}
+
+{% block content %}
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h1 style="font-size: 2.25rem; font-weight: 700;">Detalhes do Equipamento</h1>
+        <div style="display: flex; gap: 10px;">
+            <a href="{% url 'equipamentos:equipamento_update' pk=equipamento.pk %}" class="btn btn-edit">Editar</a>
+            <a href="{% url 'equipamentos:equipamento_list' %}" class="btn btn-secondary">Voltar para a Lista</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">{{ equipamento.nome_item }}</h2>
+        
+        <div class="details-grid">
+            <!-- Grupo de Identificação -->
+            <div class="details-group">
+                <h3>Identificação do Item</h3>
+                <p><strong>Tipo:</strong> {{ equipamento.tipo_item.nome|default:"-" }}</p>
+                <p><strong>Categoria:</strong> {{ equipamento.categoria_item.nome|default:"-" }}</p>
+                <p><strong>Marca:</strong> {{ equipamento.marca.nome|default:"-" }}</p>
+                <p><strong>Modelo:</strong> {{ equipamento.modelo|default:"-" }}</p>
+                <p><strong>Etiqueta de Serviço Dell (S/N):</strong> {{ equipamento.etiqueta_servico_dell|default:"-" }}</p>
+                <p><strong>Hostname (Nome na Rede):</strong> {{ equipamento.hostname|default:"-" }}</p>
+            </div>
+
+            <!-- Grupo de Atribuição -->
+            <div class="details-group">
+                <h3>Uso e Responsabilidade</h3>
+                <p><strong>Status:</strong> {{ equipamento.status.nome|default:"-" }}</p>
+                <p><strong>Responsável:</strong> {{ equipamento.responsavel.get_full_name|default:"-" }}</p>
+                <p><strong>Email do Responsável:</strong> {{ equipamento.responsavel.email|default:"-" }}</p>
+                <p><strong>Telefone do Usuário:</strong> {{ equipamento.telefone_usuario|default:"-" }}</p>
+                <p><strong>AnyDesk:</strong> {{ equipamento.anydesk|default:"-" }}</p>
+            </div>
+
+            <!-- Grupo de Aquisição -->
+            <div class="details-group">
+                <h3>Detalhes da Aquisição</h3>
+                <p><strong>Data da Compra:</strong> {{ equipamento.data_compra|date:"d/m/Y"|default:"-" }}</p>
+                <p><strong>Loja da Compra:</strong> {{ equipamento.loja_compra|default:"-" }}</p>
+                <p><strong>Valor Pago:</strong> R$ {{ equipamento.valor_pago|default:"-" }}</p>
+                <p><strong>Pago por:</strong> {{ equipamento.get_pago_por_display|default:"-" }}</p>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -125,7 +125,7 @@
             <a href="{% url 'workflow:kanban' %}">Visão dos Casos por Fase</a> <!-- NOVO LINK AQUI -->
             <a href="{% url 'casos:lista_casos' %}">Casos</a>
             <a href="{% url 'clientes:lista_clientes' %}">Clientes</a>
-            <a href="#">Equipamentos</a>
+            <a href="{% url 'equipamentos:equipamento_list' %}">Equipamentos</a>
         </div>
         <div class="navbar-auth">
             {% if user.is_authenticated %}

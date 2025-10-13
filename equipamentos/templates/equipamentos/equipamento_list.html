@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestão de Equipamentos{% endblock %}
+
+{% block content %}
+    <h1 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 24px;">Gestão de Equipamentos</h1>
+
+    <!-- CARD DE FILTROS (Estrutura pronta para futura implementação) -->
+    <div class="card">
+        <form method="GET" action="">
+            <div class="form-row" style="align-items: flex-end;">
+                <div class="form-group">
+                    <label for="id_filtro_nome">Nome do Item</label>
+                    <input id="id_filtro_nome" type="text" name="filtro_nome" placeholder="Filtrar por nome...">
+                </div>
+                <div class="form-group">
+                    <label for="id_filtro_responsavel">Responsável</label>
+                    <select id="id_filtro_responsavel" name="filtro_responsavel">
+                        <option value="">Todos</option>
+                        {# Futuramente, podemos popular com a lista de usuários #}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="id_filtro_status">Status</label>
+                    <select id="id_filtro_status" name="filtro_status">
+                        <option value="">Todos</option>
+                        {# Futuramente, podemos popular com a lista de status #}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" class="btn btn-success">Filtrar</button>
+                        <a href="{% url 'equipamentos:equipamento_list' %}" class="btn btn-secondary">Limpar</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Barra de Ações (Novo Equipamento) -->
+    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 24px;">
+        <a href="{% url 'equipamentos:equipamento_create' %}" class="btn btn-primary">Adicionar Novo Equipamento</a>
+    </div>
+
+    <!-- Card da Tabela de Equipamentos -->
+    <div class="data-table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nome do Item</th>
+                    <th>Responsável</th>
+                    <th>Status</th>
+                    <th>Tipo</th>
+                    <th>Marca</th>
+                    <th style="text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for equipamento in equipamentos %}
+                <tr>
+                    <td>{{ equipamento.nome_item|truncatechars:40 }}</td>
+                    <td>{{ equipamento.responsavel.get_full_name|default:"-" }}</td>
+                    <td>{{ equipamento.status.nome|default:"-" }}</td>
+                    <td>{{ equipamento.tipo_item.nome|default:"-" }}</td>
+                    <td>{{ equipamento.marca.nome|default:"-" }}</td>
+                    <td class="actions">
+                        <a href="{% url 'equipamentos:equipamento_detail' pk=equipamento.pk %}" class="action-btn btn-info">Ver Detalhes</a>
+                        <a href="{% url 'equipamentos:equipamento_update' pk=equipamento.pk %}" class="action-btn btn-edit">Editar</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state">
+                            <p>Nenhum equipamento cadastrado ainda.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

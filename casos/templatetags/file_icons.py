@@ -2,6 +2,8 @@
 
 from django import template
 from django.utils import timezone
+from django.urls import resolve, reverse
+from django.http import HttpRequest
 
 register = template.Library()
 
@@ -88,6 +90,36 @@ def format_timedelta(timedelta_obj):
     
     # zfill(2) garante que minutos e segundos sempre tenham 2 dígitos (ex: 05)
     return f"{horas}:{str(minutos).zfill(2)}:{str(segundos).zfill(2)}"
+
+@register.filter
+def get_item(dictionary, key):
+    return dictionary.get(key)
+
+@register.simple_tag(takes_context=True)
+def call_view(context, view_name, *args, **kwargs):
+    """
+    Permite chamar uma view de dentro de um template.
+    """
+    request = context['request']
+    
+    # Copia os parâmetros GET da requisição original
+    request_get = request.GET.copy()
+    
+    # Adiciona/sobrescreve com os kwargs passados
+    for key, value in kwargs.items():
+        request_get[key] = value
+
+    # Encontra a view e a chama
+    view, _, _ = resolve(reverse(view_name))
+    
+    # Cria um request "fake" para a view
+    fake_request = HttpRequest()
+    fake_request.method = 'GET'
+    fake_request.GET = request_get
+    fake_request.user = request.user
+
+    # Chama a view e retorna sua resposta (o HTML renderizado)
+    return view(fake_request)
 
 @register.filter
 def get_item(dictionary, key):

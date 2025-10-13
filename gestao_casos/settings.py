@@ -50,8 +50,8 @@ INSTALLED_APPS = [
      # Meus Apps
     'core.apps.CoreConfig', # Nosso novo app!
     'clientes.apps.ClientesConfig',
-    'equipamentos.apps.EquipamentosConfig',
     'casos.apps.CasosConfig',
+    'equipamentos.apps.EquipamentosConfig',
     'pastas.apps.PastasConfig',
     'campos_custom.apps.CamposCustomConfig',
     'produtos.apps.ProdutosConfig',

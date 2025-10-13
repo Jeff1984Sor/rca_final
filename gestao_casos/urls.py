@@ -14,4 +14,5 @@ urlpatterns = [
     path('casos/', include('casos.urls', namespace='casos')),
     path('pastas/', include('pastas.urls', namespace='pastas')),
     path('workflow/', include('workflow.urls', namespace='workflow')),
+    path('equipamentos/', include('equipamentos.urls', namespace='equipamentos')),
 ]

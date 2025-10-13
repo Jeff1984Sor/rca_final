@@ -1,9 +1,224 @@
-<!-- core/templates/core/home.html -->
 {% extends 'base.html' %}
+{% load custom_tags %}
 
-{% block title %}Início - Gestão de Casos{% endblock %}
+{% block title %}Dashboard - {{ ano_selecionado }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px; margin-top: 24px; }
+    .grid-col-span-12 { grid-column: span 12; }
+    .grid-col-span-6 { grid-column: span 6; }
+    .kpi-table th, .kpi-table td { padding: 8px 5px !important; font-size: 0.9em; }
+    #pizzaStatusChart { max-height: 350px; }
+    .caso-details-cell { font-size: 0.9em; color: var(--text-medium); }
+    .caso-details-cell strong { color: var(--text-dark); }
+</style>
+{% endblock %}
 
 {% block content %}
-    <h1>Bem-vindo ao Sistema de Gestão de Casos</h1>
-    <p>Utilize o menu superior para navegar entre as seções do sistema.</p>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h1 style="font-size: 2.25rem; font-weight: 700; margin: 0;">Visão Geral - {{ ano_selecionado }}</h1>
+        <form method="GET" action="{% url 'core:home' %}">
+            <div class="form-row" style="align-items: flex-end; margin-bottom: 0;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="id_ano">Selecionar Ano</label>
+                    <select id="id_ano" name="ano" onchange="this.form.submit()">
+                        {% for ano in anos_disponiveis %}
+                        <option value="{{ ano }}" {% if ano == ano_selecionado %}selected{% endif %}>{{ ano }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Card da Tabela de CASOS ABERTOS -->
+    <div class="card">
+        <h3 class="section-title">Casos ABERTOS por Mês e Produto ({{ ano_selecionado }})</h3>
+        {% if dados_pivot_abertos %}
+            <div class="data-table-container" style="box-shadow: none; border: none; overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 200px;">Cliente / Produto</th>
+                            {% for mes in meses_nomes %}
+                                <th style="text-align: center;">{{ mes|slice:":3" }}</th>
+                            {% endfor %}
+                            <th>TOTAL ANO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cliente, produtos in dados_pivot_abertos.items %}
+                            <tr style="background-color: var(--bg-subtle);">
+                                <td colspan="14"><strong>{{ cliente }}</strong></td>
+                            </tr>
+                            {% for produto_nome in todos_produtos %}
+                                {% with produto_data=produtos|get_item:produto_nome %}
+                                <tr>
+                                    <td style="padding-left: 30px;">{{ produto_nome }}</td>
+                                    {% for contagem in produto_data.meses %}
+                                        <td style="text-align: center;">{{ contagem|default:0 }}</td>
+                                    {% endfor %}
+                                    <td style="text-align: center; font-weight: bold; background-color: var(--bg-subtle);">{{ produto_data.total_ano }}</td>
+                                </tr>
+                                {% endwith %}
+                            {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr style="background-color: #dee2e6; font-weight: bold;">
+                            <td>TOTAL MÊS</td>
+                            {% for total_mes in totais_abertos_mes %}
+                                <td style="text-align: center;">{{ total_mes }}</td>
+                            {% endfor %}
+                            <td style="text-align: center; background-color: #cbd5e1;">{{ total_geral_abertos }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state"><p>Nenhum caso aberto encontrado para o ano de {{ ano_selecionado }}.</p></div>
+        {% endif %}
+    </div>
+
+    <!-- Card da Tabela de CASOS ENCERRADOS -->
+    <div class="card" style="margin-top: 24px;">
+        <h3 class="section-title">Casos ENCERRADOS por Mês e Produto ({{ ano_selecionado }})</h3>
+        {% if dados_pivot_encerrados %}
+            <div class="data-table-container" style="box-shadow: none; border: none; overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 200px;">Cliente / Produto</th>
+                            {% for mes in meses_nomes %}
+                                <th style="text-align: center;">{{ mes|slice:":3" }}</th>
+                            {% endfor %}
+                            <th>TOTAL ANO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cliente, produtos in dados_pivot_encerrados.items %}
+                            <tr style="background-color: var(--bg-subtle);"><td colspan="14"><strong>{{ cliente }}</strong></td></tr>
+                            {% for produto_nome in todos_produtos %}
+                                {% with produto_data=produtos|get_item:produto_nome %}
+                                <tr>
+                                    <td style="padding-left: 30px;">{{ produto_nome }}</td>
+                                    {% for contagem in produto_data.meses %}
+                                        <td style="text-align: center;">{{ contagem|default:0 }}</td>
+                                    {% endfor %}
+                                    <td style="text-align: center; font-weight: bold; background-color: var(--bg-subtle);">{{ produto_data.total_ano }}</td>
+                                </tr>
+                                {% endwith %}
+                            {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr style="background-color: #dee2e6; font-weight: bold;">
+                            <td>TOTAL MÊS</td>
+                            {% for total_mes in totais_encerrados_mes %}
+                                <td style="text-align: center;">{{ total_mes }}</td>
+                            {% endfor %}
+                            <td style="text-align: center; background-color: #cbd5e1;">{{ total_geral_encerrados }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state"><p>Nenhum caso encerrado encontrado para o ano de {{ ano_selecionado }}.</p></div>
+        {% endif %}
+    </div>
+
+
+<!-- TABELA DE PERFORMANCE CORRIGIDA (AGRUPADA POR PROFISSIONAL) -->
+<div class="grid-col-span-12">
+    {% for advogado, registros in tabela_performance.items %}
+        <div class="card" style="margin-top: 24px;">
+            <h3 class="section-title">Performance de: <strong>{{ advogado }}</strong></h3>
+            <div class="data-table-container" style="box-shadow: none; border: none; overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 150px;">Cliente</th>
+                            <th style="min-width: 120px;">Produto</th>
+                            <th style="min-width: 120px;">Status</th>
+                            <th style="text-align: right;">Qtd. Casos</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for registro in registros %}
+                        <tr>
+                            <td>{{ registro.cliente }}</td>
+                            <td>{{ registro.produto }}</td>
+                            <td>{{ registro.status }}</td>
+                            <td style="text-align: right;">{{ registro.total }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% empty %}
+        <div class="card grid-col-span-12">
+            <div class="empty-state"><p>Nenhum dado de performance encontrado.</p></div>
+        </div>
+    {% endfor %}
+</div>
+
+        <!-- Ações do Dia -->
+        <div class="grid-col-span-6">
+            <div class="card">
+                <h3 class="section-title"><i class="fa-solid fa-list-check"></i> Suas Ações com Prazo para Hoje</h3>
+                <div class="data-table-container" style="box-shadow: none; border: none;">
+                    <table class="data-table">
+                        <thead><tr><th>Caso</th><th>Ação</th><th style="text-align: right;">Acessar</th></tr></thead>
+                        <tbody>
+                            {% for acao_inst in acoes_do_dia %}
+                            <tr>
+                                <td class="caso-details-cell"><strong>#{{ acao_inst.caso.id|stringformat:"05d" }}</strong><br><small>{{ acao_inst.caso.cliente.nome }} | {{ acao_inst.caso.produto.nome }}</small></td>
+                                <td>{{ acao_inst.acao.titulo|truncatechars:30 }}</td>
+                                <td style="text-align: right;"><a href="{% url 'casos:detalhe_caso' pk=acao_inst.caso.pk %}?aba=acoes" class="action-btn btn-info">Ir</a></td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="3"><div class="empty-state" style="padding: 20px;"><p>🎉 Nenhuma ação com prazo para hoje.</p></div></td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gráfico de Status (Pizza)
+    const pizzaCtx = document.getElementById('pizzaStatusChart');
+    {% if dados_grafico_pizza %}
+    if (pizzaCtx) {
+        const pizzaLabels = {{ pizza_labels|safe }};
+        const pizzaData = {{ pizza_data|safe }};
+        new Chart(pizzaCtx, {
+            type: 'pie',
+            data: {
+                labels: pizzaLabels, 
+                datasets: [{
+                    label: 'Quantidade de Casos', 
+                    data: pizzaData,
+                    backgroundColor: ['#3b82f6', '#64748b', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'],
+                    borderColor: '#ffffff', 
+                    borderWidth: 2, 
+                    hoverOffset: 4
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { legend: { position: 'right' } } 
+            }
+        });
+    }
+    {% endif %}
+});
+</script>
 {% endblock %}

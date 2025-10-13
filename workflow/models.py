@@ -76,7 +76,8 @@ class Acao(models.Model):
     mudar_status_caso_para = models.CharField(
         max_length=20, 
         blank=True,
-        choices=[('', 'Não alterar')] + Caso.STATUS_CHOICES, # <<<<<<< USA A LISTA DO MODELO IMPORTADO
+        # CORREÇÃO AQUI: Acessa o atributo da classe
+        choices=[('', 'Não alterar')] + Caso.STATUS_CHOICES, 
         verbose_name="Ao concluir, mudar Status do Caso para"
     )
 

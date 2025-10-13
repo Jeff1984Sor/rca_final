@@ -1,0 +1,37 @@
+<div class="data-table-container">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Título</th>
+                <th>Cliente</th>
+                <th>Produto</th>
+                <th>Status</th>
+                <th>Data de Entrada</th>
+                <th>Responsável</th>
+                <th style="text-align: right;">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for caso in casos %}
+            <tr>
+                <td>{{ caso.id|stringformat:"05d" }}</td>
+                <td>{{ caso.titulo|default:"(sem título)"|truncatechars:40 }}</td>
+                <td>{{ caso.cliente.nome }}</td>
+                <td>{{ caso.produto.nome }}</td>
+                <td>{{ caso.get_status_display }}</td>
+                <td>{{ caso.data_entrada|date:"d/m/Y" }}</td>
+                <td>{% if caso.advogado_responsavel %}{{ caso.advogado_responsavel.get_full_name|default:caso.advogado_responsavel.username }}{% else %}-{% endif %}</td>
+                <td class="actions">
+                    <a href="{% url 'casos:detalhe_caso' pk=caso.pk %}" class="action-btn btn-info">Ver Detalhes</a>
+                    <a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="action-btn btn-edit">Editar</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8"><div class="empty-state"><p>Nenhum caso encontrado.</p></div></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

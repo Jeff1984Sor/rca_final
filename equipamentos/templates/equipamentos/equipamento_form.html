@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+    <h1 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 24px;">{{ titulo }}</h1>
+
+    <div class="card">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            
+            <div class="form-row">
+                {% for field in form %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <small class="form-text-muted">{{ field.help_text }}</small>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <div class="error-message">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 24px;">
+                <button type="submit" class="btn btn-primary">Salvar</button>
+                <a href="{% url 'equipamentos:equipamento_list' %}" class="btn btn-secondary">Cancelar</a>
+            </div>
+        </form>
+    </div>
+{% endblock %}

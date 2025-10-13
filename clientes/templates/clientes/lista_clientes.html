@@ -1,78 +1,76 @@
 {% extends 'base.html' %}
 
-{% block title %}Lista de Clientes{% endblock %}
-
-{% block extra_css %}
-<style>
-    /* Estilos específicos desta página */
-    .container { max-width: 1000px; }
-    h1 { color: #333; }
-    .toolbar { background-color: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .filter-form { display: flex; align-items: center; gap: 10px; }
-    .filter-form input[type="text"], .filter-form select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
-    .btn, .btn-filter, .btn-clear, .btn-export { text-decoration: none; color: white; padding: 8px 15px; border-radius: 5px; border: none; cursor: pointer; font-size: 14px; }
-    .btn { background-color: #007BFF; }
-    .btn-filter { background-color: #28a745; }
-    .btn-clear { background-color: #6c757d; }
-    .btn-export { background-color: #17a2b8; margin-right: 10px; }
-    .action-btn { padding: 5px 10px; font-size: 14px; text-decoration: none; border-radius: 4px; color: white; display: inline-block; text-align: center; }
-    .btn-edit { background-color: #ffc107; color: black; }
-    .btn-delete { background-color: #dc3545; color: white; margin-left: 5px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    th, td { border-bottom: 1px solid #ddd; padding: 12px; text-align: left; }
-    thead th { background-color: #f8f9fa; font-weight: bold; }
-    tbody tr:hover { background-color: #f1f1f1; }
-    td.actions { white-space: nowrap; }
-</style>
-{% endblock %}
+{% block title %}Gestão de Clientes{% endblock %}
 
 {% block content %}
-    <h1>Gestão de Clientes</h1>
+    <h1 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 24px;">Gestão de Clientes</h1>
 
-    <div class="toolbar">
-        <form method="GET" action="{% url 'clientes:lista_clientes' %}" class="filter-form">
-            <input type="text" name="filtro_nome" placeholder="Filtrar por nome..." value="{{ filtro_nome }}">
-            <select name="filtro_tipo">
-                <option value="">Todos os Tipos</option>
-                <option value="PF" {% if filtro_tipo == 'PF' %}selected{% endif %}>Pessoa Física</option>
-                <option value="PJ" {% if filtro_tipo == 'PJ' %}selected{% endif %}>Pessoa Jurídica</option>
-            </select>
-            <button type="submit" class="btn-filter">Filtrar</button>
-            <a href="{% url 'clientes:lista_clientes' %}" class="btn-clear">Limpar</a>
+    <!-- Card de Filtros -->
+    <div class="card">
+        <form method="GET" action="{% url 'clientes:lista_clientes' %}">
+            <div class="form-row" style="align-items: flex-end;">
+                <div class="form-group">
+                    <label for="id_filtro_nome">Filtrar por Nome</label>
+                    <input id="id_filtro_nome" type="text" name="filtro_nome" placeholder="Digite parte do nome..." value="{{ filtro_nome }}">
+                </div>
+                <div class="form-group">
+                    <label for="id_filtro_tipo">Filtrar por Tipo</label>
+                    <select id="id_filtro_tipo" name="filtro_tipo">
+                        <option value="">Todos os Tipos</option>
+                        <option value="PF" {% if filtro_tipo == 'PF' %}selected{% endif %}>Pessoa Física</option>
+                        <option value="PJ" {% if filtro_tipo == 'PJ' %}selected{% endif %}>Pessoa Jurídica</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" class="btn btn-success">Filtrar</button>
+                        <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-secondary">Limpar</a>
+                    </div>
+                </div>
+            </div>
         </form>
-        <div>
-            <a href="{% url 'clientes:exportar_excel' %}?filtro_nome={{ filtro_nome }}&filtro_tipo={{ filtro_tipo }}" class="btn-export">Exportar Excel</a>
-            <a href="{% url 'clientes:criar_cliente' %}" class="btn">Criar Novo Cliente</a>
-        </div>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Nome</th>
-                <th>Tipo</th>
-                <th>Cidade/UF</th>
-                <th>Contato</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for cliente in clientes %}
-            <tr>
-                <td>{{ cliente.nome }}</td>
-                <td>{{ cliente.get_tipo_display }}</td>
-                <td>{{ cliente.cidade|default:"-" }}/{{ cliente.uf|default:"-" }}</td>
-                <td>{{ cliente.contato_empresa|default:"-" }}</td>
-                <td class="actions">
-                    <a href="{% url 'clientes:editar_cliente' pk=cliente.pk %}" class="action-btn btn-edit">Editar</a>
-                    <a href="{% url 'clientes:deletar_cliente' pk=cliente.pk %}" class="action-btn btn-delete">Deletar</a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="5" style="text-align: center; padding: 20px;">Nenhum cliente encontrado.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <!-- Barra de Ações (Exportar, Novo) -->
+    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 24px;">
+        <a href="{% url 'clientes:exportar_excel' %}?filtro_nome={{ filtro_nome }}&filtro_tipo={{ filtro_tipo }}" class="btn btn-info">Exportar Excel</a>
+        <a href="{% url 'clientes:criar_cliente' %}" class="btn btn-primary">Criar Novo Cliente</a>
+    </div>
+
+    <!-- Card da Tabela -->
+    <div class="data-table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Tipo</th>
+                    <th>Cidade/UF</th>
+                    <th>Contato (PJ)</th>
+                    <th style="text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cliente in clientes %}
+                <tr>
+                    <td>{{ cliente.nome }}</td>
+                    <td>{{ cliente.get_tipo_display }}</td>
+                    <td>{{ cliente.cidade|default:"-" }}/{{ cliente.uf|default:"-" }}</td>
+                    <td>{{ cliente.contato_empresa|default:"-" }}</td>
+                    <td class="actions">
+                        <a href="{% url 'clientes:editar_cliente' pk=cliente.pk %}" class="action-btn btn-edit">Editar</a>
+                        <a href="{% url 'clientes:deletar_cliente' pk=cliente.pk %}" class="action-btn btn-danger">Deletar</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">
+                        <div class="empty-state">
+                            <p>Nenhum cliente encontrado.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% endblock %}

@@ -5,7 +5,7 @@
 {% block content %}
     <h1 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 24px;">Gestão de Casos</h1>
 
-    <!-- Card de Filtros -->
+    <!-- CARD DE FILTROS (QUE ESTAVA FALTANDO) -->
     <div class="card">
         <form method="GET" action="{% url 'casos:lista_casos' %}">
             <div class="form-row" style="align-items: flex-end;">
@@ -16,32 +16,39 @@
                 <div class="form-group">
                     <label for="id_filtro_cliente">Cliente</label>
                     <select id="id_filtro_cliente" name="filtro_cliente">
-                        <option value="">Todos</option>
-                        {% for cliente in todos_clientes %}<option value="{{ cliente.id }}" {% if valores_filtro.filtro_cliente == cliente.id|stringformat:"s" %}selected{% endif %}>{{ cliente.nome }}</option>{% endfor %}
+                        <option value="">Todos os Clientes</option>
+                        {% for cliente in todos_clientes %}
+                            <option value="{{ cliente.id }}" {% if valores_filtro.filtro_cliente == cliente.id|stringformat:"s" %}selected{% endif %}>{{ cliente.nome }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="form-group">
                     <label for="id_filtro_produto">Produto</label>
                     <select id="id_filtro_produto" name="filtro_produto">
-                        <option value="">Todos</option>
-                        {% for produto in todos_produtos %}<option value="{{ produto.id }}" {% if valores_filtro.filtro_produto == produto.id|stringformat:"s" %}selected{% endif %}>{{ produto.nome }}</option>{% endfor %}
+                        <option value="">Todos os Produtos</option>
+                        {% for produto in todos_produtos %}
+                            <option value="{{ produto.id }}" {% if valores_filtro.filtro_produto == produto.id|stringformat:"s" %}selected{% endif %}>{{ produto.nome }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="form-group">
                     <label for="id_filtro_status">Status</label>
                     <select id="id_filtro_status" name="filtro_status">
-                        <option value="">Todos</option>
-                        {% for value, display in status_choices %}<option value="{{ value }}" {% if valores_filtro.filtro_status == value %}selected{% endif %}>{{ display }}</option>{% endfor %}
+                        <option value="">Todos os Status</option>
+                        {% for value, display in status_choices %}
+                            <option value="{{ value }}" {% if valores_filtro.filtro_status == value %}selected{% endif %}>{{ display }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="form-group">
                     <label for="id_filtro_advogado">Advogado</label>
                     <select id="id_filtro_advogado" name="filtro_advogado">
-                        <option value="">Todos</option>
-                        {% for advogado in todos_advogados %}<option value="{{ advogado.id }}" {% if valores_filtro.filtro_advogado == advogado.id|stringformat:"s" %}selected{% endif %}>{{ advogado.get_full_name|default:advogado.username }}</option>{% endfor %}
+                        <option value="">Todos os Advogados</option>
+                        {% for advogado in todos_advogados %}
+                            <option value="{{ advogado.id }}" {% if valores_filtro.filtro_advogado == advogado.id|stringformat:"s" %}selected{% endif %}>{{ advogado.get_full_name|default:advogado.username }}</option>
+                        {% endfor %}
                     </select>
                 </div>
-                <!-- Botões de Ação do Filtro -->
                 <div class="form-group">
                     <div style="display: flex; gap: 10px;">
                         <button type="submit" class="btn btn-success">Filtrar</button>
