@@ -10,13 +10,6 @@ class Produto(models.Model):
         verbose_name="Padrão do Título do Caso",
         help_text="Crie um padrão para o título. Use {NomeDoCampo} para inserir valores. Ex: Aviso {NumeroAviso} - Segurado {NomeSegurado}"
     )
-    campos_personalizados = models.ManyToManyField(
-        'campos_custom.CampoPersonalizado', # <<< ALTERAÇÃO AQUI
-        through='campos_custom.ProdutoCampo',
-        related_name='produtos',
-        blank=True,
-        verbose_name="Campos Personalizados"
-    )
-
+    
     def __str__(self):
         return self.nome
