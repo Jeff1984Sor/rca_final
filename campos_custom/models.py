@@ -43,6 +43,13 @@ class CampoPersonalizado(models.Model):
     ]
     tipo_campo = models.CharField(max_length=20, choices=TIPO_CAMPO_CHOICES, verbose_name="Tipo do Campo")
     opcoes_lista = models.TextField(blank=True, verbose_name="Opções (para Lista de Opções)", help_text="Separadas por vírgula. Ex: Opção A, Opção B")
+
+    @property
+    def get_opcoes_como_lista(self):
+        """Transforma o texto 'Opção A, Opção B' em uma lista ['Opção A', 'Opção B']."""
+        if self.opcoes_lista:
+            return [opt.strip() for opt in self.opcoes_lista.split(',')]
+        return []
     
     def __str__(self):
         return self.nome_campo
