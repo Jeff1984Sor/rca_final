@@ -1,96 +1,74 @@
 # campos_custom/admin.py
 
 from django.contrib import admin
-from .models import CampoPersonalizado, ConfiguracaoCampoPersonalizado, ValorCampoPersonalizado, EstruturaDeCampos
+from .models import CampoPersonalizado, EstruturaDeCampos, EstruturaCampoOrdenado, ValorCampoPersonalizado
+from ordered_model.admin import OrderedTabularInline, OrderedModelAdmin
 
 # ==============================================================================
 # ADMIN PARA A BIBLIOTECA DE CAMPOS
-# Permite criar e gerenciar os campos que podem ser usados.
+# Essencial ter o search_fields para o autocomplete funcionar.
 # ==============================================================================
 @admin.register(CampoPersonalizado)
 class CampoPersonalizadoAdmin(admin.ModelAdmin):
-    # ATUALIZADO PARA MOSTRAR OS DOIS NOMES
     list_display = ('nome_campo', 'nome_variavel', 'tipo_campo')
     search_fields = ('nome_campo', 'nome_variavel')
-    # Adicionamos a ordenação por nome visível
     ordering = ('nome_campo',)
+    list_filter = ('tipo_campo',)
     
-    # Organiza os campos no formulário para melhor entendimento
     fieldsets = (
         (None, {
             'fields': ('nome_campo', 'nome_variavel', 'tipo_campo')
         }),
         ('Configuração para Listas', {
-            'classes': ('collapse',), # Começa recolhido
+            'classes': ('collapse',),
             'fields': ('opcoes_lista',),
         }),
     )
 
+# ==============================================================================
+# INLINE PARA OS CAMPOS ORDENADOS
+# Esta é a parte que vai aparecer DENTRO da página da Estrutura de Campos.
+# Ela usa a classe da biblioteca 'ordered_model'.
+# ==============================================================================
+class EstruturaCampoOrdenadoInline(OrderedTabularInline):
+    model = EstruturaCampoOrdenado
+    # 'move_up_down_links' é o campo "mágico" da biblioteca que cria as setinhas.
+    fields = ('campo', 'move_up_down_links',)
+    readonly_fields = ('move_up_down_links',)
+    extra = 1 # Quantos campos vazios mostrar por padrão
+    autocomplete_fields = ['campo']
+    ordering = ('order',) # Garante que os campos apareçam na ordem correta
 
 # ==============================================================================
-# ADMIN PARA A CONFIGURAÇÃO (A PARTE MAIS IMPORTANTE)
-# É aqui que você vai associar Cliente + Produto -> Campo da Biblioteca
+# ADMIN PRINCIPAL PARA A ESTRUTURA DE CAMPOS
+# Esta é a tela onde você vai configurar a relação Cliente + Produto -> Campos
 # ==============================================================================
-@admin.register(ConfiguracaoCampoPersonalizado)
-class ConfiguracaoCampoAdmin(admin.ModelAdmin):
-
-    change_list_template = "admin/campos_custom/configuracaocampopersonalizado/change_list.html"
-
-    # Mostra as colunas principais na lista
-    list_display = ('cliente', 'produto', 'campo', 'ordem', 'obrigatorio')
+@admin.register(EstruturaDeCampos)
+class EstruturaDeCamposAdmin(admin.ModelAdmin):
+    list_display = ('cliente', 'produto')
+    search_fields = ('cliente__nome_razao_social', 'produto__nome')
+    autocomplete_fields = ['cliente', 'produto']
     
-    # Adiciona filtros poderosos na lateral
-    list_filter = ('cliente', 'produto')
-    
-    # Define os campos que a barra de busca vai pesquisar
-    search_fields = ('cliente__nome_razao_social', 'produto__nome', 'campo__nome_campo')
-    
-    # Melhora drasticamente a usabilidade ao selecionar Cliente, Produto e Campo,
-    # transformando o select em um campo de busca.
-    autocomplete_fields = ['cliente', 'produto', 'campo']
-    
-    # Organiza a ordem da lista
-    ordering = ('cliente', 'produto', 'ordem')
+    # Aninhamos o inline de campos ordenados aqui dentro.
+    inlines = [EstruturaCampoOrdenadoInline]
 
 
 # ==============================================================================
-# ADMIN PARA OS VALORES PREENCHIDOS (Geralmente para consulta)
-# É útil para ver os dados que os usuários preencheram nos casos.
+# ADMIN PARA CONSULTA DOS VALORES PREENCHIDOS
 # ==============================================================================
 @admin.register(ValorCampoPersonalizado)
 class ValorCampoAdmin(admin.ModelAdmin):
     list_display = ('get_caso_id', 'get_cliente_do_caso', 'campo', 'valor')
     search_fields = ('caso__id', 'campo__nome_campo', 'valor')
-    
-    # Deixamos os campos como somente leitura, pois a edição deve ser feita na tela do Caso.
     readonly_fields = ('caso', 'campo', 'valor')
-
-    # Funções para exibir informações do caso relacionado na lista
+    list_filter = ('campo',)
+    
     @admin.display(description='ID do Caso', ordering='caso__id')
     def get_caso_id(self, obj):
         return obj.caso.id
-
+        
     @admin.display(description='Cliente do Caso', ordering='caso__cliente__nome_razao_social')
     def get_cliente_do_caso(self, obj):
         if obj.caso and obj.caso.cliente:
             return obj.caso.cliente.nome_razao_social
         return "N/A"
-    
-@admin.register(EstruturaDeCampos)
-class EstruturaDeCamposAdmin(admin.ModelAdmin):
-    # Adicionamos as funções que mostram os IDs
-    list_display = ('cliente', 'get_cliente_id', 'produto', 'get_produto_id')
-    search_fields = ('cliente__nome_razao_social', 'produto__nome')
-    autocomplete_fields = ['cliente', 'produto']
-    filter_horizontal = ('campos',)
-    ordering = ('cliente', 'produto')
-
-    # Função para criar a coluna "ID Cliente"
-    @admin.display(description='ID Cliente', ordering='cliente__id')
-    def get_cliente_id(self, obj):
-        return obj.cliente.id
-
-    # Função para criar a coluna "ID Produto"
-    @admin.display(description='ID Produto', ordering='produto__id')
-    def get_produto_id(self, obj):
-        return obj.produto.id

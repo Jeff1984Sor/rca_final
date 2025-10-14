@@ -7,6 +7,7 @@ from clientes.models import Cliente
 from produtos.models import Produto
 from django.core.exceptions import ValidationError
 import re
+from ordered_model.models import OrderedModel
 
 # ==============================================================================
 # MODELO DA BIBLIOTECA DE CAMPOS (NÃO PRECISA MUDAR)
@@ -92,18 +93,30 @@ class ValorCampoPersonalizado(models.Model):
     
 
 class EstruturaDeCampos(models.Model):
-    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, verbose_name="Cliente")
-    produto = models.ForeignKey(Produto, on_delete=models.CASCADE, verbose_name="Produto")
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
+    produto = models.ForeignKey(Produto, on_delete=models.CASCADE)
+    
+    # A MUDANÇA ESTÁ AQUI: agora usamos o modelo 'through'
     campos = models.ManyToManyField(
         CampoPersonalizado,
+        through='EstruturaCampoOrdenado', # Apontamos para o nosso novo modelo
         verbose_name="Campos Personalizados",
         blank=True
     )
-
+    # ... (o resto da classe Meta e __str__ não muda) ...
     class Meta:
         verbose_name = "Estrutura de Campos"
         verbose_name_plural = "Estruturas de Campos"
         unique_together = ('cliente', 'produto')
+    def __str__(self): return f"Estrutura para {self.cliente.nome} - {self.produto.nome}"
 
-    def __str__(self):
-        return f"Estrutura para {self.cliente.nome} - {self.produto.nome}"
+class EstruturaCampoOrdenado(OrderedModel):
+    estrutura = models.ForeignKey(EstruturaDeCampos, on_delete=models.CASCADE)
+    campo = models.ForeignKey(CampoPersonalizado, on_delete=models.CASCADE)
+    
+    # Este campo 'order' é herdado do OrderedModel e será gerenciado automaticamente
+    order_with_respect_to = 'estrutura' # Diz para ordenar os campos DENTRO de cada estrutura
+
+    class Meta(OrderedModel.Meta):
+        # A classe Meta também precisa herdar para funcionar
+        pass

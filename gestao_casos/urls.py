@@ -1,14 +1,24 @@
+# gestao_casos/urls.py (VERSÃO CORRIGIDA E FINAL)
+
 from django.contrib import admin
 from django.urls import path, include
+# Importa as views que acabamos de garantir que existem
 from core.views import CustomLoginView, logout_view
 
 urlpatterns = [
-    # Rotas Padrão
+    # 1. Rotas de Admin e Bibliotecas
     path('admin/', admin.site.urls),
-    #path('accounts/', include('django.contrib.auth.urls')),
-    path('accounts/logout/', logout_view, name='logout'),
+    #path('ordered_model/', include('ordered_model.urls')),
+    # A linha abaixo só é necessária se você ainda estiver usando a ordenação.
+    # Se der erro, pode comentá-la.
+    # path('ordered_model/', include('ordered_model.admin_urls')),
+    
+    # 2. Rotas de Autenticação
     path('accounts/login/', CustomLoginView.as_view(), name='login'),
+    path('accounts/logout/', logout_view, name='logout'),
     path('accounts/', include('django.contrib.auth.urls')),
+    
+    # 3. Rotas dos Seus Aplicativos
     path('', include('core.urls', namespace='core')),
     path('clientes/', include('clientes.urls', namespace='clientes')),
     path('casos/', include('casos.urls', namespace='casos')),
