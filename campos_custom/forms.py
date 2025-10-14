@@ -16,10 +16,9 @@ class ConfiguracaoEmMassaForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-select'}),
         label="Produto"
     )
-    # Este é o campo mágico: permite selecionar vários campos
     campos = forms.ModelMultipleChoiceField(
         queryset=CampoPersonalizado.objects.all().order_by('nome_campo'),
-        widget=forms.CheckboxSelectMultiple, # Mostra como checkboxes, fácil de selecionar
+        widget=forms.CheckboxSelectMultiple,
         label="Selecione os Campos da Biblioteca",
         required=True
     )
@@ -29,12 +28,10 @@ class ConfiguracaoEmMassaForm(forms.Form):
         produto = self.cleaned_data['produto']
         campos_selecionados = self.cleaned_data['campos']
 
-        # Loop para criar cada configuração
         for campo in campos_selecionados:
-            # `get_or_create` é seguro e evita criar duplicatas se a regra já existir
             ConfiguracaoCampoPersonalizado.objects.get_or_create(
                 cliente=cliente,
                 produto=produto,
                 campo=campo,
-                defaults={'ordem': 0} # Você pode definir uma ordem padrão
+                defaults={'ordem': 0}
             )

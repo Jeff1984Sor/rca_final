@@ -64,7 +64,7 @@ def criar_caso(request, cliente_id, produto_id):
                 titulo_final = produto.padrao_titulo
                 estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
                 if estrutura:
-                    for campo in estrutura.campos.all():
+                    for campo in estrutura.campos.all().distinct():
                         valor = dados_limpos.get(f'campo_personalizado_{campo.id}') or ''
                         # 2. Usamos o NOME DA VARIÁVEL para a substituição!
                         chave_variavel = campo.nome_variavel 

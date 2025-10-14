@@ -65,7 +65,7 @@ else:
 
 INSTALLED_APPS = [
     # ... (sua lista de apps, com 'ordered_model' antes de 'django.contrib.admin') ...
-    'ordered_model',
+    #'ordered_model',
     'nested_admin',
     'django.contrib.admin',
     'django.contrib.auth',

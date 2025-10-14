@@ -7,7 +7,7 @@ from clientes.models import Cliente
 from produtos.models import Produto
 from django.core.exceptions import ValidationError
 import re
-from ordered_model.models import OrderedModel
+
 
 # ==============================================================================
 # MODELO DA BIBLIOTECA DE CAMPOS (NÃO PRECISA MUDAR)
@@ -110,13 +110,15 @@ class EstruturaDeCampos(models.Model):
         unique_together = ('cliente', 'produto')
     def __str__(self): return f"Estrutura para {self.cliente.nome} - {self.produto.nome}"
 
-class EstruturaCampoOrdenado(OrderedModel):
+class EstruturaCampoOrdenado(models.Model): # NÃO HERDA MAIS DE OrderedModel
     estrutura = models.ForeignKey(EstruturaDeCampos, on_delete=models.CASCADE)
     campo = models.ForeignKey(CampoPersonalizado, on_delete=models.CASCADE)
     
-    # Este campo 'order' é herdado do OrderedModel e será gerenciado automaticamente
-    order_with_respect_to = 'estrutura' # Diz para ordenar os campos DENTRO de cada estrutura
+    # Criamos nosso próprio campo de ordenação
+    order = models.PositiveIntegerField(default=0, db_index=True)
 
-    class Meta(OrderedModel.Meta):
-        # A classe Meta também precisa herdar para funcionar
-        pass
+    class Meta:
+        # Definimos a ordenação padrão
+        ordering = ['order']
+        # Garantimos que um campo só pode ser adicionado uma vez por estrutura
+        unique_together = ('estrutura', 'campo')

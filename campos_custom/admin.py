@@ -2,12 +2,9 @@
 
 from django.contrib import admin
 from .models import CampoPersonalizado, EstruturaDeCampos, EstruturaCampoOrdenado, ValorCampoPersonalizado
-from ordered_model.admin import OrderedTabularInline, OrderedModelAdmin
+import nested_admin
 
-# ==============================================================================
-# ADMIN PARA A BIBLIOTECA DE CAMPOS
-# Essencial ter o search_fields para o autocomplete funcionar.
-# ==============================================================================
+# --- ADMIN DA BIBLIOTECA DE CAMPOS ---
 @admin.register(CampoPersonalizado)
 class CampoPersonalizadoAdmin(admin.ModelAdmin):
     list_display = ('nome_campo', 'nome_variavel', 'tipo_campo')
@@ -25,37 +22,24 @@ class CampoPersonalizadoAdmin(admin.ModelAdmin):
         }),
     )
 
-# ==============================================================================
-# INLINE PARA OS CAMPOS ORDENADOS
-# Esta é a parte que vai aparecer DENTRO da página da Estrutura de Campos.
-# Ela usa a classe da biblioteca 'ordered_model'.
-# ==============================================================================
-class EstruturaCampoOrdenadoInline(OrderedTabularInline):
+# --- INLINE PARA A ORDENAÇÃO USANDO nested_admin ---
+class EstruturaCampoOrdenadoInline(nested_admin.NestedTabularInline):
     model = EstruturaCampoOrdenado
-    # 'move_up_down_links' é o campo "mágico" da biblioteca que cria as setinhas.
-    fields = ('campo', 'move_up_down_links',)
-    readonly_fields = ('move_up_down_links',)
-    extra = 1 # Quantos campos vazios mostrar por padrão
+    extra = 1
     autocomplete_fields = ['campo']
-    ordering = ('order',) # Garante que os campos apareçam na ordem correta
+    # Esta linha ativa o "arrasta e solta" do nested_admin, que vai
+    # preencher o campo 'order' que criamos no models.py.
+    sortable_field_name = "order"
 
-# ==============================================================================
-# ADMIN PRINCIPAL PARA A ESTRUTURA DE CAMPOS
-# Esta é a tela onde você vai configurar a relação Cliente + Produto -> Campos
-# ==============================================================================
+# --- ADMIN PRINCIPAL DA ESTRUTURA DE CAMPOS ---
 @admin.register(EstruturaDeCampos)
-class EstruturaDeCamposAdmin(admin.ModelAdmin):
+class EstruturaDeCamposAdmin(nested_admin.NestedModelAdmin):
     list_display = ('cliente', 'produto')
-    search_fields = ('cliente__nome_razao_social', 'produto__nome')
+    search_fields = ('cliente__nome', 'produto__nome') # Corrigido para 'nome'
     autocomplete_fields = ['cliente', 'produto']
-    
-    # Aninhamos o inline de campos ordenados aqui dentro.
     inlines = [EstruturaCampoOrdenadoInline]
 
-
-# ==============================================================================
-# ADMIN PARA CONSULTA DOS VALORES PREENCHIDOS
-# ==============================================================================
+# --- ADMIN DE CONSULTA PARA VALORES ---
 @admin.register(ValorCampoPersonalizado)
 class ValorCampoAdmin(admin.ModelAdmin):
     list_display = ('get_caso_id', 'get_cliente_do_caso', 'campo', 'valor')
@@ -67,8 +51,8 @@ class ValorCampoAdmin(admin.ModelAdmin):
     def get_caso_id(self, obj):
         return obj.caso.id
         
-    @admin.display(description='Cliente do Caso', ordering='caso__cliente__nome_razao_social')
+    @admin.display(description='Cliente do Caso', ordering='caso__cliente__nome')
     def get_cliente_do_caso(self, obj):
         if obj.caso and obj.caso.cliente:
-            return obj.caso.cliente.nome_razao_social
+            return obj.caso.cliente.nome
         return "N/A"

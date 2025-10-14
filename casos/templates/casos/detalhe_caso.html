@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
+{% load currency_tags %}
 {% load file_icons %}
+
 
 {% block title %}Detalhes do Caso #{{ caso.id }}{% endblock %}
 
@@ -220,40 +222,39 @@
     </div>
 
     <!-- Aba 1: Detalhes -->
-    <div id="detalhes" class="tab-content">
-        <div class="form-section">
-            <h3 class="section-title">Dados do Caso</h3>
-            <div class="details-grid">
-                <div class="detail-item"><label>Status</label><span>{{ caso.get_status_display }}</span></div>
-                <div class="detail-item"><label>Data de Entrada</label><span>{{ caso.data_entrada|date:"d/m/Y" }}</span></div>
-                <div class="detail-item"><label>Fase do Workflow</label><span>{{ caso.fase_atual_wf.nome|default:"Não iniciado" }}</span></div>
-                <div class="detail-item"><label>Advogado Responsável</label><span>{% if caso.advogado_responsavel %}{{ caso.advogado_responsavel.get_full_name|default:caso.advogado_responsavel.username }}{% else %}Não atribuído{% endif %}</span></div>
-                <div class="detail-item"><label>Data de Encerramento</label><span>{{ caso.data_encerramento|date:"d/m/Y"|default:"-" }}</span></div>
-            </div>
+    <!-- Aba 1: Detalhes (VERSÃO FINAL COM FORMATAÇÃO DE MOEDA) -->
+<div id="detalhes" class="tab-content">
+    <div class="form-section">
+        <h3 class="section-title">Dados do Caso</h3>
+        <div class="details-grid">
+            {# ... seus campos padrão (data_entrada, etc.) ... #}
         </div>
-        {% if valores_personalizados %}
-        <div class="form-section">
-            <h3 class="section-title">Dados Adicionais</h3>
-            <div class="details-grid">
-                {% for valor in valores_personalizados %}
-                    <div class="detail-item">
-                        <label>{{ valor.campo.nome_campo }}</label>
-                        <span>
-                            {# ===================================================== #}
-                            {# AGORA USAMOS A VARIÁVEL 'valor_tratado'               #}
-                            {# ===================================================== #}
-                            {% if valor.campo.tipo_campo == 'DATA' %}
-                                {{ valor.valor_tratado|date:"d/m/Y"|default:"-" }}
-                            {% else %}
-                                {{ valor.valor_tratado|default:"-" }}
-                            {% endif %}
-                        </span>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
     </div>
+    {% if valores_personalizados %}
+    <div class="form-section">
+        <h3 class="section-title">Dados Adicionais</h3>
+        <div class="details-grid">
+            {% for valor in valores_personalizados %}
+                <div class="detail-item">
+                    <label>{{ valor.campo.nome_campo }}</label>
+                    <span>
+                        {# ===================================================== #}
+                        {# LÓGICA FINAL COM 'MOEDA' E 'DATA'                   #}
+                        {# ===================================================== #}
+                        {% if valor.campo.tipo_campo == 'DATA' %}
+                            {{ valor.valor_tratado|date:"d/m/Y"|default:"-" }}
+                        {% elif valor.campo.tipo_campo == 'MOEDA' %}
+                            {{ valor.valor_tratado|currency }}
+                        {% else %}
+                            {{ valor.valor_tratado|default:"-" }}
+                        {% endif %}
+                    </span>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
 
     <!-- Aba 2: Ações -->
     <div id="acoes" class="tab-content">
