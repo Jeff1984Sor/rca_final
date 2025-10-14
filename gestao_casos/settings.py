@@ -5,14 +5,39 @@ from pathlib import Path
 import dj_database_url
 from dotenv import load_dotenv
 
+
 # ==============================================================================
-# 1. CONFIGURAÇÕES FUNDAMENTAIS
+# MEGA LOG DE DIAGNÓSTICO DE PRODUÇÃO
+# ==============================================================================
+print("\n" + "="*50)
+print("INICIANDO DIAGNÓSTICO DE AMBIENTE DO SETTINGS.PY")
+print(f"DJANGO_SETTINGS_MODULE: {os.environ.get('DJANGO_SETTINGS_MODULE')}")
+
+# Verifica as variáveis essenciais
+secret_key = os.environ.get('SECRET_KEY')
+if secret_key:
+    print("[OK] SECRET_KEY encontrada.")
+else:
+    print("[FALHA CRÍTICA] SECRET_KEY NÃO ENCONTRADA! O APP VAI QUEBRAR.")
+
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    print("[OK] DATABASE_URL encontrada.")
+else:
+    print("[FALHA CRÍTICA] DATABASE_URL NÃO ENCONTRADA! O APP VAI QUEBRAR.")
+
+debug_mode = os.environ.get('DEBUG', 'False').lower()
+print(f"Modo DEBUG detectado como: '{debug_mode}'")
+
+print("FIM DO DIAGNÓSTICO")
+print("="*50 + "\n")
 # ==============================================================================
 
 # Carrega variáveis de ambiente de um arquivo .env (para desenvolvimento local)
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
 
 # Pega a chave secreta da variável de ambiente.
 SECRET_KEY = os.environ.get('SECRET_KEY')
