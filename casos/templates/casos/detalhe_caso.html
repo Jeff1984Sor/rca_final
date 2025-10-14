@@ -235,7 +235,21 @@
         <div class="form-section">
             <h3 class="section-title">Dados Adicionais</h3>
             <div class="details-grid">
-                {% for valor in valores_personalizados %}<div class="detail-item"><label>{{ valor.campo.nome_campo }}</label><span>{{ valor.valor|default:"-" }}</span></div>{% endfor %}
+                {% for valor in valores_personalizados %}
+                    <div class="detail-item">
+                        <label>{{ valor.campo.nome_campo }}</label>
+                        <span>
+                            {# ===================================================== #}
+                            {# AGORA USAMOS A VARIÁVEL 'valor_tratado'               #}
+                            {# ===================================================== #}
+                            {% if valor.campo.tipo_campo == 'DATA' %}
+                                {{ valor.valor_tratado|date:"d/m/Y"|default:"-" }}
+                            {% else %}
+                                {{ valor.valor_tratado|default:"-" }}
+                            {% endif %}
+                        </span>
+                    </div>
+                {% endfor %}
             </div>
         </div>
         {% endif %}

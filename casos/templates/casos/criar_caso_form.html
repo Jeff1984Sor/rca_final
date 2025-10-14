@@ -40,22 +40,23 @@
                 <div class="form-group">{{ form.data_encerramento.label_tag }}{{ form.data_encerramento }}</div>
             </div>
             
-            <div class="form-group">{{ form.advogado_responsavel.label_tag }}{{ form.advogado_responsavel }}</div>
+            <div class="form-group" style="max-width: 50%; min-width: 300px;"> <!-- Limitando a largura do campo de advogado -->
+                {{ form.advogado_responsavel.label_tag }}{{ form.advogado_responsavel }}
+            </div>
             
             {% if form.titulo_manual %}
                 <div class="form-group">{{ form.titulo_manual.label_tag }}{{ form.titulo_manual }}</div>
             {% endif %}
         </div>
 
-        <!-- ============================================================================== -->
-        <!-- A CORREÇÃO MÁGICA ESTÁ AQUI                                                     -->
-        <!-- ============================================================================== -->
-        
         <!-- Card 2: DADOS ADICIONAIS -->
         <div class="card" style="padding: 32px; margin-top: 24px;">
             <h3 class="section-title">Dados Adicionais</h3>
             
-            <div class="form-row">
+            <!-- ============================================================================== -->
+            <!-- A MÁGICA DA GRADE DE 3 COLUNAS ACONTECE AQUI                                   -->
+            <!-- ============================================================================== -->
+            <div class="form-grid-3-cols">
                 {% for field in form %}
                     {# Itera por TODOS os campos do formulário #}
                     {% if field.name|slice:":19" == 'campo_personalizado' %}
@@ -70,8 +71,8 @@
                     {% endif %}
                 {% endfor %}
             </div>
+            <!-- ============================================================================== -->
         </div>
-        <!-- ============================================================================== -->
         
         <!-- BOTÕES DE AÇÃO -->
         <div style="margin-top: 30px; display: flex; justify-content: flex-end; gap: 10px;">
@@ -79,4 +80,22 @@
             <button type="submit" class="btn btn-primary">Salvar</button>
         </div>
     </form>
+{% endblock %}
+
+{% block extra_css %}
+    {# Adicionamos um novo bloco de CSS no final da página #}
+    <style>
+        .form-grid-3-cols {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* Cria 3 colunas de tamanho igual */
+            gap: 20px; /* Espaçamento entre os campos */
+        }
+
+        /* Para telas menores (como celulares), fazemos os campos ocuparem a tela inteira */
+        @media (max-width: 768px) {
+            .form-grid-3-cols {
+                grid-template-columns: 1fr; /* Volta para 1 coluna */
+            }
+        }
+    </style>
 {% endblock %}

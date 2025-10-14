@@ -21,6 +21,7 @@ from campos_custom.models import EstruturaDeCampos
 # Importações de modelos de outros apps
 from clientes.models import Cliente
 from produtos.models import Produto
+from datetime import datetime
 
 # Importações de modelos locais
 from .models import Caso, Andamento, ModeloAndamento, Timesheet, Acordo, Parcela, Despesa, FluxoInterno
@@ -226,6 +227,18 @@ def detalhe_caso(request, pk):
             valor_salvo = valores_salvos_dict.get(campo.id)
             if valor_salvo:
                 valores_para_template.append(valor_salvo)
+            if campo.tipo_campo == 'DATA' and valor_salvo.valor:
+                    try:
+                        # Tentamos converter a string 'AAAA-MM-DD' em um objeto de data
+                        valor_salvo.valor_tratado = datetime.strptime(valor_salvo.valor, '%Y-%m-%d').date()
+                    except (ValueError, TypeError):
+                        # Se a conversão falhar, usamos o valor original
+                        valor_salvo.valor_tratado = valor_salvo.valor
+            else:
+                    # Para todos os outros tipos, apenas usamos o valor como está
+                    valor_salvo.valor_tratado = valor_salvo.valor
+                
+            valores_para_template.append(valor_salvo)
     
     # ==============================================================================
     # O RESTO DO CÓDIGO CONTINUA EXATAMENTE IGUAL
