@@ -1,6 +1,7 @@
 <!-- workflow/templates/workflow/partials/painel_acoes.html -->
 
 <h2>Ações do Workflow: <span class="fase-atual-nome">{{ caso.fase_atual_wf.nome|default:"Não iniciado" }}</span></h2>
+
 <!-- Seção de Ações Pendentes -->
 <div class="acoes-section">
     <h3 class="section-title">Ações Pendentes</h3>
@@ -25,12 +26,22 @@
                     {% endif %}
                 </div>
 
+                {# Exibe a descrição da tarefa se ela existir #}
+                {% if acao_inst.acao.descricao %}
+                <div class="acao-descricao">
+                    <p>{{ acao_inst.acao.descricao|linebreaksbr }}</p>
+                </div>
+                {% endif %}
+
                 {% if acao_inst.acao.tipo != 'AGUARDAR_DIAS' %}
                     <form hx-post="{% url 'workflow:executar_acao' pk=acao_inst.pk %}" hx-target="#painel-acoes" hx-swap="outerHTML" hx-indicator="#spinner-{{ acao_inst.pk }}">
                         {% csrf_token %}
-                        <div class="form-comentario">
-                            <textarea name="comentario" placeholder="Adicione um comentário sobre a execução..." rows="3"></textarea>
+                        
+                        {# Campo de comentário agora usa 'form-group' e tem 5 linhas #}
+                        <div class="form-group">
+                            <textarea name="comentario" placeholder="Adicione um comentário sobre a execução..." rows="5"></textarea>
                         </div>
+
                         <div class="acao-botoes">
                             <span id="spinner-{{ acao_inst.pk }}" class="htmx-indicator"><i class="fa-solid fa-spinner fa-spin"></i></span>
                             {% if acao_inst.acao.tipo == 'SIMPLES' %}
@@ -84,3 +95,16 @@
         </div>
     {% endfor %}
 </div>
+
+<!-- Estilo Opcional para a Descrição -->
+<style>
+    .acao-descricao {
+        background-color: #f8f9fa; /* Um cinza bem claro */
+        border-left: 3px solid #6c757d; /* Borda cinza */
+        padding: 10px 15px;
+        margin-top: 15px;
+        margin-bottom: 15px;
+        font-size: 0.95em;
+        color: #495057;
+    }
+</style>

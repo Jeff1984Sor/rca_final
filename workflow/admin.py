@@ -37,7 +37,7 @@ class AcaoInline(nested_admin.NestedStackedInline):
     # Opcional, mas bom para organização:
     fieldsets = (
         (None, {
-            'fields': ('titulo', 'tipo', 'prazo_dias', 'responsavel_padrao')
+            'fields': ('titulo', 'descricao', 'tipo', 'prazo_dias', 'responsavel_padrao')
         }),
         ('Efeitos Colaterais', {
             'classes': ('collapse',),

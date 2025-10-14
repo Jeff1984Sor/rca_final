@@ -52,6 +52,13 @@ class Acao(models.Model):
     ]
     fase = models.ForeignKey(Fase, on_delete=models.CASCADE, related_name='acoes')
     titulo = models.CharField(max_length=255, verbose_name="Título da Ação")
+
+    descricao = models.TextField(
+        blank=True, # Permite que o campo fique em branco
+        verbose_name="Descrição da Tarefa",
+        help_text="Forneça instruções detalhadas ou o contexto para esta ação."
+    )
+    
     tipo = models.CharField(max_length=20, choices=TIPO_ACAO_CHOICES, default='SIMPLES')
 
     prazo_dias = models.PositiveIntegerField(
