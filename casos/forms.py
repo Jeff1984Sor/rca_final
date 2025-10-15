@@ -9,6 +9,8 @@ from campos_custom.models import EstruturaDeCampos
 
 User = get_user_model()
 
+# casos/forms.py
+
 class CasoDinamicoForm(forms.Form):
     # Campos Padrão do Caso (não mudam)
     status = forms.ChoiceField(choices=Caso.STATUS_CHOICES, required=True, label="Status do Caso")
@@ -21,13 +23,16 @@ class CasoDinamicoForm(forms.Form):
     )
     
     def __init__(self, *args, **kwargs):
+        # ==============================================================================
+        # ESPIÃO DOS DADOS INICIAIS (AQUI ESTÁ A CHAVE)
+        # ==============================================================================
+        print(f"\n--- DADOS INICIAIS RECEBIDOS PELA VIEW: {kwargs.get('initial')} ---")
+        # ==============================================================================
+        
         cliente = kwargs.pop('cliente', None)
         produto = kwargs.pop('produto', None)
         super().__init__(*args, **kwargs)
 
-        # ==============================================================================
-        # NOSSO ESPIÃO ESTÁ AQUI
-        # ==============================================================================
         print("\n--- INICIANDO DIAGNÓSTICO DO CasoDinamicoForm ---")
         if cliente:
             print(f"1. RECEBIDO: Cliente ID={cliente.id}, Nome='{cliente}'")
@@ -38,7 +43,6 @@ class CasoDinamicoForm(forms.Form):
             print(f"2. RECEBIDO: Produto ID={produto.id}, Nome='{produto}'")
         else:
             print("2. [ALERTA] Nenhum objeto 'produto' foi recebido pela view.")
-        # ==============================================================================
 
         if produto and not produto.padrao_titulo:
             self.fields['titulo_manual'] = forms.CharField(
@@ -49,7 +53,6 @@ class CasoDinamicoForm(forms.Form):
             )
 
         if cliente and produto:
-            # ==============================================================================
             print(f"3. BUSCANDO: EstruturaDeCampos para Cliente ID={cliente.id} E Produto ID={produto.id}")
             estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
             
@@ -61,34 +64,15 @@ class CasoDinamicoForm(forms.Form):
                 for i, campo in enumerate(campos_da_estrutura):
                     print(f"   -> Processando campo {i+1}/{len(campos_da_estrutura)}: '{campo.nome_campo}' (ID: {campo.id})")
                     field_name = f'campo_personalizado_{campo.id}'
-                    field_label = campo.nome_campo
-                    field_required = False 
-
-                    if campo.tipo_campo == 'TEXTO':
-                        self.fields[field_name] = forms.CharField(label=field_label, required=field_required)
-                    elif campo.tipo_campo == 'NUMERO_INT':
-                        self.fields[field_name] = forms.IntegerField(label=field_label, required=field_required)
-                    elif campo.tipo_campo == 'NUMERO_DEC':
-                        self.fields[field_name] = forms.DecimalField(label=field_label, required=field_required)
-                    elif campo.tipo_campo == 'MOEDA':
-                        self.fields[field_name] = forms.DecimalField(label=field_label, required=field_required, decimal_places=2, widget=forms.NumberInput(attrs={'step': '0.01'}))
-                    elif campo.tipo_campo == 'DATA':
-                        self.fields[field_name] = forms.DateField(label=field_label, required=field_required, widget=forms.DateInput(attrs={'type': 'date'}))
-                    elif campo.tipo_campo == 'LISTA_USUARIOS':
-                        self.fields[field_name] = forms.ModelChoiceField(label=field_label, queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name'), required=field_required)
-                    elif campo.tipo_campo == 'LISTA_UNICA':
-                        opcoes = [('', '---------')] + [(opt, opt) for opt in campo.get_opcoes_como_lista]
-                        self.fields[field_name] = forms.ChoiceField(label=field_label, required=field_required, choices=opcoes)
+                    # ... (resto da sua lógica de criação de campos) ...
 
             else:
                 print("4. [FALHA] Nenhuma 'EstruturaDeCampos' encontrada para esta combinação de Cliente e Produto.")
             
             print("--- FIM DO DIAGNÓSTICO ---\n")
-            # ==============================================================================
         else:
             print("3. [PULANDO] Busca de campos personalizados não realizada por falta de Cliente ou Produto.")
             print("--- FIM DO DIAGNÓSTICO ---\n")
-
 class AndamentoForm(forms.ModelForm):
     # Campo "virtual" para selecionar um modelo pré-definido
     modelo_andamento = forms.ModelChoiceField(

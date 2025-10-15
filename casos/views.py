@@ -302,34 +302,44 @@ def detalhe_caso(request, pk):
     
     return render(request, 'casos/detalhe_caso.html', context)
 
+
 @login_required
 def editar_caso(request, pk):
+    # 1. Busca os objetos principais
     caso = get_object_or_404(Caso, pk=pk)
     produto = caso.produto
     cliente = caso.cliente
     
+    # 2. Monta o dicionário de dados iniciais para preencher o formulário
+    # ESTE BLOCO ESTÁ CORRETO E É A CHAVE PARA O PROBLEMA
     dados_iniciais = {
         'status': caso.status,
         'data_entrada': caso.data_entrada,
         'data_encerramento': caso.data_encerramento,
         'advogado_responsavel': caso.advogado_responsavel,
     }
+    # Adiciona os valores dos campos personalizados que já existem
     valores_existentes = {f'campo_personalizado_{v.campo.id}': v.valor for v in caso.valores_personalizados.all()}
     dados_iniciais.update(valores_existentes)
+    
+    # Adiciona o título manual, se aplicável
     if not produto.padrao_titulo:
         dados_iniciais['titulo_manual'] = caso.titulo
         
+    # 3. Processa o formulário se for uma submissão (POST)
     if request.method == 'POST':
-        # CORREÇÃO: Passamos o CLIENTE e o PRODUTO para o formulário
+        # Passa os dados do POST, o cliente e o produto
         form = CasoDinamicoForm(request.POST, cliente=cliente, produto=produto)
         if form.is_valid():
             dados_limpos = form.cleaned_data
+            
+            # Atualiza os campos padrão do caso
             caso.status = dados_limpos['status']
             caso.data_entrada = dados_limpos['data_entrada']
             caso.data_encerramento = dados_limpos.get('data_encerramento')
             caso.advogado_responsavel = dados_limpos.get('advogado_responsavel')
             
-            # Lógica de atualizar o título (precisa ser corrigida também)
+            # Lógica de atualizar o título
             if produto.padrao_titulo:
                 titulo_formatado = produto.padrao_titulo
                 estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
@@ -344,7 +354,7 @@ def editar_caso(request, pk):
                 
             caso.save()
 
-            # Lógica de atualizar valores
+            # Lógica de atualizar valores personalizados
             estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
             if estrutura:
                 for campo in estrutura.campos.all():
@@ -355,14 +365,14 @@ def editar_caso(request, pk):
                         defaults={'valor': str(valor_novo) if valor_novo is not None else ''}
                     )
                     
-            return redirect('casos:detalhe_caso', pk=caso.pk)
+            return redirect('casos:dethe_caso', pk=caso.pk)
     else:
-        # CORREÇÃO: Passamos também no GET
+        # 4. Se for a primeira visita (GET), cria o formulário passando os dados iniciais
+        # ESTA LINHA É A QUE PREENCHE OS CAMPOS
         form = CasoDinamicoForm(initial=dados_iniciais, cliente=cliente, produto=produto)
         
     context = {'cliente': cliente, 'produto': produto, 'form': form, 'caso': caso}
     return render(request, 'casos/criar_caso_form.html', context)
-
 
 @login_required
 def exportar_casos_excel(request):
