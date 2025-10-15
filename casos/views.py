@@ -207,38 +207,37 @@ def detalhe_caso(request, pk):
     form_despesa = DespesaForm(user=request.user)
     
     # ==============================================================================
-    # A ÚNICA MUDANÇA ESTÁ AQUI: BUSCA DE DADOS PARA AS ABAS
+    # LÓGICA DE BUSCA DE DADOS CORRIGIDA E FINALIZADA
     # ==============================================================================
     
-    # 1. Busca todos os valores que já foram salvos para este caso.
-    valores_salvos_qs = caso.valores_personalizados.select_related('campo').all()
-    # Cria um dicionário para acesso rápido: {id_do_campo: objeto_valor}
-    valores_salvos_dict = {valor.campo.id: valor for valor in valores_salvos_qs}
-
-    # 2. Busca a ESTRUTURA de campos correta para o cliente e produto deste caso.
+    # Busca a ESTRUTURA de campos correta para o cliente e produto deste caso.
     estrutura = EstruturaDeCampos.objects.filter(cliente=caso.cliente, produto=caso.produto).first()
 
-    # 3. Monta a lista final de valores a serem exibidos, na ordem correta.
     valores_para_template = []
     if estrutura:
-        # Itera sobre os campos definidos na estrutura.
+        # Pega todos os valores salvos para este caso DE UMA VEZ.
+        valores_salvos_qs = caso.valores_personalizados.select_related('campo').all()
+        # Cria um dicionário para acesso rápido: {id_do_campo: objeto_valor}
+        valores_salvos_dict = {valor.campo.id: valor for valor in valores_salvos_qs}
+
+        # Itera sobre os campos definidos na estrutura, que já estão na ordem correta
+        # graças ao 'ordered-model'. Usamos '.all()' para garantir a ordem.
         for campo in estrutura.campos.all():
-            # Verifica se existe um valor salvo para este campo.
+            # Pega o valor correspondente do dicionário
             valor_salvo = valores_salvos_dict.get(campo.id)
+
+            # Só adicionamos à lista se existir um valor salvo para este campo
             if valor_salvo:
-                valores_para_template.append(valor_salvo)
-            if campo.tipo_campo == 'DATA' and valor_salvo.valor:
+                # Tratamento de dados (como converter a data)
+                if campo.tipo_campo == 'DATA' and valor_salvo.valor:
                     try:
-                        # Tentamos converter a string 'AAAA-MM-DD' em um objeto de data
                         valor_salvo.valor_tratado = datetime.strptime(valor_salvo.valor, '%Y-%m-%d').date()
                     except (ValueError, TypeError):
-                        # Se a conversão falhar, usamos o valor original
                         valor_salvo.valor_tratado = valor_salvo.valor
-            else:
-                    # Para todos os outros tipos, apenas usamos o valor como está
+                else:
                     valor_salvo.valor_tratado = valor_salvo.valor
                 
-            valores_para_template.append(valor_salvo)
+                valores_para_template.append(valor_salvo)
     
     # ==============================================================================
     # O RESTO DO CÓDIGO CONTINUA EXATAMENTE IGUAL
@@ -282,7 +281,7 @@ def detalhe_caso(request, pk):
         'form_timesheet': form_timesheet,
         'form_acordo': form_acordo,
         'form_despesa': form_despesa,
-        'valores_personalizados': valores_para_template, # <<< Usamos a nossa nova variável aqui
+        'valores_personalizados': valores_para_template,
         'andamentos': andamentos,
         'modelos_andamento': modelos_andamento,
         'timesheets': timesheets,
