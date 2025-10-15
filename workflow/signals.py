@@ -1,5 +1,12 @@
+# workflow/signals.py
+
+import os
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.conf import settings
+from django.urls import reverse
 
 # Importa todos os modelos e serviços necessários
 from casos.models import Caso, FluxoInterno
@@ -8,7 +15,9 @@ from integrations.sharepoint import SharePoint
 from .models import Workflow, Fase
 from .views import transitar_fase # Importa nossa função de transição
 
-# --- FUNÇÃO DE LÓGICA DO SHAREPOINT ---
+# ==============================================================================
+# FUNÇÃO DE LÓGICA DO SHAREPOINT (NÃO MUDA)
+# ==============================================================================
 def criar_pastas_sharepoint_logica(instance):
     """
     Verifica a estrutura e cria as pastas no SharePoint para um novo caso.
@@ -40,35 +49,34 @@ def criar_pastas_sharepoint_logica(instance):
     except Exception as e:
         print(f"ERRO ao criar pastas no SharePoint para o Caso #{instance.id}: {e}")
 
-# --- FUNÇÃO DE LÓGICA DE E-MAIL (Exemplo) ---
+# ==============================================================================
+# FUNÇÃO DE LÓGICA DE E-MAIL (CORRIGIDA PARA DESTINATÁRIO FIXO)
+# ==============================================================================
 def enviar_email_novo_caso(instance, request=None):
     """
-    Prepara e envia um e-mail de notificação sobre um novo caso.
+    Prepara e envia um e-mail de notificação sobre um novo caso para um destinatário fixo.
     """
     print(f"E-mail: Preparando para enviar e-mail para o caso #{instance.id}...")
 
-    # Define o destinatário. A lógica pode ser mais complexa (ex: um grupo)
-    # Por enquanto, vamos enviar para o advogado responsável, se houver.
-    if not instance.advogado_responsavel or not instance.advogado_responsavel.email:
-        print(f"E-mail: Envio cancelado. Nenhum advogado responsável ou email definido para o caso #{instance.id}.")
+    # 1. Pega o destinatário fixo da variável de ambiente.
+    destinatario_fixo = os.environ.get('EMAIL_DESTINATARIO_NOVOS_CASOS')
+
+    # 2. Verifica se a variável foi configurada. Se não, cancela o envio.
+    if not destinatario_fixo:
+        print("!!!!!! E-mail: Envio cancelado. A variável de ambiente 'EMAIL_DESTINATARIO_NOVOS_CASOS' não foi definida. !!!!!!")
         return
 
-    destinatario = [instance.advogado_responsavel.email]
+    destinatarios = [destinatario_fixo]
     
-    # Monta o link completo para o caso
-    # Precisamos do 'request' para construir a URL absoluta (http://...)
-    # Se não tivermos o request, criamos um link relativo.
-    if request:
-        link_caso = request.build_absolute_uri(
-            reverse('casos:detalhe_caso', kwargs={'pk': instance.id})
-        )
-    else:
-        link_caso = reverse('casos:detalhe_caso', kwargs={'pk': instance.id})
+    # Monta o link para o caso.
+    # Como o signal não tem acesso ao 'request', a URL será relativa (ex: /casos/1/).
+    # O seu provedor de e-mail (Outlook, Gmail) geralmente transforma isso em um link clicável.
+    link_caso = reverse('casos:detalhe_caso', kwargs={'pk': instance.id})
 
     # Monta o contexto para o template do e-mail
     context = {
         'caso': instance,
-        'link_caso': link_caso,
+        'link_caso': f"https://gesta-rca.onrender.com{link_caso}" # Constrói a URL completa manualmente
     }
     
     # Renderiza o corpo do e-mail a partir do template HTML
@@ -76,22 +84,21 @@ def enviar_email_novo_caso(instance, request=None):
     
     try:
         send_mail(
-            subject=f'Novo Caso Criado: #{instance.id} - {instance.titulo}',
+            subject=f'Novo Caso Criado no Sistema: #{instance.id} - {instance.titulo}',
             message='', # A mensagem de texto é opcional, pois estamos enviando HTML
             from_email=settings.EMAIL_HOST_USER, # Remetente (configurado no settings.py)
-            recipient_list=destinatario,
+            recipient_list=destinatarios,
             html_message=html_message, # O corpo do e-mail em HTML
-            fail_silently=False, # Se der erro, levanta uma exceção
+            fail_silently=False, # Se der erro, levanta uma exceção (visível nos logs)
         )
-        print(f"E-mail: Notificação para o caso #{instance.id} enviada com sucesso para {destinatario[0]}!")
+        print(f"E-mail: Notificação para o caso #{instance.id} enviada com sucesso para {destinatarios[0]}!")
     except Exception as e:
         print(f"!!!!!! ERRO AO ENVIAR E-MAIL para o caso #{instance.id}: {e} !!!!!!")
 
 
-# --- SINAL ÚNICO E UNIFICADO ---
-
-
-# --- SINAL ÚNICO E UNIFICADO ---
+# ==============================================================================
+# SINAL ÚNICO E UNIFICADO (NÃO MUDA)
+# ==============================================================================
 @receiver(post_save, sender=Caso)
 def gatilho_pos_criacao_caso(sender, instance, created, **kwargs):
     """
@@ -116,7 +123,6 @@ def gatilho_pos_criacao_caso(sender, instance, created, **kwargs):
             caso=instance,
             tipo_evento='CRIACAO_CASO',
             descricao=f"Caso criado com status '{instance.get_status_display()}'.",
-            # O autor da criação é, por padrão, o advogado responsável, se houver
             autor=instance.advogado_responsavel 
         )
 
