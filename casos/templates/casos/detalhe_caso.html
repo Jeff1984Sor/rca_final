@@ -344,19 +344,89 @@
         </div>
     </div>
 
-    <!-- Aba 8: Despesas -->
+        <!-- Aba 8: Despesas (VERSÃO CORRIGIDA E ORGANIZADA) -->
     <div id="despesas" class="tab-content">
-        <div class="form-section"><h3>Registrar Nova Despesa</h3><form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">{% csrf_token %}<div class="form-row"><div class="form-group">{{ form_despesa.data_despesa.label_tag }}{{ form_despesa.data_despesa }}</div><div class="form-group">{{ form_despesa.valor.label_tag }}{{ form_despesa.valor }}</div></div><div class="form-group">{{ form_despesa.descricao.label_tag }}{{ form_despesa.descricao }}</div><div class="form-group">{{ form_despesa.advogado.label_tag }}{{ form_despesa.advogado }}</div><button type="submit" name="submit_despesa" class="btn-submit despesa">Salvar Despesa</button></form></div>
-        <div class="summary-box"><h3>Total de Despesas</h3><p>R$ {{ total_despesas|default:"0.00" }}</p></div>
+        
+        <!-- Formulário para Registrar Nova Despesa -->
+        <div class="form-section">
+            <h3>Registrar Nova Despesa</h3>
+            <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
+                {% csrf_token %}
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form_despesa.data_despesa.label_tag }}
+                        {{ form_despesa.data_despesa }}
+                    </div>
+                    <div class="form-group">
+                        {{ form_despesa.valor.label_tag }}
+                        {{ form_despesa.valor }}
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    {{ form_despesa.descricao.label_tag }}
+                    {{ form_despesa.descricao }}
+                </div>
+                
+                <div class="form-group">
+                    {{ form_despesa.advogado.label_tag }}
+                    {{ form_despesa.advogado }}
+                </div>
+                
+                <button type="submit" name="submit_despesa" class="btn-submit despesa">Salvar Despesa</button>
+            </form>
+        </div>
+        
+        <!-- Box de Resumo do Total de Despesas -->
+        <div class="summary-box">
+            <h3>Total de Despesas</h3>
+            <p>{{ total_despesas|currency }}</p> {# Usando o filtro de moeda aqui também #}
+        </div>
+        
         <hr>
-        <div class="list-toolbar"><h3>Histórico de Despesas</h3></div>
-        <table class="data-table"><thead><tr><th>Data</th><th>Advogado</th><th>Descrição</th><th>Valor (R$)</th><th>Ações</th></tr></thead>
-            <tbody>{% for despesa in despesas %}<tr><td>{{ despesa.data_despesa|date:"d/m/Y" }}</td><td>{% if despesa.advogado %}{{ despesa.advogado.get_full_name|default:despesa.advogado.username }}{% else %}-{% endif %}</td><td>{{ despesa.descricao }}</td><td>{{ despesa.valor }}</td><td class="actions"><a href="{% url 'casos:editar_despesa' pk=despesa.pk %}" class="action-btn btn-edit">Editar</a></td></tr>{% empty %}<tr><td colspan="5" style="text-align: center; padding: 20px;">Nenhuma despesa registrada.</td></tr>{% endfor %}</tbody>
+        
+        <!-- Histórico de Despesas -->
+        <div class="list-toolbar">
+            <h3>Histórico de Despesas</h3>
+            {# Adicione aqui botões de exportação, se desejar #}
+        </div>
+        
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Advogado</th>
+                    <th>Descrição</th>
+                    <th>Valor (R$)</th>
+                    <th class="actions">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for despesa in despesas %}
+                <tr>
+                    <td>{{ despesa.data_despesa|date:"d/m/Y" }}</td>
+                    <td>{% if despesa.advogado %}{{ despesa.advogado.get_full_name|default:despesa.advogado.username }}{% else %}-{% endif %}</td>
+                    <td>{{ despesa.descricao }}</td>
+                    
+                    <!-- ============================================================================== -->
+                    <!-- A CORREÇÃO DA FORMATAÇÃO DA MOEDA ESTÁ AQUI                                  -->
+                    <!-- ============================================================================== -->
+                    <td>{{ despesa.valor|currency }}</td>
+                    
+                    <td class="actions">
+                        <a href="{% url 'casos:editar_despesa' pk=despesa.pk %}" class="action-btn btn-edit">Editar</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 20px;">Nenhuma despesa registrada.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
         </table>
     </div>
 
-    <!-- Aba 9: Anexos-->
-    <!-- Aba 9: Anexos-->
     <!-- Aba 9: Anexos-->
     <div id="anexos" class="tab-content">
         <h2>Anexos do Caso (SharePoint)</h2>
