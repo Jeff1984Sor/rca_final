@@ -18,17 +18,20 @@ class CasoDinamicoForm(forms.Form):
     # ==============================================================================
     status = forms.ChoiceField(choices=Caso.STATUS_CHOICES, required=True, label="Status do Caso")
     data_entrada = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'), 
-        input_formats=['%Y-%m-%d'],
+        # Usamos um widget de texto normal, mas com um placeholder amigável
+        widget=forms.DateInput(attrs={'type': 'text', 'placeholder': 'DD/MM/AAAA'}),
+        # Informamos ao Django os formatos que aceitamos na entrada
+        input_formats=['%d/%m/%Y', '%Y-%m-%d'],
         required=True, 
         label="Data de Entrada"
     )
     data_encerramento = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
-        input_formats=['%Y-%m-%d'],
+        widget=forms.DateInput(attrs={'type': 'text', 'placeholder': 'DD/MM/AAAA'}),
+        input_formats=['%d/%m/%Y', '%Y-%m-%d'],
         required=False, 
         label="Data de Encerramento"
     )
+    
     advogado_responsavel = forms.ModelChoiceField(
         queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username'),
         required=False,
@@ -86,7 +89,12 @@ class CasoDinamicoForm(forms.Form):
                         self.fields[field_name] = forms.DecimalField(label=field_label, required=field_required, decimal_places=2, widget=forms.NumberInput(attrs={'step': '0.01'}))
                     
                     elif campo.tipo_campo == 'DATA':
-                        self.fields[field_name] = forms.DateField(label=field_label, required=field_required, widget=forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'), input_formats=['%Y-%m-%d'])
+                        self.fields[field_name] = forms.DateField(
+                            label=field_label, 
+                            required=field_required, 
+                            widget=forms.DateInput(attrs={'type': 'text', 'placeholder': 'DD/MM/AAAA'}),
+                            input_formats=['%d/%m/%Y', '%Y-%m-%d']
+                    )
                     
                     elif campo.tipo_campo == 'LISTA_USUARIOS':
                         self.fields[field_name] = forms.ModelChoiceField(label=field_label, queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name'), required=field_required)
@@ -111,7 +119,7 @@ class CasoDinamicoForm(forms.Form):
                         else:
                             self.fields[field_name].initial = self.initial.get(field_name)
 
-                            
+
 class AndamentoForm(forms.ModelForm):
     # Campo "virtual" para selecionar um modelo pré-definido
     modelo_andamento = forms.ModelChoiceField(
