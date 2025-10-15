@@ -36,77 +36,82 @@ class CasoDinamicoForm(forms.Form):
     )
     
     # ==============================================================================
-    # 2. O CORAÇÃO DA MÁGICA: O __init__ COM O MEGA LOG
+    # 2. O __init__ COMPLETO E CORRIGIDO
     # ==============================================================================
     def __init__(self, *args, **kwargs):
-        # ==============================================================================
-        # MEGA LOG DE DIAGNÓSTICO
-        # ==============================================================================
-        print("\n" + "="*60)
-        print("--- INICIANDO DIAGNÓSTICO COMPLETO DO CasoDinamicoForm ---")
-        
-        # Espião 1: Verificamos os dados iniciais que a view enviou
-        initial_data_from_view = kwargs.get('initial', {})
-        print("\n[ESPIÃO 1: DADOS INICIAIS RECEBIDOS DA VIEW]")
-        if initial_data_from_view:
-            print("  - Status:", initial_data_from_view.get('status'))
-            print("  - Data de Entrada:", initial_data_from_view.get('data_entrada'))
-            print("  - Campos Personalizados encontrados:", {k: v for k, v in initial_data_from_view.items() if k.startswith('campo_personalizado_')})
-        else:
-            print("  - [AVISO] Nenhum dicionário 'initial' foi recebido. O formulário estará em branco.")
-        
-        # ==============================================================================
-
-        # Separação dos nossos parâmetros customizados
+        # Primeiro, separamos nossos parâmetros customizados (cliente e produto)
         cliente = kwargs.pop('cliente', None)
         produto = kwargs.pop('produto', None)
         
-        # Inicializa o formulário pai. Isso processa os 'initial data'.
+        # A inicialização do Django vem primeiro, SEMPRE.
+        # Isso processa 'initial' e preenche os campos padrão.
         super().__init__(*args, **kwargs)
-        
-        # ==============================================================================
-        # Espião 2: Verificamos os dados após a inicialização do Django
-        print("\n[ESPIÃO 2: DADOS APÓS super().__init__()]")
-        print("  - Valor inicial de 'data_entrada' no formulário:", self.fields['data_entrada'].initial)
-        print("  - Dicionário `self.initial` completo:", self.initial)
-        # ==============================================================================
 
-        # Adiciona os campos dinâmicos
+        # Agora, com o formulário base inicializado, adicionamos os campos dinâmicos.
+        
+        # Adiciona o campo de título manual, se necessário
         if produto and not produto.padrao_titulo:
             self.fields['titulo_manual'] = forms.CharField(
                 label="Título Manual", 
                 required=False,
                 widget=forms.TextInput(attrs={'placeholder': 'Descreva o caso resumidamente...'})
             )
+            # Preenche o valor inicial se ele existir
+            if self.initial.get('titulo_manual'):
+                self.fields['titulo_manual'].initial = self.initial.get('titulo_manual')
 
+        # Busca e cria os campos personalizados baseados na combinação Cliente + Produto
         if cliente and produto:
-            print("\n[ESPIÃO 3: LÓGICA DE CAMPOS DINÂMICOS]")
-            print(f"  - Buscando Estrutura para Cliente ID={cliente.id} e Produto ID={produto.id}")
             estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
             if estrutura:
-                print(f"  - [SUCESSO] Estrutura encontrada (ID={estrutura.id}). Processando campos...")
+                # Usamos a ordenação que definimos no Admin
                 for campo in estrutura.campos.all().order_by('estruturacampoordenado__order'):
                     field_name = f'campo_personalizado_{campo.id}'
-                    # ... sua lógica de criação de campos aqui ...
-                    if campo.tipo_campo == 'TEXTO': self.fields[field_name] = forms.CharField(label=campo.nome_campo, required=False)
-                    elif campo.tipo_campo == 'DATA': self.fields[field_name] = forms.DateField(label=campo.nome_campo, required=False, widget=forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'), input_formats=['%Y-%m-%d'])
-                    # ... adicione os outros elifs ...
+                    field_label = campo.nome_campo
+                    field_required = False # O campo 'obrigatorio' foi removido, então todos são opcionais
 
-                    # A LÓGICA DE PREENCHIMENTO
-                    initial_value = self.initial.get(field_name)
-                    if initial_value is not None:
-                        self.fields[field_name].initial = initial_value
-                        print(f"    -> Campo '{campo.nome_campo}' criado e preenchido com valor inicial: '{initial_value}'")
-                    else:
-                        print(f"    -> Campo '{campo.nome_campo}' criado (sem valor inicial).")
-            else:
-                print("  - [FALHA] Nenhuma estrutura encontrada para esta combinação.")
-        else:
-            print("\n[ESPIÃO 3: LÓGICA DE CAMPOS DINÂMICOS] -> PULADO (Faltou cliente ou produto).")
+                    # ==============================================================================
+                    # LÓGICA COMPLETA PARA CRIAR CADA TIPO DE CAMPO
+                    # ==============================================================================
+                    if campo.tipo_campo == 'TEXTO':
+                        self.fields[field_name] = forms.CharField(label=field_label, required=field_required)
+                    
+                    elif campo.tipo_campo == 'NUMERO_INT':
+                        self.fields[field_name] = forms.IntegerField(label=field_label, required=field_required)
+                    
+                    elif campo.tipo_campo == 'NUMERO_DEC':
+                        self.fields[field_name] = forms.DecimalField(label=field_label, required=field_required)
+                    
+                    elif campo.tipo_campo == 'MOEDA':
+                        self.fields[field_name] = forms.DecimalField(label=field_label, required=field_required, decimal_places=2, widget=forms.NumberInput(attrs={'step': '0.01'}))
+                    
+                    elif campo.tipo_campo == 'DATA':
+                        self.fields[field_name] = forms.DateField(label=field_label, required=field_required, widget=forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'), input_formats=['%Y-%m-%d'])
+                    
+                    elif campo.tipo_campo == 'LISTA_USUARIOS':
+                        self.fields[field_name] = forms.ModelChoiceField(label=field_label, queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name'), required=field_required)
+                    
+                    elif campo.tipo_campo == 'LISTA_UNICA':
+                        opcoes = [('', '---------')] + [(opt, opt) for opt in campo.get_opcoes_como_lista]
+                        self.fields[field_name] = forms.ChoiceField(label=field_label, required=field_required, choices=opcoes)
+                    
+                    elif campo.tipo_campo == 'LISTA_MULTIPLA':
+                        opcoes = [(opt, opt) for opt in campo.get_opcoes_como_lista]
+                        self.fields[field_name] = forms.MultipleChoiceField(label=field_label, required=field_required, choices=opcoes, widget=forms.CheckboxSelectMultiple)
 
-        print("--- FIM DO DIAGNÓSTICO ---")
-        print("="*60 + "\n")
-        
+                    # AQUI ESTÁ A CORREÇÃO PARA OS CAMPOS PERSONALIZADOS:
+                    # Após criar CADA campo, nós o preenchemos se houver um valor inicial para ele.
+                    if self.initial.get(field_name):
+                        # Para ModelChoiceField, o valor inicial precisa ser o ID.
+                        if campo.tipo_campo == 'LISTA_USUARIOS':
+                            try:
+                                self.fields[field_name].initial = int(self.initial.get(field_name))
+                            except (ValueError, TypeError):
+                                pass # Ignora se o valor inicial não for um ID de usuário válido
+                        else:
+                            self.fields[field_name].initial = self.initial.get(field_name)
+
+                            
 class AndamentoForm(forms.ModelForm):
     # Campo "virtual" para selecionar um modelo pré-definido
     modelo_andamento = forms.ModelChoiceField(
