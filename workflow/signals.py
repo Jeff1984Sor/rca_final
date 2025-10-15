@@ -41,10 +41,54 @@ def criar_pastas_sharepoint_logica(instance):
         print(f"ERRO ao criar pastas no SharePoint para o Caso #{instance.id}: {e}")
 
 # --- FUNÇÃO DE LÓGICA DE E-MAIL (Exemplo) ---
-def enviar_email_novo_caso(instance):
+def enviar_email_novo_caso(instance, request=None):
+    """
+    Prepara e envia um e-mail de notificação sobre um novo caso.
+    """
     print(f"E-mail: Preparando para enviar e-mail para o caso #{instance.id}...")
-    # Coloque aqui o seu código que envia o e-mail
-    print(f"E-mail: Notificação para o caso #{instance.id} enviada com sucesso!")
+
+    # Define o destinatário. A lógica pode ser mais complexa (ex: um grupo)
+    # Por enquanto, vamos enviar para o advogado responsável, se houver.
+    if not instance.advogado_responsavel or not instance.advogado_responsavel.email:
+        print(f"E-mail: Envio cancelado. Nenhum advogado responsável ou email definido para o caso #{instance.id}.")
+        return
+
+    destinatario = [instance.advogado_responsavel.email]
+    
+    # Monta o link completo para o caso
+    # Precisamos do 'request' para construir a URL absoluta (http://...)
+    # Se não tivermos o request, criamos um link relativo.
+    if request:
+        link_caso = request.build_absolute_uri(
+            reverse('casos:detalhe_caso', kwargs={'pk': instance.id})
+        )
+    else:
+        link_caso = reverse('casos:detalhe_caso', kwargs={'pk': instance.id})
+
+    # Monta o contexto para o template do e-mail
+    context = {
+        'caso': instance,
+        'link_caso': link_caso,
+    }
+    
+    # Renderiza o corpo do e-mail a partir do template HTML
+    html_message = render_to_string('emails/notificacao_novo_caso.html', context)
+    
+    try:
+        send_mail(
+            subject=f'Novo Caso Criado: #{instance.id} - {instance.titulo}',
+            message='', # A mensagem de texto é opcional, pois estamos enviando HTML
+            from_email=settings.EMAIL_HOST_USER, # Remetente (configurado no settings.py)
+            recipient_list=destinatario,
+            html_message=html_message, # O corpo do e-mail em HTML
+            fail_silently=False, # Se der erro, levanta uma exceção
+        )
+        print(f"E-mail: Notificação para o caso #{instance.id} enviada com sucesso para {destinatario[0]}!")
+    except Exception as e:
+        print(f"!!!!!! ERRO AO ENVIAR E-MAIL para o caso #{instance.id}: {e} !!!!!!")
+
+
+# --- SINAL ÚNICO E UNIFICADO ---
 
 
 # --- SINAL ÚNICO E UNIFICADO ---

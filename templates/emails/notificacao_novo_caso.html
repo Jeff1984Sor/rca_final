@@ -1,0 +1,43 @@
+<!-- templates/emails/notificacao_novo_caso.html -->
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Novo Caso Criado: #{{ caso.id }}</title>
+</head>
+<body style="font-family: sans-serif; margin: 20px;">
+    <h2 style="color: #333;">Novo Caso Criado no Sistema de Gestão</h2>
+    <hr>
+    <p>Olá,</p>
+    <p>Um novo caso foi criado e atribuído a você (ou ao seu grupo):</p>
+    
+    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background-color: #f2f2f2;">
+            <td style="padding: 8px; border: 1px solid #ddd; width: 30%;"><strong>ID do Caso:</strong></td>
+            <td style="padding: 8px; border: 1px solid #ddd;">#{{ caso.id|stringformat:"05d" }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #ddd;"><strong>Título:</strong></td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{{ caso.titulo }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #ddd;"><strong>Cliente:</strong></td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{{ caso.cliente.nome }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; border: 1px solid #ddd;"><strong>Produto:</strong></td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{{ caso.produto.nome }}</td>
+        </tr>
+        
+    </table>
+
+    <p>Você pode acessar os detalhes do caso clicando no link abaixo:</p>
+    <p style="text-align: center;">
+        <a href="{{ link_caso }}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            Ver Detalhes do Caso
+        </a>
+    </p>
+    <br>
+    <p>Atenciosamente,<br>Sistema de Gestão RCA</p>
+</body>
+</html>
