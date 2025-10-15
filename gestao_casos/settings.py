@@ -177,3 +177,15 @@ STATICFILES_DIRS = [
 # Configurações para arquivos de Mídia (uploads de usuários)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# ==============================================================================
+# 10. CONFIGURAÇÕES DE E-MAIL (CARREGADAS DO AMBIENTE)
+# ==============================================================================
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.office365.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+# As credenciais são lidas das variáveis de ambiente
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
