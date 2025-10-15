@@ -12,81 +12,101 @@ User = get_user_model()
 # casos/forms.py
 
 class CasoDinamicoForm(forms.Form):
-    # Campos Padrão do Caso (não mudam)
+    # ==============================================================================
+    # 1. CAMPOS PADRÃO (FIXOS)
+    # Com a correção de formato para o widget de data.
+    # ==============================================================================
     status = forms.ChoiceField(choices=Caso.STATUS_CHOICES, required=True, label="Status do Caso")
-    data_entrada = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=True, label="Data de Entrada")
-    data_encerramento = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=False, label="Data de Encerramento")
+    data_entrada = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'), 
+        input_formats=['%Y-%m-%d'],
+        required=True, 
+        label="Data de Entrada"
+    )
+    data_encerramento = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+        input_formats=['%Y-%m-%d'],
+        required=False, 
+        label="Data de Encerramento"
+    )
     advogado_responsavel = forms.ModelChoiceField(
         queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username'),
         required=False,
         label="Advogado Responsável"
     )
-    class Meta:
-        model = Caso
-        # Campos que o ModelForm vai cuidar AUTOMATICAMENTE
-        fields = ['status', 'data_entrada', 'data_encerramento', 'advogado_responsavel', 'titulo']
-        widgets = {
-            'data_entrada': forms.DateInput(attrs={'type': 'date'}),
-            'data_encerramento': forms.DateInput(attrs={'type': 'date'}),
-        }
     
+    # ==============================================================================
+    # 2. O CORAÇÃO DA MÁGICA: O __init__ COM O MEGA LOG
+    # ==============================================================================
     def __init__(self, *args, **kwargs):
         # ==============================================================================
-        # ESPIÃO DOS DADOS INICIAIS (AQUI ESTÁ A CHAVE)
+        # MEGA LOG DE DIAGNÓSTICO
         # ==============================================================================
-        print(f"\n--- DADOS INICIAIS RECEBIDOS PELA VIEW: {kwargs.get('initial')} ---")
-        # ==============================================================================
+        print("\n" + "="*60)
+        print("--- INICIANDO DIAGNÓSTICO COMPLETO DO CasoDinamicoForm ---")
         
+        # Espião 1: Verificamos os dados iniciais que a view enviou
+        initial_data_from_view = kwargs.get('initial', {})
+        print("\n[ESPIÃO 1: DADOS INICIAIS RECEBIDOS DA VIEW]")
+        if initial_data_from_view:
+            print("  - Status:", initial_data_from_view.get('status'))
+            print("  - Data de Entrada:", initial_data_from_view.get('data_entrada'))
+            print("  - Campos Personalizados encontrados:", {k: v for k, v in initial_data_from_view.items() if k.startswith('campo_personalizado_')})
+        else:
+            print("  - [AVISO] Nenhum dicionário 'initial' foi recebido. O formulário estará em branco.")
+        
+        # ==============================================================================
+
+        # Separação dos nossos parâmetros customizados
         cliente = kwargs.pop('cliente', None)
         produto = kwargs.pop('produto', None)
-
-        initial_data = kwargs.get('initial', {})
-
+        
+        # Inicializa o formulário pai. Isso processa os 'initial data'.
         super().__init__(*args, **kwargs)
+        
+        # ==============================================================================
+        # Espião 2: Verificamos os dados após a inicialização do Django
+        print("\n[ESPIÃO 2: DADOS APÓS super().__init__()]")
+        print("  - Valor inicial de 'data_entrada' no formulário:", self.fields['data_entrada'].initial)
+        print("  - Dicionário `self.initial` completo:", self.initial)
+        # ==============================================================================
 
-        if 'data_entrada' in initial_data:
-            self.fields['data_entrada'].initial = initial_data['data_entrada']
-
-        print("\n--- INICIANDO DIAGNÓSTICO DO CasoDinamicoForm ---")
-        if cliente:
-            print(f"1. RECEBIDO: Cliente ID={cliente.id}, Nome='{cliente}'")
-        else:
-            print("1. [ALERTA] Nenhum objeto 'cliente' foi recebido pela view.")
-
-        if produto:
-            print(f"2. RECEBIDO: Produto ID={produto.id}, Nome='{produto}'")
-        else:
-            print("2. [ALERTA] Nenhum objeto 'produto' foi recebido pela view.")
-
+        # Adiciona os campos dinâmicos
         if produto and not produto.padrao_titulo:
             self.fields['titulo_manual'] = forms.CharField(
                 label="Título Manual", 
-                max_length=255, 
                 required=False,
                 widget=forms.TextInput(attrs={'placeholder': 'Descreva o caso resumidamente...'})
             )
 
         if cliente and produto:
-            print(f"3. BUSCANDO: EstruturaDeCampos para Cliente ID={cliente.id} E Produto ID={produto.id}")
+            print("\n[ESPIÃO 3: LÓGICA DE CAMPOS DINÂMICOS]")
+            print(f"  - Buscando Estrutura para Cliente ID={cliente.id} e Produto ID={produto.id}")
             estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
-            
             if estrutura:
-                print(f"4. [SUCESSO] Estrutura encontrada! ID={estrutura.id}")
-                campos_da_estrutura = list(estrutura.campos.all())
-                print(f"5. CAMPOS NA ESTRUTURA: {[campo.nome_campo for campo in campos_da_estrutura]}")
-                
-                for i, campo in enumerate(campos_da_estrutura):
-                    print(f"   -> Processando campo {i+1}/{len(campos_da_estrutura)}: '{campo.nome_campo}' (ID: {campo.id})")
+                print(f"  - [SUCESSO] Estrutura encontrada (ID={estrutura.id}). Processando campos...")
+                for campo in estrutura.campos.all().order_by('estruturacampoordenado__order'):
                     field_name = f'campo_personalizado_{campo.id}'
-                    # ... (resto da sua lógica de criação de campos) ...
+                    # ... sua lógica de criação de campos aqui ...
+                    if campo.tipo_campo == 'TEXTO': self.fields[field_name] = forms.CharField(label=campo.nome_campo, required=False)
+                    elif campo.tipo_campo == 'DATA': self.fields[field_name] = forms.DateField(label=campo.nome_campo, required=False, widget=forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'), input_formats=['%Y-%m-%d'])
+                    # ... adicione os outros elifs ...
 
+                    # A LÓGICA DE PREENCHIMENTO
+                    initial_value = self.initial.get(field_name)
+                    if initial_value is not None:
+                        self.fields[field_name].initial = initial_value
+                        print(f"    -> Campo '{campo.nome_campo}' criado e preenchido com valor inicial: '{initial_value}'")
+                    else:
+                        print(f"    -> Campo '{campo.nome_campo}' criado (sem valor inicial).")
             else:
-                print("4. [FALHA] Nenhuma 'EstruturaDeCampos' encontrada para esta combinação de Cliente e Produto.")
-            
-            print("--- FIM DO DIAGNÓSTICO ---\n")
+                print("  - [FALHA] Nenhuma estrutura encontrada para esta combinação.")
         else:
-            print("3. [PULANDO] Busca de campos personalizados não realizada por falta de Cliente ou Produto.")
-            print("--- FIM DO DIAGNÓSTICO ---\n")
+            print("\n[ESPIÃO 3: LÓGICA DE CAMPOS DINÂMICOS] -> PULADO (Faltou cliente ou produto).")
+
+        print("--- FIM DO DIAGNÓSTICO ---")
+        print("="*60 + "\n")
+        
 class AndamentoForm(forms.ModelForm):
     # Campo "virtual" para selecionar um modelo pré-definido
     modelo_andamento = forms.ModelChoiceField(
