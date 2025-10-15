@@ -365,7 +365,7 @@ def editar_caso(request, pk):
                         defaults={'valor': str(valor_novo) if valor_novo is not None else ''}
                     )
                     
-            return redirect('casos:dethe_caso', pk=caso.pk)
+            return redirect('casos:detalhe_caso', pk=caso.pk)
     else:
         # 4. Se for a primeira visita (GET), cria o formulário passando os dados iniciais
         # ESTA LINHA É A QUE PREENCHE OS CAMPOS

@@ -20,9 +20,10 @@
         {% csrf_token %}
         
         <!-- Card 1: DADOS PRINCIPAIS -->
+        <!-- Card 1: DADOS PRINCIPAIS (VERSÃO CORRIGIDA) -->
         <div class="card" style="padding: 32px;">
             <h3 class="section-title">Dados Principais do Caso</h3>
-            
+
             <div class="form-row">
                 <div class="form-group">
                     <label>Cliente</label>
@@ -35,17 +36,30 @@
             </div>
 
             <div class="form-row">
-                <div class="form-group">{{ form.status.label_tag }}{{ form.status }}</div>
-                <div class="form-group">{{ form.data_entrada.label_tag }}{{ form.data_entrada }}</div>
-                <div class="form-group">{{ form.data_encerramento.label_tag }}{{ form.data_encerramento }}</div>
+                <div class="form-group">
+                    <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+                    {{ form.status }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.data_entrada.id_for_label }}">{{ form.data_entrada.label }}</label>
+                    {{ form.data_entrada }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.data_encerramento.id_for_label }}">{{ form.data_encerramento.label }}</label>
+                    {{ form.data_encerramento }}
+                </div>
             </div>
             
-            <div class="form-group" style="max-width: 50%; min-width: 300px;"> <!-- Limitando a largura do campo de advogado -->
-                {{ form.advogado_responsavel.label_tag }}{{ form.advogado_responsavel }}
+            <div class="form-group">
+                <label for="{{ form.advogado_responsavel.id_for_label }}">{{ form.advogado_responsavel.label }}</label>
+                {{ form.advogado_responsavel }}
             </div>
             
             {% if form.titulo_manual %}
-                <div class="form-group">{{ form.titulo_manual.label_tag }}{{ form.titulo_manual }}</div>
+                <div class="form-group">
+                    <label for="{{ form.titulo_manual.id_for_label }}">{{ form.titulo_manual.label }}</label>
+                    {{ form.titulo_manual }}
+                </div>
             {% endif %}
         </div>
 

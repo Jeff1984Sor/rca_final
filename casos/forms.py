@@ -21,6 +21,14 @@ class CasoDinamicoForm(forms.Form):
         required=False,
         label="Advogado Responsável"
     )
+    class Meta:
+        model = Caso
+        # Campos que o ModelForm vai cuidar AUTOMATICAMENTE
+        fields = ['status', 'data_entrada', 'data_encerramento', 'advogado_responsavel', 'titulo']
+        widgets = {
+            'data_entrada': forms.DateInput(attrs={'type': 'date'}),
+            'data_encerramento': forms.DateInput(attrs={'type': 'date'}),
+        }
     
     def __init__(self, *args, **kwargs):
         # ==============================================================================
@@ -31,7 +39,13 @@ class CasoDinamicoForm(forms.Form):
         
         cliente = kwargs.pop('cliente', None)
         produto = kwargs.pop('produto', None)
+
+        initial_data = kwargs.get('initial', {})
+
         super().__init__(*args, **kwargs)
+
+        if 'data_entrada' in initial_data:
+            self.fields['data_entrada'].initial = initial_data['data_entrada']
 
         print("\n--- INICIANDO DIAGNÓSTICO DO CasoDinamicoForm ---")
         if cliente:
