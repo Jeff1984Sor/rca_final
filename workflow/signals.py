@@ -1,6 +1,7 @@
 # workflow/signals.py
 
 import os
+import requests
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.core.mail import send_mail
@@ -14,6 +15,41 @@ from pastas.models import EstruturaPasta
 from integrations.sharepoint import SharePoint
 from .models import Workflow, Fase
 from .views import transitar_fase # Importa nossa função de transição
+
+
+def enviar_sinal_para_n8n(instance):
+    """
+    Envia os dados do novo caso para o Webhook configurado no n8n.
+    """
+    print(f"n8n Webhook: A preparar para enviar sinal para o caso #{instance.id}...")
+    
+    webhook_url = os.environ.get('N8N_WEBHOOK_URL')
+    if not webhook_url:
+        print("AVISO: Variável de ambiente N8N_WEBHOOK_URL não configurada. A saltar o envio para o n8n.")
+        return
+
+    payload = {
+        "id": instance.id,
+        "titulo": instance.titulo,
+        "status": instance.status,
+        "status_display": instance.get_status_display(),
+        "data_entrada": instance.data_entrada.isoformat() if instance.data_entrada else None,
+        "cliente_id": instance.cliente.id,
+        "cliente_nome": instance.cliente.nome,
+        "produto_id": instance.produto.id,
+        "produto_nome": instance.produto.nome,
+        "advogado_id": instance.advogado_responsavel.id if instance.advogado_responsavel else None,
+        "advogado_nome": instance.advogado_responsavel.get_full_name() if instance.advogado_responsavel else None,
+        "advogado_email": instance.advogado_responsavel.email if instance.advogado_responsavel else None,
+    }
+
+    try:
+        print(f"n8N Webhook: A enviar dados para: {webhook_url}")
+        response = requests.post(webhook_url, json=payload, timeout=10)
+        response.raise_for_status()
+        print(f"n8n Webhook: Sinal enviado com sucesso! Status: {response.status_code}")
+    except requests.exceptions.RequestException as e:
+        print(f"ERRO ao enviar sinal para o n8n: {e}")
 
 # ==============================================================================
 # FUNÇÃO DE LÓGICA DO SHAREPOINT (NÃO MUDA)
