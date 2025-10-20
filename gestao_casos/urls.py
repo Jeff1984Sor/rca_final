@@ -4,10 +4,15 @@ from django.contrib import admin
 from django.urls import path, include
 # Importa as views que acabamos de garantir que existem
 from core.views import CustomLoginView, logout_view
+from casos.urls import urlpatterns_api as casos_api_urls
+from rest_framework.authtoken import views as authtoken_views
 
 urlpatterns = [
     # 1. Rotas de Admin e Bibliotecas
     path('admin/', admin.site.urls),
+    path('casos/', include('casos.urls')),
+    path('api/v1/', include(casos_api_urls)),
+    path('api-token-auth/', authtoken_views.obtain_auth_token),
     #path('ordered_model/', include('ordered_model.urls')),
     # A linha abaixo só é necessária se você ainda estiver usando a ordenação.
     # Se der erro, pode comentá-la.

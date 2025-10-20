@@ -31,6 +31,10 @@ from integrations.sharepoint import SharePoint
 
 # Importações de formulários locais
 from .forms import CasoDinamicoForm, AndamentoForm, TimesheetForm, AcordoForm, DespesaForm
+from django.utils import timezone
+from rest_framework import viewsets, status
+from rest_framework.viewsets import ModelViewSet
+from .serializers import CasoSerializer
 
 User = get_user_model()
 
@@ -889,3 +893,43 @@ def excluir_anexo_sharepoint(request, item_id):
     # 3. Retorna a resposta
     return response
 
+class CasoAPIViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint que permite que casos sejam visualizados, criados, atualizados ou deletados.
+    """
+    queryset = Caso.objects.all().order_by('-data_criacao')
+    serializer_class = CasoSerializer
+    
+    # Exemplo: Permite acesso apenas a usuários autenticados
+    # permission_classes = [IsAuthenticated] 
+
+    # Sobrescrevendo o método create para lidar com a criação
+    def create(self, request, *args, **kwargs):
+        # A lógica do serializador já cuidará da maioria das validações.
+        # Aqui você pode adicionar lógica customizada antes de salvar.
+        # Por exemplo, definir o advogado_responsavel automaticamente se não for fornecido.
+        
+        # O DRF já trata `cliente` e `produto` como IDs graças a PrimaryKeyRelatedField
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    # Sobrescrevendo o método update (para PUT) e partial_update (para PATCH)
+    def perform_update(self, serializer):
+        # Você pode adicionar lógica customizada aqui antes de salvar a atualização
+        # Por exemplo, se o status mudar para 'ENCERRADO', definir data_encerramento
+        if 'status' in serializer.validated_data and serializer.validated_data['status'] == 'ENCERRADO':
+            if not serializer.instance.data_encerramento:
+                serializer.validated_data['data_encerramento'] = timezone.now().date() # Aqui usa
+        serializer.save()
+
+    # Se você precisar de um endpoint específico para buscar por external_id (e não pelo ID do Django)
+    # Exemplo: /api/casos/by_external_id/CASO-N8N-001/
+    # Isso exigiria uma rota extra no urls.py
+    # @action(detail=False, methods=['get'], url_path='by_external_id/(?P<external_id>[^/.]+)')
+    # def by_external_id(self, request, external_id=None):
+    #     caso = get_object_or_404(Caso, external_id=external_id)
+    #     serializer = self.get_serializer(caso)
+    #     return Response(serializer.data)

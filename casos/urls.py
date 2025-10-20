@@ -1,12 +1,25 @@
 # casos/urls.py
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from . import views
 
-app_name = 'casos'
+# --- LÓGICA DA API ---
+# 1. O roteador é definido
+router = DefaultRouter()
+router.register(r'casos', views.CasoAPIViewSet, basename='caso-api')
 
+# 2. Crie a lista 'urlpatterns_api' (ISTO ESTÁ FALTANDO)
+# O seu gestao_casos/urls.py está procurando por ESTA variável.
+urlpatterns_api = [
+    path('', include(router.urls)),
+]
+
+
+# --- LÓGICA DAS VIEWS NORMAIS ---
+# 3. Defina as 'urlpatterns' normais (SEM as urls do router)
+app_name = 'casos'
 urlpatterns = [
-    # Por enquanto, teremos apenas a URL para o primeiro passo da criação.
-    # A lista de casos virá depois.
+    # A linha 'path('', include(router.urls)),' foi REMOVIDA daqui.
     path('', views.lista_casos, name='lista_casos'),
     path('novo/', views.selecionar_produto_cliente, name='selecionar_produto_cliente'),
     path('novo/<int:cliente_id>/<int:produto_id>/', views.criar_caso, name='criar_caso'),
@@ -26,6 +39,4 @@ urlpatterns = [
     path('anexo/preview/<str:item_id>/', views.preview_anexo, name='preview_anexo'),
     path('pasta/<str:parent_folder_id>/criar/', views.criar_pasta_sharepoint, name='criar_pasta'),
     path('anexo/excluir/<str:item_id>/', views.excluir_anexo_sharepoint, name='excluir_anexo'),
-
-
 ]

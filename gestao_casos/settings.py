@@ -1,79 +1,53 @@
-# gestao_casos/settings.py
-
 import os
 from pathlib import Path
 import dj_database_url
-from dotenv import load_dotenv
-
+from environs import Env  # Usaremos environs para gerenciar tudo
 
 # ==============================================================================
-# MEGA LOG DE DIAGNÓSTICO DE PRODUÇÃO
-# ==============================================================================
-print("\n" + "="*50)
-print("INICIANDO DIAGNÓSTICO DE AMBIENTE DO SETTINGS.PY")
-print(f"DJANGO_SETTINGS_MODULE: {os.environ.get('DJANGO_SETTINGS_MODULE')}")
-
-# Verifica as variáveis essenciais
-secret_key = os.environ.get('SECRET_KEY')
-if secret_key:
-    print("[OK] SECRET_KEY encontrada.")
-else:
-    print("[FALHA CRÍTICA] SECRET_KEY NÃO ENCONTRADA! O APP VAI QUEBRAR.")
-
-database_url = os.environ.get('DATABASE_URL')
-if database_url:
-    print("[OK] DATABASE_URL encontrada.")
-else:
-    print("[FALHA CRÍTICA] DATABASE_URL NÃO ENCONTRADA! O APP VAI QUEBRAR.")
-
-debug_mode = os.environ.get('DEBUG', 'False').lower()
-print(f"Modo DEBUG detectado como: '{debug_mode}'")
-
-print("FIM DO DIAGNÓSTICO")
-print("="*50 + "\n")
+# 1. CONFIGURAÇÃO BÁSICA E VARIÁVEIS DE AMBIENTE
 # ==============================================================================
 
-# Carrega variáveis de ambiente de um arquivo .env (para desenvolvimento local)
-load_dotenv()
-
+# Define o diretório base do projeto (RCA_Final/)
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Instancia o leitor de variáveis de ambiente e lê o arquivo .env
+env = Env()
+env.read_env()
 
-# Pega a chave secreta da variável de ambiente.
-SECRET_KEY = os.environ.get('SECRET_KEY')
+# Pega a chave secreta da variável de ambiente. Essencial para segurança.
+# O `env.str()` garante que o programa vai quebrar se a variável não for encontrada.
+SECRET_KEY = env.str('SECRET_KEY')
 
-# ==============================================================================
-# AQUI ESTÁ A MÁGICA: O DEBUG É LIDO DO SEU ARQUIVO .env
-# ==============================================================================
-# Se a variável DEBUG não existir, o padrão é 'False' (seguro para produção).
-DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
-# ==============================================================================
+# O modo DEBUG é lido do arquivo .env. Se não for encontrado, o padrão é False (seguro).
+DEBUG = env.bool('DEBUG', default=False)
 
 # Configuração de hosts permitidos (automática para Render, manual para local)
-ALLOWED_HOSTS = []
-RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['127.0.0.1', 'localhost'])
+
+RENDER_EXTERNAL_HOSTNAME = env.str('RENDER_EXTERNAL_HOSTNAME', default=None)
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
-else:
-    # Para desenvolvimento local
-    ALLOWED_HOSTS.extend(['127.0.0.1', 'localhost'])
 
 
 # ==============================================================================
-# 2. APLICAÇÕES INSTALADAS
+# 2. APLICAÇÕES INSTALADAS (APPS)
 # ==============================================================================
 
 INSTALLED_APPS = [
-    # ... (sua lista de apps, com 'ordered_model' antes de 'django.contrib.admin') ...
-    #'ordered_model',
-    'nested_admin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # Apps de terceiros
     'django_htmx',
+    'nested_admin',
+    'rest_framework',
+    'rest_framework.authtoken',  # Adicionado para a autenticação da API (n8n)
+
+    # Seus apps
     'core.apps.CoreConfig',
     'clientes.apps.ClientesConfig',
     'casos.apps.CasosConfig',
@@ -86,12 +60,12 @@ INSTALLED_APPS = [
 
 
 # ==============================================================================
-# 3. MIDDLEWARE E OUTRAS CONFIGURAÇÕES GERAIS
+# 3. MIDDLEWARE
 # ==============================================================================
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # Para servir arquivos estáticos em produção
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -101,8 +75,38 @@ MIDDLEWARE = [
     'django_htmx.middleware.HtmxMiddleware',
 ]
 
+
+# ==============================================================================
+# 4. URLs e Aplicação WSGI
+# ==============================================================================
+
 ROOT_URLCONF = 'gestao_casos.urls'
 WSGI_APPLICATION = 'gestao_casos.wsgi.application'
+
+
+# ==============================================================================
+# 5. BANCO DE DADOS (CONFIGURAÇÃO ÚNICA E CORRIGIDA)
+# ==============================================================================
+
+# Lê a DATABASE_URL do ambiente
+DATABASE_URL = env.str('DATABASE_URL')
+
+# Verifica se a URL é para sqlite. Se NÃO for, ativa o ssl_require.
+# Isso corrige o erro 'sslmode' ao rodar localmente.
+SSL_REQUIRE = not DATABASE_URL.startswith('sqlite')
+
+DATABASES = {
+    'default': dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=600,
+        ssl_require=SSL_REQUIRE
+    )
+}
+
+
+# ==============================================================================
+# 6. TEMPLATES
+# ==============================================================================
 
 TEMPLATES = [
     {
@@ -120,36 +124,21 @@ TEMPLATES = [
     },
 ]
 
-# ... (DATABASES, AUTH_PASSWORD_VALIDATORS, etc. não mudam) ...
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-if 'DATABASE_URL' in os.environ:
-    DATABASES['default'] = dj_database_url.config(conn_max_age=600, ssl_require=True)
-
-# ... (O resto do seu arquivo até o final) ...
 
 # ==============================================================================
-# 11. CONFIGURAÇÕES DE PRODUÇÃO E SEGURANÇA (A SOLUÇÃO FINAL)
+# 7. VALIDAÇÃO DE SENHAS
 # ==============================================================================
 
-# Estas configurações SÓ serão aplicadas se DEBUG for False (ou seja, no Render)
-if not DEBUG:
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = True # <-- O VILÃO, AGORA DOMADO
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+]
 
-# Esta configuração SÓ será aplicada se estiver no Render
-if RENDER_EXTERNAL_HOSTNAME:
-    CSRF_TRUSTED_ORIGINS = [f'https://{RENDER_EXTERNAL_HOSTNAME}', 'https://*.onrender.com']
 
 # ==============================================================================
-# 8. INTERNACIONALIZAÇÃO
+# 8. INTERNACIONALIZAÇÃO (I18N)
 # ==============================================================================
 
 LANGUAGE_CODE = 'pt-br'
@@ -159,33 +148,48 @@ USE_TZ = True
 
 
 # ==============================================================================
-# 9. ARQUIVOS ESTÁTICOS E MÍDIA (A CORREÇÃO ESTÁ AQUI)
+# 9. ARQUIVOS ESTÁTICOS (STATIC) E DE MÍDIA (MEDIA)
 # ==============================================================================
 
-# URL base para servir os arquivos estáticos
 STATIC_URL = 'static/'
-
-# Pasta para onde o 'collectstatic' vai copiar todos os arquivos para produção
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
-# Lista de pastas onde o Django vai procurar por arquivos estáticos adicionais
-# (além dos que já estão dentro de cada app)
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-]
-
-# Configurações para arquivos de Mídia (uploads de usuários)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+
 # ==============================================================================
-# 10. CONFIGURAÇÕES DE E-MAIL (CARREGADAS DO AMBIENTE)
+# 10. CONFIGURAÇÕES DE E-MAIL
 # ==============================================================================
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.office365.com'
+EMAIL_HOST = 'smtp.office35.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-# As credenciais são lidas das variáveis de ambiente
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+EMAIL_HOST_USER = env.str('EMAIL_HOST_USER', default=None)
+EMAIL_HOST_PASSWORD = env.str('EMAIL_HOST_PASSWORD', default=None)
+
+
+# ==============================================================================
+# 11. CONFIGURAÇÕES DE PRODUÇÃO E SEGURANÇA
+# ==============================================================================
+
+# Estas configurações só são aplicadas se DEBUG for False (ou seja, no Render)
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# Esta configuração só é aplicada se estiver no Render
+if RENDER_EXTERNAL_HOSTNAME:
+    CSRF_TRUSTED_ORIGINS = [f'https://{RENDER_EXTERNAL_HOSTNAME}', 'https://*.onrender.com']
+
+
+# ==============================================================================
+# 12. OUTRAS CONFIGURAÇÕES
+# ==============================================================================
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
