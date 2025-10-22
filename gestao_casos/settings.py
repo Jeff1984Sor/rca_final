@@ -175,6 +175,7 @@ EMAIL_HOST_PASSWORD = env.str('EMAIL_HOST_PASSWORD', default=None)
 
 # Estas configurações só são aplicadas se DEBUG for False (ou seja, no Render)
 if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = False
