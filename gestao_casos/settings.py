@@ -91,13 +91,13 @@ DATABASE_URL = env.str('DATABASE_URL')
 
 # Verifica se a URL é para sqlite. Se NÃO for, ativa o ssl_require.
 # Isso corrige o erro 'sslmode' ao rodar localmente.
-SSL_REQUIRE = not DATABASE_URL.startswith('sqlite')
+SSL_REQUIRE = False
 
 DATABASES = {
     'default': dj_database_url.config(
         default=DATABASE_URL,
         conn_max_age=600,
-        SSL_REQUIRE = not DATABASE_URL.startswith('sqlite')
+        ssl_require=SSL_REQUIRE
     )
 }
 
