@@ -180,10 +180,6 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# Esta configuração só é aplicada se estiver no Render
-if RENDER_EXTERNAL_HOSTNAME:
-    CSRF_TRUSTED_ORIGINS = [f'https://{RENDER_EXTERNAL_HOSTNAME}', 'https://*.onrender.com']
-
 
 # ==============================================================================
 # 12. OUTRAS CONFIGURAÇÕES
