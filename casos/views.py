@@ -36,6 +36,9 @@ from rest_framework import viewsets, status
 from rest_framework.viewsets import ModelViewSet
 from .serializers import CasoSerializer
 
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication
+
 User = get_user_model()
 
 @login_required
@@ -899,6 +902,9 @@ class CasoAPIViewSet(viewsets.ModelViewSet):
     """
     queryset = Caso.objects.all().order_by('-data_criacao')
     serializer_class = CasoSerializer
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
     
     # Exemplo: Permite acesso apenas a usuários autenticados
     # permission_classes = [IsAuthenticated] 
