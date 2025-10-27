@@ -176,7 +176,7 @@ def detalhe_caso(request, pk):
     form_acordo = AcordoForm(user=request.user)
     form_despesa = DespesaForm(user=request.user)
 
-    # Processamento de formulários enviados via POST (ESTA PARTE NÃO MUDA)
+    # Processamento de formulários enviados via POST (SUA LÓGICA ORIGINAL)
     if request.method == 'POST':
         if 'submit_andamento' in request.POST:
             form_andamento = AndamentoForm(request.POST)
@@ -241,40 +241,63 @@ def detalhe_caso(request, pk):
     form_despesa = DespesaForm(user=request.user)
     
     # ==============================================================================
-    # LÓGICA DE BUSCA DE DADOS CORRIGIDA E FINALIZADA
+    # LÓGICA DE BUSCA DE DADOS PERSONALIZADOS (ATUALIZADA)
     # ==============================================================================
     
-    # Busca a ESTRUTURA de campos correta para o cliente e produto deste caso.
-    estrutura = EstruturaDeCampos.objects.filter(cliente=caso.cliente, produto=caso.produto).first()
+    # Busca a ESTRUTURA de campos correta
+    estrutura = EstruturaDeCampos.objects.filter(cliente=caso.cliente, produto=caso.produto).prefetch_related('campos').first()
 
-    valores_para_template = []
+    valores_para_template = [] # Lista final para o template
+    
     if estrutura:
-        # Pega todos os valores salvos para este caso DE UMA VEZ.
+        # Pega todos os valores que JÁ EXISTEM para este caso DE UMA VEZ.
         valores_salvos_qs = caso.valores_personalizados.select_related('campo').all()
         # Cria um dicionário para acesso rápido: {id_do_campo: objeto_valor}
         valores_salvos_dict = {valor.campo.id: valor for valor in valores_salvos_qs}
 
-        # Itera sobre os campos definidos na estrutura, que já estão na ordem correta
-        # graças ao 'ordered-model'. Usamos '.all()' para garantir a ordem.
-        for campo in estrutura.campos.all():
-            # Pega o valor correspondente do dicionário
-            valor_salvo = valores_salvos_dict.get(campo.id)
+        # Itera sobre os CAMPOS DA ESTRUTURA (as definições), na ordem correta
+        # (Usa o 'through' model 'estruturacampoordenado' para a ordenação)
+        try:
+             campos_ordenados = estrutura.campos.all().order_by('estruturacampoordenado__order')
+        except Exception:
+             # Fallback se 'estruturacampoordenado' não existir ou falhar
+             campos_ordenados = estrutura.campos.all()
 
-            # Só adicionamos à lista se existir um valor salvo para este campo
+        for campo_definicao in campos_ordenados:
+            
+            # Tenta encontrar o valor salvo no dicionário
+            valor_salvo = valores_salvos_dict.get(campo_definicao.id)
+
             if valor_salvo:
-                # Tratamento de dados (como converter a data)
-                if campo.tipo_campo == 'DATA' and valor_salvo.valor:
+                # --- O VALOR EXISTE NO BANCO ---
+                
+                # Tratamento de dados (ex: converter data)
+                if campo_definicao.tipo_campo == 'DATA' and valor_salvo.valor:
                     try:
+                        # Tenta parsear a string (ex: '2025-10-27') de volta para um objeto date
                         valor_salvo.valor_tratado = datetime.strptime(valor_salvo.valor, '%Y-%m-%d').date()
                     except (ValueError, TypeError):
-                        valor_salvo.valor_tratado = valor_salvo.valor
+                        valor_salvo.valor_tratado = valor_salvo.valor # Fallback se o parse falhar
                 else:
-                    valor_salvo.valor_tratado = valor_salvo.valor
+                    valor_salvo.valor_tratado = valor_salvo.valor # Usa o valor string direto
                 
+                # Adiciona o objeto REAL (com valor)
                 valores_para_template.append(valor_salvo)
+            
+            else:
+                # --- O VALOR NÃO EXISTE NO BANCO (Ex: Campo de data opcional e vazio) ---
+                
+                # Criamos um "objeto" falso (um placeholder) em memória
+                placeholder_valor = ValorCampoPersonalizado() # Objeto vazio
+                placeholder_valor.campo = campo_definicao # Associa a definição (para pegar o rótulo no template)
+                placeholder_valor.valor = None # Define o valor como None/Vazio
+                placeholder_valor.valor_tratado = None # Define o valor tratado como None/Vazio
+                
+                # Adiciona o objeto PLACEHOLDER à lista
+                valores_para_template.append(placeholder_valor)
     
     # ==============================================================================
-    # O RESTO DO CÓDIGO CONTINUA EXATAMENTE IGUAL
+    # O RESTO DO CÓDIGO CONTINUA EXATAMENTE IGUAL (SUA LÓGICA ORIGINAL)
     # ==============================================================================
 
     andamentos = caso.andamentos.select_related('autor').all()
@@ -291,6 +314,7 @@ def detalhe_caso(request, pk):
     tempo_total = soma_tempo_obj['total_tempo']
     
     saldo_devedor_total = Decimal('0.00')
+    # NOTA: Esta lógica de saldo pode ser otimizada para usar o prefetch (como discutimos)
     for acordo in acordos:
         saldo_acordo = acordo.parcelas.filter(status='EMITIDA').aggregate(soma=Sum('valor_parcela'))['soma']
         if saldo_acordo:
@@ -306,6 +330,7 @@ def detalhe_caso(request, pk):
             sp = SharePoint()
             itens_anexos = sp.listar_conteudo_pasta(caso.sharepoint_folder_id)
         except Exception as e:
+            # (Mantém o print de log que você tinha)
             print(f"Erro ao buscar anexos da pasta raiz para o caso #{caso.id}: {e}")
 
     # Montagem do Contexto Final
@@ -315,7 +340,9 @@ def detalhe_caso(request, pk):
         'form_timesheet': form_timesheet,
         'form_acordo': form_acordo,
         'form_despesa': form_despesa,
-        'valores_personalizados': valores_para_template,
+        
+        'valores_personalizados': valores_para_template, # <<< LISTA CORRIGIDA
+        
         'andamentos': andamentos,
         'modelos_andamento': modelos_andamento,
         'timesheets': timesheets,
