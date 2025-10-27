@@ -1085,22 +1085,21 @@ def exportar_casos_dinamico(request, cliente_id, produto_id):
 @login_required
 def importar_casos_view(request):
     """
-    Recebe o upload do Excel e despacha as tarefas para o Celery.
+    Exibe o formulário de upload (GET) ou recebe o arquivo Excel (POST)
+    e despacha as tarefas de importação para o Celery.
     """
-    # Lógica GET (Carrega dados para o formulário inicial)
+    # --- Lógica GET: Exibir o formulário ---
     if request.method == 'GET':
         clientes = Cliente.objects.all().order_by('nome')
         produtos = Produto.objects.all().order_by('nome')
-        # --- CORREÇÃO DA SINTAXE DO CONTEXT ---
         context = {
             'clientes': clientes,
             'produtos': produtos,
             'titulo': 'Importação Massiva de Casos'
         }
-        # ----------------------------------------
         return render(request, 'casos/importar_casos_form.html', context)
 
-    # Lógica POST (Processa o upload do arquivo)
+    # --- Lógica POST: Processar o upload ---
     elif request.method == 'POST':
         cliente_id = request.POST.get('cliente')
         produto_id = request.POST.get('produto')
@@ -1109,101 +1108,129 @@ def importar_casos_view(request):
         # Validação básica dos campos do formulário
         if not (cliente_id and produto_id and arquivo_excel):
             messages.error(request, "Todos os campos (Cliente, Produto e Arquivo) são obrigatórios.")
-            # Retorna para a página GET recarregando os selects
+            # Recarrega a página GET com os selects
             clientes = Cliente.objects.all().order_by('nome')
             produtos = Produto.objects.all().order_by('nome')
             context = {'clientes': clientes, 'produtos': produtos, 'titulo': 'Importação Massiva de Casos'}
-            return render(request, 'casos/importar_casos_form.html', context) # Renderiza de novo com erro
+            return render(request, 'casos/importar_casos_form.html', context)
 
         try:
             cliente = get_object_or_404(Cliente, id=cliente_id)
             produto = get_object_or_404(Produto, id=produto_id)
 
-            # --- Lógica de Leitura e Envio para Celery ---
-            logger.info(f"Recebido arquivo '{arquivo_excel.name}' para importação (Cliente {cliente_id}, Produto {produto_id}).")
+            # --- Lógica de Leitura da Planilha e Envio para Celery ---
+            logger.info(f"Recebido arquivo '{arquivo_excel.name}' para importação (Cliente ID: {cliente_id}, Produto ID: {produto_id}).")
 
-            # Obter Chaves Válidas e Mapa de Cabeçalhos
+            # Obter Chaves Válidas e Estrutura de Campos
             lista_chaves_validas, _ = get_cabecalho_exportacao(cliente, produto)
             chaves_validas_set = set(lista_chaves_validas)
             estrutura_campos = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).prefetch_related('campos').first()
+            
+            # Mapa {nome_variavel_original: objeto CampoPersonalizado}
             campos_meta_map = {cm.nome_variavel: cm for cm in estrutura_campos.campos.all()} if estrutura_campos else {}
 
             # Carregar e Ler Planilha
             workbook = openpyxl.load_workbook(arquivo_excel)
             sheet = workbook.active
+            logger.info(f"Arquivo Excel carregado. Planilha ativa: '{sheet.title}'. Linhas: {sheet.max_row}")
 
             if sheet.max_row < 2:
                  raise ValidationError("A planilha não contém dados para importar (está vazia ou tem apenas o cabeçalho).")
 
+            # Ler e Normalizar Cabeçalho
             excel_headers_raw = [cell.value for cell in sheet[1]]
             excel_headers = [str(h).strip().lower().replace(' ', '_') if h else '' for h in excel_headers_raw]
             logger.info(f"Cabeçalhos lidos da planilha: {excel_headers_raw}")
             logger.debug(f"Cabeçalhos normalizados para mapeamento: {excel_headers}")
 
-            # Criar Mapa de Cabeçalhos (Excel -> Chave Interna Django, Case-Insensitive para Personalizados)
-            header_map = {}
-            chaves_personalizadas_map = { f'personalizado_{cm.nome_variavel.lower()}': cm.nome_variavel for cm in campos_meta_map.values() }
+            # --- CORREÇÃO FINAL: Criar Mapa de Cabeçalhos (Excel -> Chave Interna, Case-Insensitive) ---
+            header_map = {} # {excel_header_norm: nome_variavel_original OU chave_fixa}
+            
+            # Mapa temporário para busca case-insensitive de personalizados
+            # Chave: nome_variavel MINÚSCULO, Valor: nome_variavel ORIGINAL (com case)
+            variaveis_personalizadas_lower = {
+                cm.nome_variavel.lower(): cm.nome_variavel 
+                for cm in campos_meta_map.values() # Usa o mapa {nome_var_original: obj_Campo}
+            }
+            logger.debug(f"Mapa de variáveis personalizadas (lower): {variaveis_personalizadas_lower}")
 
             for excel_header_norm in excel_headers:
-                if excel_header_norm in chaves_validas_set and not excel_header_norm.startswith('personalizado_'):
-                    header_map[excel_header_norm] = excel_header_norm
+                # Tentativa 1: É um campo fixo EXATO? (já está minúsculo e na lista válida?)
+                chave_fixa = excel_header_norm
+                if chave_fixa in chaves_validas_set and not chave_fixa.startswith('personalizado_') and '__' not in chave_fixa: # Checa se é uma chave fixa válida
+                    header_map[excel_header_norm] = chave_fixa
+                    logger.debug(f"Mapeado Header '{excel_header_norm}' para Chave Fixa '{chave_fixa}'")
+                
+                # Tentativa 2: É um campo personalizado (busca case-insensitive)?
+                # Procura o cabeçalho normalizado (ex: 'aviso') no mapa de minúsculas
+                elif excel_header_norm in variaveis_personalizadas_lower:
+                    # Pega o nome_variavel ORIGINAL (ex: 'Aviso')
+                    nome_variavel_original = variaveis_personalizadas_lower[excel_header_norm]
+                    # O mapa final terá {excel_header_norm : nome_variavel_original}
+                    header_map[excel_header_norm] = nome_variavel_original 
+                    logger.debug(f"Mapeado Header '{excel_header_norm}' para Nome Variável Personalizado '{nome_variavel_original}'")
+                
+                # Se não for nenhum dos dois
                 else:
-                    chave_teste_pers = f'personalizado_{excel_header_norm}'
-                    nome_variavel_original = chaves_personalizadas_map.get(chave_teste_pers)
-                    if nome_variavel_original:
-                        header_map[excel_header_norm] = nome_variavel_original
-                    else:
-                        logger.warning(f"Cabeçalho da planilha '{excel_header_norm}' não corresponde a nenhum campo válido e será ignorado.")
+                    logger.warning(f"Cabeçalho da planilha '{excel_header_norm}' não corresponde a nenhum campo válido e será ignorado.")
+            
+            logger.info(f"Mapa final de cabeçalhos criado para tarefa Celery: {header_map}")
+            # --- FIM DA CORREÇÃO DO HEADER_MAP ---
 
+            # Validação: Garante que algum cabeçalho foi mapeado
             if not header_map:
                 raise ValidationError("Nenhum cabeçalho na planilha corresponde aos campos fixos ou personalizados esperados para esta combinação Cliente/Produto.")
 
             # Preparar e Enviar Tarefas para Celery
             total_linhas = sheet.max_row - 1
-            delay_segundos = 180 # 3 minutos
+            delay_segundos = 180 # 3 minutos (180 segundos)
             linhas_enviadas = 0
 
             logger.info(f"Enviando {total_linhas} tarefas para o Celery com delay de {delay_segundos}s entre cada uma.")
 
             for row_index, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+                 # Monta o dicionário de dados da linha {excel_header_norm: valor}
                  linha_dados = dict(zip(excel_headers, row))
-                 linha_dados['_row_index'] = row_index # Para logging na task
+                 linha_dados['_row_index'] = row_index # Adiciona índice para logging na task
 
+                 # Cria mapa {nome_variavel_original: campo_id} para passar à task
                  campos_meta_map_serializable = {nome_var: campo.id for nome_var, campo in campos_meta_map.items()}
 
                  # Envia a tarefa Celery com atraso
-                 processar_linha_importacao.apply_async( # <<< AGORA DEVE SER ENCONTRADA
+                 processar_linha_importacao.apply_async(
                      args=[
                          linha_dados,
                          cliente.id,
                          produto.id,
-                         header_map,
-                         list(chaves_validas_set),
-                         campos_meta_map_serializable,
-                         produto.padrao_titulo, # Envia a string do padrão
+                         header_map, # Passa o mapa {excel_header_norm: nome_var_original ou chave_fixa}
+                         list(chaves_validas_set), # Passa como lista (embora não usada ativamente na task)
+                         campos_meta_map_serializable, # Passa o mapa {nome_var_original: campo_id}
+                         produto.padrao_titulo, # Passa a string do padrão de título
                          estrutura_campos.id if estrutura_campos else None
                      ],
-                     countdown=linhas_enviadas * delay_segundos
+                     countdown=linhas_enviadas * delay_segundos # Atraso cumulativo
                  )
                  linhas_enviadas += 1
 
-            messages.success(request, f"Importação iniciada com sucesso! {linhas_enviadas} casos foram enviados para processamento em background (um a cada {delay_segundos // 60} minutos).")
+            messages.success(request, f"Importação iniciada com sucesso! {linhas_enviadas} casos foram enviados para processamento em background (um a cada {delay_segundos // 60} minutos). Acompanhe os logs do Celery para o progresso.")
             # Redireciona de volta para a mesma página após o envio
             return redirect('casos:importar_casos_view')
             # --- Fim da Lógica de Leitura e Envio ---
 
-        except ValidationError as e: # Captura erros de validação (planilha vazia, sem cabeçalho válido)
+        # Tratamento de Erros durante o processamento do Upload (antes de enviar ao Celery)
+        except ValidationError as e: 
             logger.error(f"Erro de validação no upload da importação: {e.message}")
             messages.error(request, f"Erro na Importação: {e.message}")
-        except Exception as e: # Captura outros erros (leitura do arquivo, etc.)
+        except Exception as e: 
             logger.error(f"Erro inesperado ao iniciar a importação: {str(e)}", exc_info=True)
             messages.error(request, f"Erro inesperado ao iniciar a importação. Verifique o arquivo ou contate o suporte.")
 
         # Se houve erro, redireciona de volta para o formulário de importação
         return redirect('casos:importar_casos_view')
 
-    # Se não for GET nem POST (improvável, mas por segurança)
-    return redirect('casos:importar_casos_view')
+    # Se não for GET nem POST (improvável)
+    logger.warning(f"Recebida requisição {request.method} inesperada para importar_casos_view.")
+    return redirect('casos:importar_casos_view') # Redireciona por segurança
 
 def processar_importacao_excel(request, cliente_id, produto_id, arquivo_excel):
     logger.info(f"Iniciando importação (Criação Apenas) para Cliente ID {cliente_id}, Produto ID {produto_id}")
