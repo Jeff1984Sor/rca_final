@@ -51,6 +51,7 @@ from campos_custom.models import EstruturaDeCampos, CampoPersonalizado, ValorCam
 
 # Integrações
 from integrations.sharepoint import SharePoint
+from .tasks import processar_linha_importacao
 
 logger = logging.getLogger('casos_app')
 User = get_user_model()
@@ -1084,38 +1085,125 @@ def exportar_casos_dinamico(request, cliente_id, produto_id):
 @login_required
 def importar_casos_view(request):
     """
-    Permite o upload de um arquivo Excel e processa a importação de casos.
+    Recebe o upload do Excel e despacha as tarefas para o Celery.
     """
-    clientes = Cliente.objects.all().order_by('nome')
-    produtos = Produto.objects.all().order_by('nome')
+    # Lógica GET (Carrega dados para o formulário inicial)
+    if request.method == 'GET':
+        clientes = Cliente.objects.all().order_by('nome')
+        produtos = Produto.objects.all().order_by('nome')
+        # --- CORREÇÃO DA SINTAXE DO CONTEXT ---
+        context = {
+            'clientes': clientes,
+            'produtos': produtos,
+            'titulo': 'Importação Massiva de Casos'
+        }
+        # ----------------------------------------
+        return render(request, 'casos/importar_casos_form.html', context)
 
-    if request.method == 'POST':
-        # 1. Obtém os dados de seleção
+    # Lógica POST (Processa o upload do arquivo)
+    elif request.method == 'POST':
         cliente_id = request.POST.get('cliente')
         produto_id = request.POST.get('produto')
         arquivo_excel = request.FILES.get('arquivo_excel')
 
+        # Validação básica dos campos do formulário
         if not (cliente_id and produto_id and arquivo_excel):
-            messages.error(request, "Todos os campos são obrigatórios.")
-            return redirect('casos:importar_casos_view')
+            messages.error(request, "Todos os campos (Cliente, Produto e Arquivo) são obrigatórios.")
+            # Retorna para a página GET recarregando os selects
+            clientes = Cliente.objects.all().order_by('nome')
+            produtos = Produto.objects.all().order_by('nome')
+            context = {'clientes': clientes, 'produtos': produtos, 'titulo': 'Importação Massiva de Casos'}
+            return render(request, 'casos/importar_casos_form.html', context) # Renderiza de novo com erro
 
         try:
-            # Redireciona para a função de processamento real
-            return processar_importacao_excel(request, cliente_id, produto_id, arquivo_excel)
-        except ValidationError as e:
+            cliente = get_object_or_404(Cliente, id=cliente_id)
+            produto = get_object_or_404(Produto, id=produto_id)
+
+            # --- Lógica de Leitura e Envio para Celery ---
+            logger.info(f"Recebido arquivo '{arquivo_excel.name}' para importação (Cliente {cliente_id}, Produto {produto_id}).")
+
+            # Obter Chaves Válidas e Mapa de Cabeçalhos
+            lista_chaves_validas, _ = get_cabecalho_exportacao(cliente, produto)
+            chaves_validas_set = set(lista_chaves_validas)
+            estrutura_campos = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).prefetch_related('campos').first()
+            campos_meta_map = {cm.nome_variavel: cm for cm in estrutura_campos.campos.all()} if estrutura_campos else {}
+
+            # Carregar e Ler Planilha
+            workbook = openpyxl.load_workbook(arquivo_excel)
+            sheet = workbook.active
+
+            if sheet.max_row < 2:
+                 raise ValidationError("A planilha não contém dados para importar (está vazia ou tem apenas o cabeçalho).")
+
+            excel_headers_raw = [cell.value for cell in sheet[1]]
+            excel_headers = [str(h).strip().lower().replace(' ', '_') if h else '' for h in excel_headers_raw]
+            logger.info(f"Cabeçalhos lidos da planilha: {excel_headers_raw}")
+            logger.debug(f"Cabeçalhos normalizados para mapeamento: {excel_headers}")
+
+            # Criar Mapa de Cabeçalhos (Excel -> Chave Interna Django, Case-Insensitive para Personalizados)
+            header_map = {}
+            chaves_personalizadas_map = { f'personalizado_{cm.nome_variavel.lower()}': cm.nome_variavel for cm in campos_meta_map.values() }
+
+            for excel_header_norm in excel_headers:
+                if excel_header_norm in chaves_validas_set and not excel_header_norm.startswith('personalizado_'):
+                    header_map[excel_header_norm] = excel_header_norm
+                else:
+                    chave_teste_pers = f'personalizado_{excel_header_norm}'
+                    nome_variavel_original = chaves_personalizadas_map.get(chave_teste_pers)
+                    if nome_variavel_original:
+                        header_map[excel_header_norm] = nome_variavel_original
+                    else:
+                        logger.warning(f"Cabeçalho da planilha '{excel_header_norm}' não corresponde a nenhum campo válido e será ignorado.")
+
+            if not header_map:
+                raise ValidationError("Nenhum cabeçalho na planilha corresponde aos campos fixos ou personalizados esperados para esta combinação Cliente/Produto.")
+
+            # Preparar e Enviar Tarefas para Celery
+            total_linhas = sheet.max_row - 1
+            delay_segundos = 180 # 3 minutos
+            linhas_enviadas = 0
+
+            logger.info(f"Enviando {total_linhas} tarefas para o Celery com delay de {delay_segundos}s entre cada uma.")
+
+            for row_index, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+                 linha_dados = dict(zip(excel_headers, row))
+                 linha_dados['_row_index'] = row_index # Para logging na task
+
+                 campos_meta_map_serializable = {nome_var: campo.id for nome_var, campo in campos_meta_map.items()}
+
+                 # Envia a tarefa Celery com atraso
+                 processar_linha_importacao.apply_async( # <<< AGORA DEVE SER ENCONTRADA
+                     args=[
+                         linha_dados,
+                         cliente.id,
+                         produto.id,
+                         header_map,
+                         list(chaves_validas_set),
+                         campos_meta_map_serializable,
+                         produto.padrao_titulo, # Envia a string do padrão
+                         estrutura_campos.id if estrutura_campos else None
+                     ],
+                     countdown=linhas_enviadas * delay_segundos
+                 )
+                 linhas_enviadas += 1
+
+            messages.success(request, f"Importação iniciada com sucesso! {linhas_enviadas} casos foram enviados para processamento em background (um a cada {delay_segundos // 60} minutos).")
+            # Redireciona de volta para a mesma página após o envio
+            return redirect('casos:importar_casos_view')
+            # --- Fim da Lógica de Leitura e Envio ---
+
+        except ValidationError as e: # Captura erros de validação (planilha vazia, sem cabeçalho válido)
+            logger.error(f"Erro de validação no upload da importação: {e.message}")
             messages.error(request, f"Erro na Importação: {e.message}")
-        except Exception as e:
-            messages.error(request, f"Erro inesperado: {str(e)}")
-            
+        except Exception as e: # Captura outros erros (leitura do arquivo, etc.)
+            logger.error(f"Erro inesperado ao iniciar a importação: {str(e)}", exc_info=True)
+            messages.error(request, f"Erro inesperado ao iniciar a importação. Verifique o arquivo ou contate o suporte.")
+
+        # Se houve erro, redireciona de volta para o formulário de importação
         return redirect('casos:importar_casos_view')
 
-    context = {
-        'clientes': clientes,
-        'produtos': produtos,
-        'titulo': 'Importação Massiva de Casos'
-    }
-    return render(request, 'casos/importar_casos_form.html', context)
-logger = logging.getLogger('casos_app')
+    # Se não for GET nem POST (improvável, mas por segurança)
+    return redirect('casos:importar_casos_view')
 
 def processar_importacao_excel(request, cliente_id, produto_id, arquivo_excel):
     logger.info(f"Iniciando importação (Criação Apenas) para Cliente ID {cliente_id}, Produto ID {produto_id}")

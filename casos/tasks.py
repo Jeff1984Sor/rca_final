@@ -1,128 +1,125 @@
 # casos/tasks.py
-
 from celery import shared_task
+import logging
+from datetime import datetime, date
+
+# Importe os modelos necessários DENTRO da função ou no topo
 from .models import Caso
-import os
-import requests
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.conf import settings
-from django.urls import reverse
-from pastas.models import EstruturaPasta
-from integrations.sharepoint import SharePoint
+from clientes.models import Cliente
+from produtos.models import Produto
+from campos_custom.models import CampoPersonalizado, ValorCampoPersonalizado, EstruturaDeCampos
 
-# ==============================================================================
-# LÓGICA DAS TAREFAS EM SEGUNDO PLANO
-# Estas funções serão executadas pelo Celery Worker, não pelo servidor web.
-# ==============================================================================
+logger = logging.getLogger('casos_app') # Use o mesmo logger
 
-@shared_task
-def criar_pastas_sharepoint_task(caso_id):
+@shared_task # Transforma a função em uma tarefa Celery
+def processar_linha_importacao(linha_dados, cliente_id, produto_id, header_map, chaves_validas_set, campos_meta_map, padrao_titulo_produto, estrutura_campos_id):
     """
-    Tarefa Celery para criar a estrutura de pastas no SharePoint.
+    Processa UMA ÚNICA linha de dados da planilha Excel.
+    Recebe os dados já mapeados.
     """
+    row_index = linha_dados.get('_row_index', 'desconhecida') # Adicionamos o índice da linha
+    logger.info(f"[CELERY Task] Iniciando processamento da linha {row_index}")
+
     try:
-        caso = Caso.objects.get(id=caso_id)
-        print(f"TASK SharePoint: A iniciar para o caso #{caso.id}...")
+        # Busca objetos FK uma vez por tarefa
+        cliente = Cliente.objects.get(id=cliente_id)
+        produto = Produto.objects.get(id=produto_id)
+        estrutura_campos = EstruturaDeCampos.objects.get(id=estrutura_campos_id) if estrutura_campos_id else None
+
+        dados_caso_fixos = {}
+        dados_personalizados_para_salvar = {} # {objeto_CampoPersonalizado: valor}
+        dados_personalizados_para_titulo = {} # {nome_variavel: valor}
         
-        estrutura = EstruturaPasta.objects.get(cliente=caso.cliente, produto=caso.produto)
-        pastas_a_criar = estrutura.pastas.all()
+        # Mapeia dados da linha (Lógica similar à view, mas para UMA linha)
+        for header_norm, cell_value in linha_dados.items():
+            if cell_value is None or not header_norm or header_norm == '_row_index': 
+                continue
+                
+            chave_interna = header_map.get(header_norm)
+            if not chave_interna: continue 
+            
+            # --- Processar Valor (Campos Fixos) ---
+            if not chave_interna.startswith('personalizado_') and '__' not in chave_interna:
+                campo_caso = chave_interna
+                # TRATAMENTO DE DATA (Exemplo)
+                if campo_caso in ['data_entrada', 'data_encerramento']:
+                     if isinstance(cell_value, datetime):
+                        dados_caso_fixos[campo_caso] = cell_value.date()
+                     elif isinstance(cell_value, date):
+                         dados_caso_fixos[campo_caso] = cell_value
+                     else:
+                         # Tentar parsear AAAA-MM-DD ou DD/MM/AAAA
+                         parsed_date = None
+                         for fmt in ('%Y-%m-%d', '%d/%m/%Y'):
+                             try:
+                                 parsed_date = datetime.strptime(str(cell_value).split(' ')[0], fmt).date()
+                                 break
+                             except (ValueError, TypeError):
+                                 continue
+                         if parsed_date:
+                            dados_caso_fixos[campo_caso] = parsed_date
+                         else:
+                            logger.warning(f"[CELERY Task - Linha {row_index}] Data inválida '{cell_value}' para '{header_norm}'.")
+                # TRATAMENTO DE STATUS 
+                elif campo_caso == 'status':
+                    valor_status = str(cell_value).strip().upper()
+                    if any(valor_status == choice[0] for choice in Caso.STATUS_CHOICES):
+                        dados_caso_fixos[campo_caso] = valor_status
+                    else:
+                        logger.warning(f"[CELERY Task - Linha {row_index}] Status inválido '{cell_value}'.")
+                else:
+                    dados_caso_fixos[campo_caso] = cell_value
+            
+            # --- Processar Valor (Campos Personalizados) ---
+            elif chave_interna.startswith('personalizado_'):
+                nome_variavel = chave_interna.split('personalizado_')[1]
+                valor_str = str(cell_value)
+                dados_personalizados_para_titulo[nome_variavel] = valor_str
+                
+                campo_meta = campos_meta_map.get(nome_variavel) # Usa o mapa passado como argumento
+                if campo_meta:
+                    dados_personalizados_para_salvar[campo_meta] = valor_str
 
-        if not pastas_a_criar:
-            print(f"TASK SharePoint: Estrutura encontrada para o caso #{caso.id}, mas sem pastas associadas.")
-            return
+        # Garante data_entrada padrão se ausente
+        if 'data_entrada' not in dados_caso_fixos:
+            dados_caso_fixos['data_entrada'] = date.today()
 
-        sp = SharePoint()
-        nome_pasta_caso = str(caso.id)
-        folder_id = sp.criar_pasta_caso(nome_pasta_caso)
-        
-        # Salva o ID no objeto 'caso'
-        caso.sharepoint_folder_id = folder_id
-        caso.save(update_fields=['sharepoint_folder_id']) # Salva diretamente na BD
-        
-        for pasta in pastas_a_criar:
-            sp.criar_subpasta(folder_id, pasta.nome)
-        
-        print(f"TASK SharePoint: Pastas para o caso #{caso.id} criadas com sucesso.")
-        return f"Pastas para o caso {caso_id} criadas com sucesso."
-    except Caso.DoesNotExist:
-        print(f"ERRO na TASK SharePoint: Caso com ID {caso_id} não encontrado.")
-        return f"Caso com ID {caso_id} não encontrado."
-    except EstruturaPasta.DoesNotExist:
-        print(f"TASK SharePoint: Nenhuma estrutura de pastas encontrada para o caso #{caso_id}.")
-        return f"Nenhuma estrutura de pastas para o caso {caso_id}."
-    except Exception as e:
-        print(f"ERRO na TASK SharePoint para o Caso #{caso_id}: {e}")
-        # Re-raise the exception to mark the task as failed
-        raise e
-
-
-@shared_task
-def enviar_sinal_para_n8n_task(caso_id):
-    """
-    Tarefa Celery para enviar os dados do novo caso para o Webhook do n8n.
-    """
-    try:
-        caso = Caso.objects.get(id=caso_id)
-        print(f"TASK n8n Webhook: A preparar para o caso #{caso.id}...")
-
-        webhook_url = os.environ.get('N8N_WEBHOOK_URL')
-        if not webhook_url:
-            print("AVISO na TASK n8n: N8N_WEBHOOK_URL não configurada.")
-            return "N8N_WEBHOOK_URL não configurada."
-
-        payload = {
-            "id": caso.id,
-            "titulo": caso.titulo,
-            # ... (adicione todos os outros campos do payload que já tinha)
-        }
-
-        response = requests.post(webhook_url, json=payload, timeout=15)
-        response.raise_for_status()
-        print(f"TASK n8n Webhook: Sinal enviado com sucesso! Status: {response.status_code}")
-        return f"Webhook para o caso {caso_id} enviado com sucesso."
-    except Caso.DoesNotExist:
-        print(f"ERRO na TASK n8n: Caso com ID {caso_id} não encontrado.")
-        return f"Caso com ID {caso_id} não encontrado."
-    except requests.exceptions.RequestException as e:
-        print(f"ERRO na TASK n8n para o caso #{caso_id}: {e}")
-        raise e
-
-
-@shared_task
-def enviar_email_novo_caso_task(caso_id):
-    """
-    Tarefa Celery para preparar e enviar um e-mail de notificação.
-    """
-    try:
-        caso = Caso.objects.get(id=caso_id)
-        print(f"TASK E-mail: A preparar para o caso #{caso.id}...")
-
-        destinatario_fixo = os.environ.get('EMAIL_DESTINATARIO_NOVOS_CASOS')
-        if not destinatario_fixo:
-            print("AVISO na TASK E-mail: EMAIL_DESTINATARIO_NOVOS_CASOS não definida.")
-            return "Variável de e-mail não definida."
-
-        link_caso = reverse('casos:detalhe_caso', kwargs={'pk': caso.id})
-        context = {
-            'caso': caso,
-            'link_caso': f"https://gesta-rca.onrender.com{link_caso}"
-        }
-        html_message = render_to_string('emails/notificacao_novo_caso.html', context)
-        
-        send_mail(
-            subject=f'Novo Caso Criado: #{caso.id} - {caso.titulo}',
-            message='',
-            from_email=settings.EMAIL_HOST_USER,
-            recipient_list=[destinatario_fixo],
-            html_message=html_message,
-            fail_silently=False,
+        # 6. Criar o Caso (sempre cria, pois é Abordagem 1)
+        novo_caso = Caso.objects.create(
+            cliente=cliente,
+            produto=produto,
+            titulo="[Título Pendente]",
+            **dados_caso_fixos
         )
-        print(f"TASK E-mail: Notificação para o caso #{caso.id} enviada com sucesso!")
-        return f"E-mail para o caso {caso_id} enviado."
-    except Caso.DoesNotExist:
-        print(f"ERRO na TASK E-mail: Caso com ID {caso_id} não encontrado.")
-        return f"Caso com ID {caso_id} não encontrado."
+        logger.info(f"[CELERY Task] Caso preliminar criado (ID {novo_caso.id}) para linha {row_index}.")
+
+        # 7. Salvar Campos Personalizados
+        for campo_meta, valor_a_salvar in dados_personalizados_para_salvar.items():
+            ValorCampoPersonalizado.objects.create(
+                caso=novo_caso,
+                campo=campo_meta,
+                valor=valor_a_salvar
+            )
+        logger.debug(f"[CELERY Task] Campos personalizados salvos para caso ID {novo_caso.id}")
+
+        # 8. Gerar e Salvar Título Automático
+        titulo_final = f"Caso Importado #{novo_caso.id}"
+        if padrao_titulo_produto and estrutura_campos:
+            titulo_formatado = padrao_titulo_produto
+            for nome_var, valor in dados_personalizados_para_titulo.items():
+                titulo_formatado = titulo_formatado.replace(f'{{{nome_var}}}', valor)
+            titulo_final = titulo_formatado
+        
+        novo_caso.titulo = titulo_final
+        novo_caso.save(update_fields=['titulo'])
+        logger.info(f"[CELERY Task] Título gerado e salvo para caso ID {novo_caso.id}: '{titulo_final}'")
+        
+        # AQUI O SIGNAL post_save SERÁ DISPARADO AUTOMATICAMENTE pelo create() e save()
+        
+        return f"Linha {row_index} processada com sucesso. Caso ID {novo_caso.id} criado."
+
     except Exception as e:
-        print(f"ERRO na TASK E-mail para o caso #{caso.id}: {e}")
-        raise e
+        logger.error(f"[CELERY Task] Erro ao processar linha {row_index}: {e}", exc_info=True)
+        # Você pode decidir o que fazer com o erro (registrar, tentar de novo, etc.)
+        # Retornar uma string de erro pode ser útil para logs gerais
+        return f"Linha {row_index} falhou: {e}"
