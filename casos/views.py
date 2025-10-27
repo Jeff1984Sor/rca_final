@@ -165,10 +165,9 @@ def lista_casos(request):
     }
     return render(request, 'casos/lista_casos.html', context)
 
-@login_required
 def detalhe_caso(request, pk):
     caso = get_object_or_404(Caso, pk=pk)
-    caso.refresh_from_db()
+    caso.refresh_from_db() # Garante que estamos vendo o estado mais atual
     
     # --- Lógica POST (Sua lógica original, sem mudanças) ---
     form_andamento = AndamentoForm()
@@ -218,7 +217,7 @@ def detalhe_caso(request, pk):
                 novo_acordo.caso = caso
                 novo_acordo.save()
                 FluxoInterno.objects.create(caso=caso, tipo_evento='ACORDO', descricao=f"Novo acordo de R$ {novo_acordo.valor_total} em {novo_acordo.numero_parcelas}x criado.", autor=request.user)
-                # ... (lógica de criação de parcelas) ...
+                # ... (Sua lógica de criação de parcelas vai aqui) ...
                 url_destino = reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})
                 return redirect(f'{url_destino}?aba=acordos')
         
@@ -235,43 +234,63 @@ def detalhe_caso(request, pk):
     # --- Lógica GET (Carregamento da Página) ---
     
     # ==============================================================================
-    # LÓGICA DE BUSCA DE DADOS PERSONALIZADOS (CORRIGIDA)
+    # LÓGICA DE BUSCA DE DADOS PERSONALIZADOS (ATUALIZADA PARA DATA E MOEDA)
     # ==============================================================================
     
+    # Busca a ESTRUTURA de campos correta
     estrutura = EstruturaDeCampos.objects.filter(cliente=caso.cliente, produto=caso.produto).prefetch_related('campos').first()
-    valores_para_template = [] 
+
+    valores_para_template = [] # Lista final para o template
     
     if estrutura:
-        valores_salvos_dict = {valor.campo.id: valor for valor in caso.valores_personalizados.select_related('campo').all()}
-        
+        # Pega todos os valores que JÁ EXISTEM para este caso DE UMA VEZ.
+        valores_salvos_qs = caso.valores_personalizados.select_related('campo').all()
+        # Cria um dicionário para acesso rápido: {id_do_campo: objeto_valor}
+        valores_salvos_dict = {valor.campo.id: valor for valor in valores_salvos_qs}
+
+        # Itera sobre os CAMPOS DA ESTRUTURA (as definições), na ordem correta
         try:
+             # Tenta ordenar pelo 'through' model 'estruturacampoordenado'
              campos_ordenados = estrutura.campos.all().order_by('estruturacampoordenado__order')
         except Exception:
+             # Fallback se 'estruturacampoordenado' não existir ou falhar
              campos_ordenados = estrutura.campos.all()
 
         for campo_definicao in campos_ordenados:
+            
+            # Tenta encontrar o valor salvo no dicionário
             valor_salvo = valores_salvos_dict.get(campo_definicao.id)
 
             if valor_salvo:
                 # --- O VALOR EXISTE NO BANCO ---
                 
-                # CORREÇÃO DA LÓGICA DE PARSE DE DATA
+                # 1. TRATAMENTO DE DATA (Converte string para objeto Date)
                 if campo_definicao.tipo_campo == 'DATA' and valor_salvo.valor:
                     parsed_date = None
-                    # Tenta os formatos na ordem correta
+                    # Tenta os formatos na ordem correta (AAAA-MM-DD HH:MM:SS ou AAAA-MM-DD)
                     for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'): 
                         try:
-                            # Tenta parsear a string COMPLETA primeiro
+                            # Tenta parsear a string (ex: '2025-09-22 00:00:00')
                             parsed_date = datetime.strptime(valor_salvo.valor, fmt).date()
                             break # Sucesso
                         except (ValueError, TypeError):
-                            # Se falhar (ex: string era só '2025-09-22'), tenta o próximo formato
-                            continue 
+                            continue # Tenta o próximo formato
                     
-                    if parsed_date:
-                        valor_salvo.valor_tratado = parsed_date # PASSA O OBJETO DATE
-                    else:
-                        valor_salvo.valor_tratado = valor_salvo.valor # Fallback: passa a string original
+                    valor_salvo.valor_tratado = parsed_date # Passa o OBJETO DATE (ou None se falhou)
+                
+                # 2. TRATAMENTO DE MOEDA (Formata a string com R$)
+                elif campo_definicao.tipo_campo == 'MOEDA' and valor_salvo.valor:
+                    try:
+                        # Tenta converter a string (ex: "15600.00" ou "15600") para Decimal
+                        valor_decimal = Decimal(valor_salvo.valor)
+                        # Formata como moeda BRL (ex: "15.600,00")
+                        valor_formatado = number_format(valor_decimal, decimal_pos=2, force_grouping=True)
+                        valor_salvo.valor_tratado = f"R$ {valor_formatado}" # Adiciona o símbolo
+                    except (InvalidOperation, ValueError, TypeError):
+                        # Se falhar (ex: valor era "N/A"), apenas mostra o valor original
+                        valor_salvo.valor_tratado = valor_salvo.valor
+                
+                # 3. OUTROS TIPOS (Texto, Número, etc.)
                 else:
                     valor_salvo.valor_tratado = valor_salvo.valor 
                 
@@ -279,15 +298,16 @@ def detalhe_caso(request, pk):
             
             else:
                 # --- O VALOR NÃO EXISTE NO BANCO ---
+                # Cria um "objeto" falso (placeholder) para exibir o rótulo
                 placeholder_valor = ValorCampoPersonalizado() 
                 placeholder_valor.campo = campo_definicao
                 placeholder_valor.valor = None
-                placeholder_valor.valor_tratado = None # PASSA NONE
+                placeholder_valor.valor_tratado = None # O template tratará isso
                 
                 valores_para_template.append(placeholder_valor)
     
     # ==============================================================================
-    # O RESTO DO CÓDIGO (Lógica de Andamentos, Timesheets, Contexto)
+    # O RESTO DO CÓDIGO DA VIEW (Sua lógica original)
     # ==============================================================================
 
     andamentos = caso.andamentos.select_related('autor').all()
@@ -296,18 +316,18 @@ def detalhe_caso(request, pk):
     acordos = caso.acordos.prefetch_related('parcelas').all()
     despesas = caso.despesas.select_related('advogado').all()
     historico_fases = caso.historico_fases.select_related('fase').order_by('data_entrada')
+    
     acoes_pendentes = caso.acoes_pendentes.filter(status='PENDENTE').select_related('acao', 'responsavel')
     acoes_concluidas = caso.acoes_pendentes.filter(status='CONCLUIDA').select_related('acao', 'concluida_por').order_by('-data_conclusao')
 
     soma_tempo_obj = timesheets.aggregate(total_tempo=Sum('tempo'))
-    tempo_total = soma_tempo_obj['total_tempo']
+    tempo_total = soma_tempo_obj['total_tempo'] # Já é um timedelta ou None
     
     saldo_devedor_total = Decimal('0.00')
+    # Otimização: Usar o prefetch para calcular o saldo em Python
     for acordo in acordos:
-        # Otimização: Usar o prefetch em vez de .filter()
-        saldo_acordo = sum(p.valor_parcela for p in acordo.parcelas.all() if p.status == 'EMITIDA')
-        if saldo_acordo:
-            saldo_devedor_total += saldo_acordo
+        saldo_acordo = sum(p.valor_parcela for p in acordo.parcelas.all() if p.status == 'EMITIDA' and p.valor_parcela is not None)
+        saldo_devedor_total += saldo_acordo
             
     soma_despesas_obj = despesas.aggregate(total_despesas=Sum('valor'))
     total_despesas = soma_despesas_obj['total_despesas'] or Decimal('0.00')
@@ -319,6 +339,7 @@ def detalhe_caso(request, pk):
             sp = SharePoint()
             itens_anexos = sp.listar_conteudo_pasta(caso.sharepoint_folder_id)
         except Exception as e:
+            # (Mantém o print de log que você tinha)
             print(f"Erro ao buscar anexos da pasta raiz para o caso #{caso.id}: {e}")
 
     # Montagem do Contexto Final
@@ -328,7 +349,9 @@ def detalhe_caso(request, pk):
         'form_timesheet': form_timesheet,
         'form_acordo': form_acordo,
         'form_despesa': form_despesa,
-        'valores_personalizados': valores_para_template, # <<< LISTA CORRIGIDA
+        
+        'valores_personalizados': valores_para_template, # <<< LISTA ATUALIZADA
+        
         'andamentos': andamentos,
         'modelos_andamento': modelos_andamento,
         'timesheets': timesheets,
