@@ -168,15 +168,14 @@ def lista_casos(request):
 @login_required
 def detalhe_caso(request, pk):
     caso = get_object_or_404(Caso, pk=pk)
-    caso.refresh_from_db() # Garante que estamos vendo o estado mais atual do caso
+    caso.refresh_from_db()
     
-    # Prepara os formulários com valores iniciais ou vazios
+    # --- Lógica POST (Sua lógica original, sem mudanças) ---
     form_andamento = AndamentoForm()
     form_timesheet = TimesheetForm(user=request.user)
     form_acordo = AcordoForm(user=request.user)
     form_despesa = DespesaForm(user=request.user)
 
-    # Processamento de formulários enviados via POST (SUA LÓGICA ORIGINAL)
     if request.method == 'POST':
         if 'submit_andamento' in request.POST:
             form_andamento = AndamentoForm(request.POST)
@@ -233,71 +232,62 @@ def detalhe_caso(request, pk):
                 url_destino = reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})
                 return redirect(f'{url_destino}?aba=despesas')
     
-    # --- Lógica GET (executada sempre) ---
-    # Prepara os formulários em branco (NÃO MUDA)
-    form_andamento = AndamentoForm()
-    form_timesheet = TimesheetForm(user=request.user)
-    form_acordo = AcordoForm(user=request.user)
-    form_despesa = DespesaForm(user=request.user)
+    # --- Lógica GET (Carregamento da Página) ---
     
     # ==============================================================================
-    # LÓGICA DE BUSCA DE DADOS PERSONALIZADOS (ATUALIZADA)
+    # LÓGICA DE BUSCA DE DADOS PERSONALIZADOS (CORRIGIDA)
     # ==============================================================================
     
-    # Busca a ESTRUTURA de campos correta
     estrutura = EstruturaDeCampos.objects.filter(cliente=caso.cliente, produto=caso.produto).prefetch_related('campos').first()
-
-    valores_para_template = [] # Lista final para o template
+    valores_para_template = [] 
     
     if estrutura:
-        # Pega todos os valores que JÁ EXISTEM para este caso DE UMA VEZ.
-        valores_salvos_qs = caso.valores_personalizados.select_related('campo').all()
-        # Cria um dicionário para acesso rápido: {id_do_campo: objeto_valor}
-        valores_salvos_dict = {valor.campo.id: valor for valor in valores_salvos_qs}
-
-        # Itera sobre os CAMPOS DA ESTRUTURA (as definições), na ordem correta
-        # (Usa o 'through' model 'estruturacampoordenado' para a ordenação)
+        valores_salvos_dict = {valor.campo.id: valor for valor in caso.valores_personalizados.select_related('campo').all()}
+        
         try:
              campos_ordenados = estrutura.campos.all().order_by('estruturacampoordenado__order')
         except Exception:
-             # Fallback se 'estruturacampoordenado' não existir ou falhar
              campos_ordenados = estrutura.campos.all()
 
         for campo_definicao in campos_ordenados:
-            
-            # Tenta encontrar o valor salvo no dicionário
             valor_salvo = valores_salvos_dict.get(campo_definicao.id)
 
             if valor_salvo:
                 # --- O VALOR EXISTE NO BANCO ---
                 
-                # Tratamento de dados (ex: converter data)
+                # CORREÇÃO DA LÓGICA DE PARSE DE DATA
                 if campo_definicao.tipo_campo == 'DATA' and valor_salvo.valor:
-                    try:
-                        # Tenta parsear a string (ex: '2025-10-27') de volta para um objeto date
-                        valor_salvo.valor_tratado = datetime.strptime(valor_salvo.valor, '%Y-%m-%d').date()
-                    except (ValueError, TypeError):
-                        valor_salvo.valor_tratado = valor_salvo.valor # Fallback se o parse falhar
+                    parsed_date = None
+                    # Tenta os formatos na ordem correta
+                    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'): 
+                        try:
+                            # Tenta parsear a string COMPLETA primeiro
+                            parsed_date = datetime.strptime(valor_salvo.valor, fmt).date()
+                            break # Sucesso
+                        except (ValueError, TypeError):
+                            # Se falhar (ex: string era só '2025-09-22'), tenta o próximo formato
+                            continue 
+                    
+                    if parsed_date:
+                        valor_salvo.valor_tratado = parsed_date # PASSA O OBJETO DATE
+                    else:
+                        valor_salvo.valor_tratado = valor_salvo.valor # Fallback: passa a string original
                 else:
-                    valor_salvo.valor_tratado = valor_salvo.valor # Usa o valor string direto
+                    valor_salvo.valor_tratado = valor_salvo.valor 
                 
-                # Adiciona o objeto REAL (com valor)
                 valores_para_template.append(valor_salvo)
             
             else:
-                # --- O VALOR NÃO EXISTE NO BANCO (Ex: Campo de data opcional e vazio) ---
+                # --- O VALOR NÃO EXISTE NO BANCO ---
+                placeholder_valor = ValorCampoPersonalizado() 
+                placeholder_valor.campo = campo_definicao
+                placeholder_valor.valor = None
+                placeholder_valor.valor_tratado = None # PASSA NONE
                 
-                # Criamos um "objeto" falso (um placeholder) em memória
-                placeholder_valor = ValorCampoPersonalizado() # Objeto vazio
-                placeholder_valor.campo = campo_definicao # Associa a definição (para pegar o rótulo no template)
-                placeholder_valor.valor = None # Define o valor como None/Vazio
-                placeholder_valor.valor_tratado = None # Define o valor tratado como None/Vazio
-                
-                # Adiciona o objeto PLACEHOLDER à lista
                 valores_para_template.append(placeholder_valor)
     
     # ==============================================================================
-    # O RESTO DO CÓDIGO CONTINUA EXATAMENTE IGUAL (SUA LÓGICA ORIGINAL)
+    # O RESTO DO CÓDIGO (Lógica de Andamentos, Timesheets, Contexto)
     # ==============================================================================
 
     andamentos = caso.andamentos.select_related('autor').all()
@@ -306,7 +296,6 @@ def detalhe_caso(request, pk):
     acordos = caso.acordos.prefetch_related('parcelas').all()
     despesas = caso.despesas.select_related('advogado').all()
     historico_fases = caso.historico_fases.select_related('fase').order_by('data_entrada')
-    
     acoes_pendentes = caso.acoes_pendentes.filter(status='PENDENTE').select_related('acao', 'responsavel')
     acoes_concluidas = caso.acoes_pendentes.filter(status='CONCLUIDA').select_related('acao', 'concluida_por').order_by('-data_conclusao')
 
@@ -314,9 +303,9 @@ def detalhe_caso(request, pk):
     tempo_total = soma_tempo_obj['total_tempo']
     
     saldo_devedor_total = Decimal('0.00')
-    # NOTA: Esta lógica de saldo pode ser otimizada para usar o prefetch (como discutimos)
     for acordo in acordos:
-        saldo_acordo = acordo.parcelas.filter(status='EMITIDA').aggregate(soma=Sum('valor_parcela'))['soma']
+        # Otimização: Usar o prefetch em vez de .filter()
+        saldo_acordo = sum(p.valor_parcela for p in acordo.parcelas.all() if p.status == 'EMITIDA')
         if saldo_acordo:
             saldo_devedor_total += saldo_acordo
             
@@ -330,7 +319,6 @@ def detalhe_caso(request, pk):
             sp = SharePoint()
             itens_anexos = sp.listar_conteudo_pasta(caso.sharepoint_folder_id)
         except Exception as e:
-            # (Mantém o print de log que você tinha)
             print(f"Erro ao buscar anexos da pasta raiz para o caso #{caso.id}: {e}")
 
     # Montagem do Contexto Final
@@ -340,9 +328,7 @@ def detalhe_caso(request, pk):
         'form_timesheet': form_timesheet,
         'form_acordo': form_acordo,
         'form_despesa': form_despesa,
-        
         'valores_personalizados': valores_para_template, # <<< LISTA CORRIGIDA
-        
         'andamentos': andamentos,
         'modelos_andamento': modelos_andamento,
         'timesheets': timesheets,
@@ -363,7 +349,6 @@ def detalhe_caso(request, pk):
     
     return render(request, 'casos/detalhe_caso.html', context)
 
-
 @login_required
 def editar_caso(request, pk):
     # 1. Busca os objetos principais
@@ -374,54 +359,46 @@ def editar_caso(request, pk):
     # 2. Monta o dicionário de dados iniciais (LÓGICA ATUALIZADA)
     dados_iniciais = {
         'status': caso.status,
-        'data_entrada': caso.data_entrada, # Já é um objeto 'date'
-        'data_encerramento': caso.data_encerramento, # Já é um objeto 'date'
+        'data_entrada': caso.data_entrada,
+        'data_encerramento': caso.data_encerramento,
         'advogado_responsavel': caso.advogado_responsavel,
     }
     
     # --- LÓGICA DE CAMPOS PERSONALIZADOS CORRIGIDA ---
-    # Adiciona os valores dos campos personalizados, tratando as datas
-    
-    # Usamos select_related para pegar o campo (metadados) junto com o valor
     valores_salvos_qs = caso.valores_personalizados.select_related('campo').all()
     
     for v in valores_salvos_qs:
         chave_formulario = f'campo_personalizado_{v.campo.id}'
         valor_final = v.valor # Valor padrão (string)
 
-        # Se for um campo de DATA e tiver um valor, parseia para o formato AAAA-MM-DD
+        # CORREÇÃO DA LÓGICA DE PARSE DE DATA
         if v.campo.tipo_campo == 'DATA' and v.valor:
             parsed_date = None
-            # Tenta formatos comuns (incluindo o que você mostrou: AAAA-MM-DD HH:MM:SS)
+            # Tenta os formatos na ordem correta
             for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'): 
                 try:
-                    # Pega a string (ex: '2025-09-22 00:00:00'), tira a hora, e parseia
-                    parsed_date = datetime.strptime(v.valor.split(' ')[0], fmt).date()
-                    break # Se funcionou, para o loop
+                    # Tenta parsear a string COMPLETA primeiro
+                    parsed_date = datetime.strptime(v.valor, fmt).date()
+                    break # Sucesso
                 except (ValueError, TypeError):
                     continue # Tenta o próximo formato
             
             if parsed_date:
-                # O formulário (input type="date") espera um objeto 'date'
-                # ou uma string AAAA-MM-DD. O objeto 'date' é mais seguro.
-                valor_final = parsed_date 
-            # else: se falhar o parse, passa a string original (v.valor)
+                valor_final = parsed_date # PASSA O OBJETO DATE
+            # else: mantém a string original se o parse falhar
         
         dados_iniciais[chave_formulario] = valor_final
     # --- FIM DA LÓGICA CORRIGIDA ---
 
-    # Adiciona o título manual, se aplicável (Sua lógica original)
     if not produto.padrao_titulo:
         dados_iniciais['titulo_manual'] = caso.titulo
         
     # 3. Processa o formulário se for uma submissão (POST)
     if request.method == 'POST':
-        # (Sua lógica de POST permanece exatamente a mesma)
         form = CasoDinamicoForm(request.POST, cliente=cliente, produto=produto)
         if form.is_valid():
             dados_limpos = form.cleaned_data
             
-            # Atualiza os campos padrão do caso
             caso.status = dados_limpos['status']
             caso.data_entrada = dados_limpos['data_entrada']
             caso.data_encerramento = dados_limpos.get('data_encerramento')
@@ -440,14 +417,14 @@ def editar_caso(request, pk):
             else:
                 caso.titulo = dados_limpos.get('titulo_manual', '')
                 
-            caso.save()
+            caso.save() # Salva campos fixos e título
 
             # Lógica de atualizar valores personalizados (Sua lógica original)
             estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
             if estrutura:
                 for campo in estrutura.campos.all():
                     valor_novo = dados_limpos.get(f'campo_personalizado_{campo.id}')
-                    # Garante que o valor salvo seja uma string no formato correto
+                    # Garante que o valor salvo seja uma string
                     valor_a_salvar = str(valor_novo) if valor_novo is not None else ''
                     
                     ValorCampoPersonalizado.objects.update_or_create(
@@ -458,11 +435,10 @@ def editar_caso(request, pk):
                     
             return redirect('casos:detalhe_caso', pk=caso.pk)
     else:
-        # 4. Se for a primeira visita (GET), cria o formulário passando os dados iniciais CORRIGIDOS
+        # 4. Se for (GET), cria o formulário passando os dados iniciais CORRIGIDOS
         form = CasoDinamicoForm(initial=dados_iniciais, cliente=cliente, produto=produto)
         
     context = {'cliente': cliente, 'produto': produto, 'form': form, 'caso': caso}
-    # (Assume que você está reusando o template de criação/edição)
     return render(request, 'casos/criar_caso_form.html', context)
 
 @login_required
