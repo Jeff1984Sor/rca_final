@@ -245,7 +245,7 @@
                         <label>{{ valor.campo.nome_campo }}</label>
                         <span>
                             {% if valor.campo.tipo_campo == 'DATA' %}
-                                {{ valor.valor_tratado|date:"d/m/Y"|default:"-" }}
+                                <p>{{ valor.valor_tratado|date:"d/m/Y"|default:"-" }}</p>
                             {% elif valor.campo.tipo_campo == 'MOEDA' %}
                                 {{ valor.valor_tratado|currency }}
                             {% else %}

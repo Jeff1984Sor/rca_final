@@ -30,46 +30,48 @@ def get_lista_campos_fixos():
 def get_cabecalho_exportacao(cliente=None, produto=None):
     """
     Monta a lista completa de cabeçalhos (fixos + personalizados) e suas chaves.
-
-    - Se Cliente e Produto são fornecidos (ex: Importação), filtra campos por estrutura.
-    - Se NÃO são fornecidos (ex: Exportação Mestra), retorna TODOS os campos.
+    
+    Retorna: (lista_de_chaves, lista_de_cabecalhos, mapa_tipos)
+    mapa_tipos = {'personalizado_nome_variavel': 'TIPO_CAMPO', ...}
     """
     
     lista_chaves = []
     lista_cabecalhos = []
+    mapa_tipos = {} # <-- NOVO DICIONÁRIO DE TIPOS
     
-    # 1. Adiciona os campos fixos (sempre)
+    # 1. Adiciona os campos fixos
     campos_fixos = get_lista_campos_fixos()
     for chave, cabecalho in campos_fixos:
         lista_chaves.append(chave)
         lista_cabecalhos.append(cabecalho)
-    
+        # (Opcional) Adicionar tipos fixos se necessário, ex:
+        if 'data_' in chave:
+             mapa_tipos[chave] = 'DATA'
+            
     campos_personalizados_query = None
 
     # 2. Lógica Híbrida para buscar campos personalizados
     if cliente and produto:
-        # MODO 1: Filtra pela estrutura C+P (Usado pela Importação)
+        # Modo 1: Filtra pela estrutura C+P (Usado pela Importação)
         try:
-            # Pega a estrutura e os campos ordenados
             estrutura = EstruturaDeCampos.objects.get(cliente=cliente, produto=produto)
-            campos_personalizados_query = estrutura.campos.all().order_by('estruturacampoordenado__order') # Usa a ordem definida
+            campos_personalizados_query = estrutura.campos.all().order_by('estruturacampoordenado__order')
         except EstruturaDeCampos.DoesNotExist:
-            campos_personalizados_query = CampoPersonalizado.objects.none() # Retorna vazio
+            campos_personalizados_query = CampoPersonalizado.objects.none()
     else:
-        # MODO 2: MESTRE (Opção 2 que você pediu) - Pega TODOS
-        # Busca todos os campos personalizados cadastrados no banco
+        # Modo 2: MESTRE (Exportação) - Pega TODOS
         campos_personalizados_query = CampoPersonalizado.objects.all().order_by('nome_campo')
 
     # 3. Processa o queryset de campos personalizados
     if campos_personalizados_query:
         for campo in campos_personalizados_query:
-            # Chave interna (para busca no dict)
             chave_personalizada = f'personalizado_{campo.nome_variavel}'
-            # Cabeçalho (o nome visível)
-            cabecalho_personalizado = campo.nome_campo # Usando o nome correto que descobrimos
+            cabecalho_personalizado = campo.nome_campo 
             
             if chave_personalizada not in lista_chaves:
                 lista_chaves.append(chave_personalizada)
                 lista_cabecalhos.append(cabecalho_personalizado)
+                mapa_tipos[chave_personalizada] = campo.tipo_campo # <-- SALVA O TIPO
                 
-    return (lista_chaves, lista_cabecalhos)
+    # Retorna as 3 listas
+    return (lista_chaves, lista_cabecalhos, mapa_tipos)

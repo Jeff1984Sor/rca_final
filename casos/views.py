@@ -441,10 +441,11 @@ def exportar_casos_excel(request):
     Exporta os casos FILTRADOS na lista de casos.
     Utiliza a "Opção 2": Exporta TODOS os campos fixos + TODOS os campos 
     personalizados (Planilha Mestra Larga com "buracos").
+    Formata as datas para DD/MM/AAAA.
     """
-    logger.info("Iniciando Exportação Mestra de Casos...")
+    logger.info(f"Iniciando Exportação Mestra de Casos para o usuário: {request.user.username}")
     
-    # 1. Obter todos os filtros da URL
+    # 1. Obter todos os filtros da URL (do request.GET)
     filtro_titulo = request.GET.get('filtro_titulo', '')
     filtro_cliente_id = request.GET.get('filtro_cliente', '')
     filtro_produto_id = request.GET.get('filtro_produto', '')
@@ -453,7 +454,7 @@ def exportar_casos_excel(request):
 
     # 2. Iniciar o QuerySet básico
     casos_queryset = Caso.objects.all().select_related(
-        'cliente', 'produto', 'advogado_responsavel'
+        'cliente', 'produto', 'advogado_responsavel' # Otimiza campos fixos
     ).prefetch_related( 
         'valores_personalizados__campo' # Pré-busca TODOS os valores e o campo relacionado
     ).order_by('-data_entrada')
@@ -470,12 +471,18 @@ def exportar_casos_excel(request):
     if filtro_produto_id:
         casos_queryset = casos_queryset.filter(produto_id=filtro_produto_id)
 
-    logger.debug(f"Queryset filtrado. {casos_queryset.count()} casos para exportar.")
+    total_casos = casos_queryset.count()
+    logger.debug(f"Queryset filtrado. {total_casos} casos para exportar.")
+    
+    if total_casos == 0:
+        messages.warning(request, "Nenhum caso encontrado com os filtros aplicados. Nada para exportar.")
+        return redirect('casos:lista_casos')
 
     # 4. Obter Cabeçalho MESTRE (Fixos + TODOS os Personalizados)
     # Chamamos a função SEM argumentos de cliente/produto
     try:
-        lista_chaves, lista_cabecalhos = get_cabecalho_exportacao()
+        # AGORA RECEBE O MAPA DE TIPOS
+        lista_chaves, lista_cabecalhos, campos_tipo_map = get_cabecalho_exportacao(cliente=None, produto=None)
     except Exception as e:
         logger.error(f"Erro ao gerar cabeçalho mestre: {e}", exc_info=True)
         messages.error(request, "Erro ao gerar o cabeçalho da exportação.")
@@ -489,7 +496,9 @@ def exportar_casos_excel(request):
     sheet.title = 'Exportacao Mestra Casos'
     
     sheet.append(lista_cabecalhos) # Linha 1 (Nomes de Exibição)
-    # sheet.append(lista_chaves)   # Opcional: Linha 2 (Nomes de Variável)
+    
+    # Opcional: Adicionar a linha de 'nome_variavel' (Linha 2)
+    # sheet.append(lista_chaves) 
     
     # 6. Adicionar Linhas de Dados
     for caso in casos_queryset:
@@ -507,15 +516,15 @@ def exportar_casos_excel(request):
 
             # --- Campo Fixo ---
             if not chave.startswith('personalizado_'):
-                if '__' in chave: 
+                if '__' in chave: # Ex: cliente__nome
                     try:
                         partes = chave.split('__')
                         obj = getattr(caso, partes[0], None)
                         valor = getattr(obj, partes[1], '') if obj else ''
                     except Exception: valor = ''
-                elif chave == 'status': 
+                elif chave == 'status': # Ex: get_status_display
                     valor = caso.get_status_display()
-                else: 
+                else: # Ex: id, data_entrada
                     valor = getattr(caso, chave, '')
             
             # --- Campo Personalizado ---
@@ -524,10 +533,36 @@ def exportar_casos_excel(request):
                 # Se o caso não tiver esse campo (produto diferente), o get retorna ''
                 valor = valores_personalizados_case.get(chave, '') 
             
-            # Formatação final
-            if valor is None: valor = ''
-            elif isinstance(valor, (datetime, date)): valor = valor.strftime('%d/%m/%Y')
-            else: valor = str(valor)
+            # --- FORMATAÇÃO UNIVERSAL DE DATA (NOVO BLOCO) ---
+            tipo_do_campo = campos_tipo_map.get(chave) # Pega o tipo (Fixo ou Personalizado)
+            
+            # 1. Se for um objeto de data/datetime (Campos Fixos como data_entrada)
+            if isinstance(valor, (datetime, date)):
+                 valor = valor.strftime('%d/%m/%Y')
+            
+            # 2. Se for um campo tipo 'DATA' (Campos Personalizados, que são strings)
+            elif tipo_do_campo == 'DATA' and valor:
+                parsed_date = None
+                # Tenta formatos comuns (incluindo o que você mostrou: AAAA-MM-DD HH:MM:SS)
+                # Adiciona mais formatos se necessário (ex: DD/MM/AAAA)
+                formatos_data = ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%d/%m/%Y') 
+                for fmt in formatos_data:
+                    try:
+                        # Tira a parte da hora se houver (ex: .split(' ')[0])
+                        # Mas como %H:%M:%S está no formato, podemos tentar direto
+                        parsed_date = datetime.strptime(str(valor), fmt).date()
+                        break # Se funcionou, para o loop
+                    except (ValueError, TypeError):
+                        continue # Tenta o próximo formato
+                
+                if parsed_date:
+                    valor = parsed_date.strftime('%d/%m/%Y') # Formata para o Excel
+                else:
+                    valor = str(valor) # Mantém a string original se não conseguir parsear
+            
+            # 3. Converte o resto para string
+            else:
+                valor = str(valor) if valor is not None else ''
                 
             linha_dados.append(valor) 
 
@@ -542,9 +577,11 @@ def exportar_casos_excel(request):
         output,
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    response['Content-Disposition'] = f'attachment; filename="casos_export_mestre.xlsx"'
+    # Define o nome do arquivo que o usuário fará download
+    filename = 'casos_export_mestre_filtrado.xlsx' 
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
-    logger.info("Exportação Mestra concluída e enviada.")
+    logger.info(f"Exportação Mestra ({total_casos} casos) concluída e enviada.")
     return response
 
 @login_required

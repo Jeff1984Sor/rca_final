@@ -226,3 +226,9 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE # Usa o mesmo timezone do Django (America/Sao_Paulo)
+
+# --- ADICIONE OU MODIFIQUE ESTAS LINHAS ---
+# Define o formato padrão para campos DateField
+DATE_FORMAT = 'd/m/Y' 
+# Define o formato padrão para campos DateTimeField
+DATETIME_FORMAT = 'd/m/Y H:i'
