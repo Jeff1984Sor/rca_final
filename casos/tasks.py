@@ -5,7 +5,7 @@ from datetime import datetime, date
 
 # Imports do Django e Modelos (necessários para a tarefa)
 from django.db import IntegrityError
-from .models import Caso
+from .models import Caso # Garanta que este import esteja correto
 from clientes.models import Cliente
 from produtos.models import Produto
 from campos_custom.models import CampoPersonalizado, ValorCampoPersonalizado, EstruturaDeCampos
@@ -18,7 +18,7 @@ def processar_linha_importacao(
     cliente_id,               # ID do Cliente selecionado
     produto_id,               # ID do Produto selecionado
     header_map,               # Mapa {excel_header_norm: nome_variavel_original ou chave_fixa}
-    chaves_validas_list,      # Lista de chaves válidas (apenas para referência, não usado ativamente)
+    chaves_validas_list,      # Lista de chaves válidas (apenas para referência)
     campos_meta_map_serializable, # Mapa {nome_variavel_original: campo_id}
     padrao_titulo_produto,    # String do padrão de título
     estrutura_campos_id       # ID da EstruturaDeCampos (pode ser None)
@@ -43,7 +43,7 @@ def processar_linha_importacao(
         # Reconstrói o mapa {nome_variavel_original: campo_id} a partir dos args
         campos_meta_ids_map = campos_meta_map_serializable
 
-        # --- Loop Principal de Processamento da Linha ---
+        # --- Loop Principal de Processamento da Linha (COM ORDEM CORRIGIDA) ---
         linha_valida = False # Flag para verificar se a linha tem algum dado útil
         for header_norm, cell_value in linha_dados.items():
             # Ignora células vazias, cabeçalhos vazios ou a chave interna _row_index
@@ -58,19 +58,19 @@ def processar_linha_importacao(
 
             linha_valida = True # Marcar que a linha tem dados
 
-            # --- Processar Valor (Campos Personalizados) ---
-            # Verifica se a chave_interna (nome_variavel original) existe no mapa de IDs de campos personalizados
+            # --- CORREÇÃO: VERIFICA PRIMEIRO SE É PERSONALIZADO ---
+            # Usa o mapa {nome_variavel_original: campo_id}
             if chave_interna in campos_meta_ids_map:
                 campo_id = campos_meta_ids_map[chave_interna]
                 valor_str = str(cell_value)
-                # Guarda para gerar o título (usando nome_variavel original como chave)
+                # Guarda para gerar o título (usando nome_variavel original)
                 dados_personalizados_para_titulo[chave_interna] = valor_str
                 # Guarda para salvar no banco {ID do Campo : valor}
                 dados_personalizados_para_salvar[campo_id] = valor_str
-                logger.debug(f"[CELERY Task - Linha {row_index}] Mapeado campo personalizado '{chave_interna}' (ID: {campo_id}) com valor '{valor_str[:50]}...'")
+                logger.debug(f"[CELERY Task - Linha {row_index}] OK - Mapeado campo PERSONALIZADO '{chave_interna}' (ID: {campo_id}) com valor '{valor_str[:50]}...'")
 
-            # --- Processar Valor (Campos Fixos) ---
-            # Se não for personalizado E não contiver '__' (evita processar FKs aqui)
+            # --- SENÃO, TENTA VERIFICAR SE É FIXO ---
+            # Se não for personalizado E não contiver '__'
             elif '__' not in chave_interna:
                 campo_caso = chave_interna # A chave já é o nome do campo fixo
 
@@ -91,7 +91,7 @@ def processar_linha_importacao(
                                  continue
                      if parsed_date:
                         dados_caso_fixos[campo_caso] = parsed_date
-                        logger.debug(f"[CELERY Task - Linha {row_index}] Mapeado campo fixo '{campo_caso}' (Data) com valor '{parsed_date}'")
+                        logger.debug(f"[CELERY Task - Linha {row_index}] OK - Mapeado campo FIXO '{campo_caso}' (Data) com valor '{parsed_date}'")
                      else:
                         logger.warning(f"[CELERY Task - Linha {row_index}] Data inválida '{cell_value}' para '{header_norm}'. Campo ignorado.")
 
@@ -101,16 +101,21 @@ def processar_linha_importacao(
                     # Valida se é uma das chaves válidas definidas no modelo Caso
                     if any(valor_status == choice[0] for choice in Caso.STATUS_CHOICES):
                         dados_caso_fixos[campo_caso] = valor_status
-                        logger.debug(f"[CELERY Task - Linha {row_index}] Mapeado campo fixo '{campo_caso}' com valor '{valor_status}'")
+                        logger.debug(f"[CELERY Task - Linha {row_index}] OK - Mapeado campo FIXO '{campo_caso}' com valor '{valor_status}'")
                     else:
                         logger.warning(f"[CELERY Task - Linha {row_index}] Status inválido '{cell_value}'. Campo ignorado.")
 
-                # Outros campos fixos (Ex: advogado_responsavel - assumindo que é ID ou None)
-                # Cuidado para não sobrescrever cliente/produto que já temos
-                elif campo_caso not in ['cliente', 'produto', 'titulo', 'id']: # Ignora chaves óbvias
+                # Outros campos fixos
+                # Cuidado para não sobrescrever cliente/produto/titulo/id
+                elif campo_caso not in ['cliente', 'produto', 'titulo', 'id']:
                     # TODO: Adicionar lógica para buscar User por nome/username se 'advogado_responsavel' vier como string
                     dados_caso_fixos[campo_caso] = cell_value
-                    logger.debug(f"[CELERY Task - Linha {row_index}] Mapeado campo fixo '{campo_caso}' com valor '{str(cell_value)[:50]}...'")
+                    logger.debug(f"[CELERY Task - Linha {row_index}] OK - Mapeado campo FIXO '{campo_caso}' com valor '{str(cell_value)[:50]}...'")
+            
+            # Se não for nenhum dos dois (ex: cliente__nome da exportação), será ignorado
+            else:
+                 logger.debug(f"[CELERY Task - Linha {row_index}] Chave '{chave_interna}' ignorada no mapeamento da linha.")
+
 
         # --- Fim do Loop de Processamento da Linha ---
 
@@ -124,7 +129,7 @@ def processar_linha_importacao(
              dados_caso_fixos['data_entrada'] = date.today()
              logger.warning(f"[CELERY Task - Linha {row_index}]: 'data_entrada' não fornecida, usando data atual como padrão.")
 
-        # 6. Criar o Caso (sempre cria, pois é Abordagem 1)
+        # 6. Criar o Caso (sempre cria)
         novo_caso = Caso.objects.create(
             cliente=cliente,
             produto=produto,
@@ -171,7 +176,7 @@ def processar_linha_importacao(
         novo_caso.save(update_fields=['titulo'])
         logger.info(f"[CELERY Task - Linha {row_index}] Título gerado e salvo para caso ID {novo_caso.id}: '{titulo_final}'")
 
-        # O signal post_save será disparado aqui pelo create() e pelo save()
+        # O signal post_save será disparado aqui pelo create() e pelos save() anteriores
 
         return f"Linha {row_index} processada com sucesso. Caso ID {novo_caso.id} criado."
 
@@ -184,8 +189,8 @@ def processar_linha_importacao(
         return f"Linha {row_index} falhou: Produto não encontrado."
     # Removida a busca da Estrutura aqui, pois usamos o ID
     except IntegrityError as e: # Captura erros de banco de dados (ex: campo obrigatório faltando no create)
-         logger.error(f"[CELERY Task - Linha {row_index}] Erro de integridade ao criar caso: {e}. Dados Fixos Tentados: {dados_caso_fixos}", exc_info=False) # exc_info=False para não poluir muito
+         logger.error(f"[CELERY Task - Linha {row_index}] Erro de integridade ao criar caso: {e}. Dados Fixos Tentados: {dados_caso_fixos}", exc_info=False)
          return f"Linha {row_index} falhou: Erro de integridade no banco ({e}). Verifique campos obrigatórios."
     except Exception as e: # Captura qualquer outro erro inesperado
-        logger.error(f"[CELERY Task - Linha {row_index}] Erro INESPERADO durante processamento: {e}", exc_info=True) # exc_info=True para detalhes
+        logger.error(f"[CELERY Task - Linha {row_index}] Erro INESPERADO durante processamento: {e}", exc_info=True)
         return f"Linha {row_index} falhou: Erro inesperado ({e})."
