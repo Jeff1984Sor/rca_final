@@ -30,7 +30,8 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-
+from decimal import Decimal, InvalidOperation # <<< VERIFIQUE SE ESTA LINHA EXISTE
+from django.utils.formats import number_format # <<< E ESTA TAMBÉM
 # Modelos de outros apps
 from clientes.models import Cliente
 from produtos.models import Produto
