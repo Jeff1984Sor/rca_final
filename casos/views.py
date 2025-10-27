@@ -1237,7 +1237,7 @@ def importar_casos_view(request):
 
             # Preparar e Enviar Tarefas para Celery
             total_linhas = sheet.max_row - 1
-            delay_segundos = 180 # 3 minutos
+            delay_segundos = 10 # 3 minutos
             linhas_enviadas = 0
 
             logger.info(f"Enviando {total_linhas} tarefas para o Celery com delay de {delay_segundos}s entre cada uma.")
