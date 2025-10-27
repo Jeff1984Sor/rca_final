@@ -35,6 +35,8 @@ from django.utils.formats import number_format # <<< E ESTA TAMBÉM
 # Modelos de outros apps
 from clientes.models import Cliente
 from produtos.models import Produto
+from django.utils.formats import number_format # <<< ADICIONE ESTA LINHA
+from decimal import Decimal, InvalidOperation # <<< ADICIONE ESTA LINHA
 
 # Modelos e Forms locais (do app 'casos')
 from .models import Caso, Andamento, ModeloAndamento, Timesheet, Acordo, Parcela, Despesa, FluxoInterno
