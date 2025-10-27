@@ -371,25 +371,52 @@ def editar_caso(request, pk):
     produto = caso.produto
     cliente = caso.cliente
     
-    # 2. Monta o dicionário de dados iniciais para preencher o formulário
-    # ESTE BLOCO ESTÁ CORRETO E É A CHAVE PARA O PROBLEMA
+    # 2. Monta o dicionário de dados iniciais (LÓGICA ATUALIZADA)
     dados_iniciais = {
         'status': caso.status,
-        'data_entrada': caso.data_entrada,
-        'data_encerramento': caso.data_encerramento,
+        'data_entrada': caso.data_entrada, # Já é um objeto 'date'
+        'data_encerramento': caso.data_encerramento, # Já é um objeto 'date'
         'advogado_responsavel': caso.advogado_responsavel,
     }
-    # Adiciona os valores dos campos personalizados que já existem
-    valores_existentes = {f'campo_personalizado_{v.campo.id}': v.valor for v in caso.valores_personalizados.all()}
-    dados_iniciais.update(valores_existentes)
     
-    # Adiciona o título manual, se aplicável
+    # --- LÓGICA DE CAMPOS PERSONALIZADOS CORRIGIDA ---
+    # Adiciona os valores dos campos personalizados, tratando as datas
+    
+    # Usamos select_related para pegar o campo (metadados) junto com o valor
+    valores_salvos_qs = caso.valores_personalizados.select_related('campo').all()
+    
+    for v in valores_salvos_qs:
+        chave_formulario = f'campo_personalizado_{v.campo.id}'
+        valor_final = v.valor # Valor padrão (string)
+
+        # Se for um campo de DATA e tiver um valor, parseia para o formato AAAA-MM-DD
+        if v.campo.tipo_campo == 'DATA' and v.valor:
+            parsed_date = None
+            # Tenta formatos comuns (incluindo o que você mostrou: AAAA-MM-DD HH:MM:SS)
+            for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'): 
+                try:
+                    # Pega a string (ex: '2025-09-22 00:00:00'), tira a hora, e parseia
+                    parsed_date = datetime.strptime(v.valor.split(' ')[0], fmt).date()
+                    break # Se funcionou, para o loop
+                except (ValueError, TypeError):
+                    continue # Tenta o próximo formato
+            
+            if parsed_date:
+                # O formulário (input type="date") espera um objeto 'date'
+                # ou uma string AAAA-MM-DD. O objeto 'date' é mais seguro.
+                valor_final = parsed_date 
+            # else: se falhar o parse, passa a string original (v.valor)
+        
+        dados_iniciais[chave_formulario] = valor_final
+    # --- FIM DA LÓGICA CORRIGIDA ---
+
+    # Adiciona o título manual, se aplicável (Sua lógica original)
     if not produto.padrao_titulo:
         dados_iniciais['titulo_manual'] = caso.titulo
         
     # 3. Processa o formulário se for uma submissão (POST)
     if request.method == 'POST':
-        # Passa os dados do POST, o cliente e o produto
+        # (Sua lógica de POST permanece exatamente a mesma)
         form = CasoDinamicoForm(request.POST, cliente=cliente, produto=produto)
         if form.is_valid():
             dados_limpos = form.cleaned_data
@@ -400,7 +427,7 @@ def editar_caso(request, pk):
             caso.data_encerramento = dados_limpos.get('data_encerramento')
             caso.advogado_responsavel = dados_limpos.get('advogado_responsavel')
             
-            # Lógica de atualizar o título
+            # Lógica de atualizar o título (Sua lógica original)
             if produto.padrao_titulo:
                 titulo_formatado = produto.padrao_titulo
                 estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
@@ -415,24 +442,27 @@ def editar_caso(request, pk):
                 
             caso.save()
 
-            # Lógica de atualizar valores personalizados
+            # Lógica de atualizar valores personalizados (Sua lógica original)
             estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
             if estrutura:
                 for campo in estrutura.campos.all():
                     valor_novo = dados_limpos.get(f'campo_personalizado_{campo.id}')
+                    # Garante que o valor salvo seja uma string no formato correto
+                    valor_a_salvar = str(valor_novo) if valor_novo is not None else ''
+                    
                     ValorCampoPersonalizado.objects.update_or_create(
                         caso=caso, 
                         campo=campo, 
-                        defaults={'valor': str(valor_novo) if valor_novo is not None else ''}
+                        defaults={'valor': valor_a_salvar}
                     )
                     
             return redirect('casos:detalhe_caso', pk=caso.pk)
     else:
-        # 4. Se for a primeira visita (GET), cria o formulário passando os dados iniciais
-        # ESTA LINHA É A QUE PREENCHE OS CAMPOS
+        # 4. Se for a primeira visita (GET), cria o formulário passando os dados iniciais CORRIGIDOS
         form = CasoDinamicoForm(initial=dados_iniciais, cliente=cliente, produto=produto)
         
     context = {'cliente': cliente, 'produto': produto, 'form': form, 'caso': caso}
+    # (Assume que você está reusando o template de criação/edição)
     return render(request, 'casos/criar_caso_form.html', context)
 
 @login_required
