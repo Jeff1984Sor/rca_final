@@ -410,46 +410,115 @@ def editar_caso(request, pk):
 
 @login_required
 def exportar_casos_excel(request):
-    casos_list = Caso.objects.select_related('cliente', 'produto', 'advogado_responsavel').all().order_by('-data_entrada')
-    filtro_titulo = request.GET.get('filtro_titulo', '')
-    filtro_cliente = request.GET.get('filtro_cliente', '')
-    filtro_produto = request.GET.get('filtro_produto', '')
-    filtro_status = request.GET.get('filtro_status', '')
-    filtro_advogado = request.GET.get('filtro_advogado', '')
-    if filtro_titulo:
-        casos_list = casos_list.filter(titulo__icontains=filtro_titulo)
-    if filtro_cliente:
-        casos_list = casos_list.filter(cliente_id=filtro_cliente)
-    if filtro_produto:
-        casos_list = casos_list.filter(produto_id=filtro_produto)
-    if filtro_status:
-        casos_list = casos_list.filter(status=filtro_status)
-    if filtro_advogado:
-        casos_list = casos_list.filter(advogado_responsavel_id=filtro_advogado)
+    """
+    Exporta os casos FILTRADOS na lista de casos.
+    Utiliza a "Opção 2": Exporta TODOS os campos fixos + TODOS os campos 
+    personalizados (Planilha Mestra Larga com "buracos").
+    """
+    logger.info("Iniciando Exportação Mestra de Casos...")
     
+    # 1. Obter todos os filtros da URL
+    filtro_titulo = request.GET.get('filtro_titulo', '')
+    filtro_cliente_id = request.GET.get('filtro_cliente', '')
+    filtro_produto_id = request.GET.get('filtro_produto', '')
+    filtro_status = request.GET.get('filtro_status', '')
+    filtro_advogado_id = request.GET.get('filtro_advogado', '')
+
+    # 2. Iniciar o QuerySet básico
+    casos_queryset = Caso.objects.all().select_related(
+        'cliente', 'produto', 'advogado_responsavel'
+    ).prefetch_related( 
+        'valores_personalizados__campo' # Pré-busca TODOS os valores e o campo relacionado
+    ).order_by('-data_entrada')
+
+    # 3. Aplicar filtros (se existirem)
+    if filtro_titulo:
+        casos_queryset = casos_queryset.filter(titulo__icontains=filtro_titulo)
+    if filtro_status:
+        casos_queryset = casos_queryset.filter(status=filtro_status)
+    if filtro_advogado_id:
+        casos_queryset = casos_queryset.filter(advogado_responsavel_id=filtro_advogado_id)
+    if filtro_cliente_id:
+        casos_queryset = casos_queryset.filter(cliente_id=filtro_cliente_id)
+    if filtro_produto_id:
+        casos_queryset = casos_queryset.filter(produto_id=filtro_produto_id)
+
+    logger.debug(f"Queryset filtrado. {casos_queryset.count()} casos para exportar.")
+
+    # 4. Obter Cabeçalho MESTRE (Fixos + TODOS os Personalizados)
+    # Chamamos a função SEM argumentos de cliente/produto
+    try:
+        lista_chaves, lista_cabecalhos = get_cabecalho_exportacao()
+    except Exception as e:
+        logger.error(f"Erro ao gerar cabeçalho mestre: {e}", exc_info=True)
+        messages.error(request, "Erro ao gerar o cabeçalho da exportação.")
+        return redirect('casos:lista_casos')
+    
+    logger.debug(f"Cabeçalho Mestre gerado com {len(lista_cabecalhos)} colunas.")
+    
+    # 5. Gerar o Arquivo Excel
     workbook = openpyxl.Workbook()
     sheet = workbook.active
-    sheet.title = 'Casos'
-    headers = ['ID', 'Título', 'Cliente', 'Produto', 'Status', 'Data de Entrada', 'Advogado Responsável']
-    sheet.append(headers)
-    for caso in casos_list:
-        advogado = '-'
-        if caso.advogado_responsavel:
-            advogado = caso.advogado_responsavel.get_full_name() or caso.advogado_responsavel.username
-        sheet.append([
-            caso.id,
-            caso.titulo,
-            caso.cliente.nome,
-            caso.produto.nome,
-            caso.get_status_display(),
-            caso.data_entrada.strftime('%d/%m/%Y') if caso.data_entrada else '',
-            advogado
-        ])
-    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename="casos.xlsx"'
-    workbook.save(response)
-    return response
+    sheet.title = 'Exportacao Mestra Casos'
+    
+    sheet.append(lista_cabecalhos) # Linha 1 (Nomes de Exibição)
+    # sheet.append(lista_chaves)   # Opcional: Linha 2 (Nomes de Variável)
+    
+    # 6. Adicionar Linhas de Dados
+    for caso in casos_queryset:
+        linha_dados = []
+        
+        # Mapeia os valores personalizados DESTE caso
+        # {'personalizado_aviso': '123', 'personalizado_cpf': '456'}
+        valores_personalizados_case = {
+            f'personalizado_{v.campo.nome_variavel}': v.valor 
+            for v in caso.valores_personalizados.all() # Usa o prefetch
+        }
+        
+        for chave in lista_chaves:
+            valor = '' # Valor padrão agora é vazio (para os "buracos")
 
+            # --- Campo Fixo ---
+            if not chave.startswith('personalizado_'):
+                if '__' in chave: 
+                    try:
+                        partes = chave.split('__')
+                        obj = getattr(caso, partes[0], None)
+                        valor = getattr(obj, partes[1], '') if obj else ''
+                    except Exception: valor = ''
+                elif chave == 'status': 
+                    valor = caso.get_status_display()
+                else: 
+                    valor = getattr(caso, chave, '')
+            
+            # --- Campo Personalizado ---
+            else:
+                # Busca a chave (ex: 'personalizado_aviso') no dict do caso
+                # Se o caso não tiver esse campo (produto diferente), o get retorna ''
+                valor = valores_personalizados_case.get(chave, '') 
+            
+            # Formatação final
+            if valor is None: valor = ''
+            elif isinstance(valor, (datetime, date)): valor = valor.strftime('%d/%m/%Y')
+            else: valor = str(valor)
+                
+            linha_dados.append(valor) 
+
+        sheet.append(linha_dados)
+            
+    # 7. Retornar a Resposta
+    output = BytesIO() 
+    workbook.save(output)
+    output.seek(0)
+    
+    response = HttpResponse(
+        output,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="casos_export_mestre.xlsx"'
+    
+    logger.info("Exportação Mestra concluída e enviada.")
+    return response
 
 @login_required
 def exportar_andamentos_excel(request, pk):

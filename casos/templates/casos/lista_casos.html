@@ -1,110 +1,150 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% load static %}
+{% load custom_tags %} {# Carrega seus filtros customizados, se necessário #}
 
 {% block title %}Gestão de Casos{% endblock %}
 
 {% block content %}
-    <h1 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 24px;">Gestão de Casos</h1>
+<div class="container-fluid mt-4">
 
-    <!-- CARD DE FILTROS (QUE ESTAVA FALTANDO) -->
-    <div class="card">
-        <form method="GET" action="{% url 'casos:lista_casos' %}">
-            <div class="form-row" style="align-items: flex-end;">
-                <div class="form-group">
-                    <label for="id_filtro_titulo">Título</label>
-                    <input id="id_filtro_titulo" type="text" name="filtro_titulo" placeholder="Filtrar por título..." value="{{ valores_filtro.filtro_titulo }}">
-                </div>
-                <div class="form-group">
-                    <label for="id_filtro_cliente">Cliente</label>
-                    <select id="id_filtro_cliente" name="filtro_cliente">
-                        <option value="">Todos os Clientes</option>
-                        {% for cliente in todos_clientes %}
-                            <option value="{{ cliente.id }}" {% if valores_filtro.filtro_cliente == cliente.id|stringformat:"s" %}selected{% endif %}>{{ cliente.nome }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="id_filtro_produto">Produto</label>
-                    <select id="id_filtro_produto" name="filtro_produto">
-                        <option value="">Todos os Produtos</option>
-                        {% for produto in todos_produtos %}
-                            <option value="{{ produto.id }}" {% if valores_filtro.filtro_produto == produto.id|stringformat:"s" %}selected{% endif %}>{{ produto.nome }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="id_filtro_status">Status</label>
-                    <select id="id_filtro_status" name="filtro_status">
-                        <option value="">Todos os Status</option>
-                        {% for value, display in status_choices %}
-                            <option value="{{ value }}" {% if valores_filtro.filtro_status == value %}selected{% endif %}>{{ display }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="id_filtro_advogado">Advogado</label>
-                    <select id="id_filtro_advogado" name="filtro_advogado">
-                        <option value="">Todos os Advogados</option>
-                        {% for advogado in todos_advogados %}
-                            <option value="{{ advogado.id }}" {% if valores_filtro.filtro_advogado == advogado.id|stringformat:"s" %}selected{% endif %}>{{ advogado.get_full_name|default:advogado.username }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <div style="display: flex; gap: 10px;">
-                        <button type="submit" class="btn btn-success">Filtrar</button>
-                        <a href="{% url 'casos:lista_casos' %}" class="btn btn-secondary">Limpar</a>
+    {% include 'casos/partials/app_messages.html' %} 
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h4 class="mb-0">Filtros de Casos</h4>
+        </div>
+        <div class="card-body">
+            <form action="{% url 'casos:lista_casos' %}" method="get">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label for="filtro_titulo" class="form-label">Título</label>
+                        <input type="text" class="form-control" id="filtro_titulo" name="filtro_titulo" value="{{ valores_filtro.filtro_titulo }}">
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label for="filtro_cliente" class="form-label">Cliente</label>
+                        <select class="form-select" id="filtro_cliente" name="filtro_cliente">
+                            <option value="">Todos os Clientes</option>
+                            {% for cliente in todos_clientes %}
+                                <option value="{{ cliente.id }}" {% if valores_filtro.filtro_cliente == cliente.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ cliente.nome }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label for="filtro_produto" class="form-label">Produto</label>
+                        <select class="form-select" id="filtro_produto" name="filtro_produto">
+                            <option value="">Todos os Produtos</option>
+                            {% for produto in todos_produtos %}
+                                <option value="{{ produto.id }}" {% if valores_filtro.filtro_produto == produto.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ produto.nome }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label for="filtro_status" class="form-label">Status</label>
+                        <select class="form-select" id="filtro_status" name="filtro_status">
+                            <option value="">Todos os Status</option>
+                            {% for key, display in status_choices %}
+                                <option value="{{ key }}" {% if valores_filtro.filtro_status == key %}selected{% endif %}>
+                                    {{ display }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="filtro_advogado" class="form-label">Advogado</label>
+                        <select class="form-select" id="filtro_advogado" name="filtro_advogado">
+                            <option value="">Todos os Advogados</option>
+                            {% for advogado in todos_advogados %}
+                                <option value="{{ advogado.id }}" {% if valores_filtro.filtro_advogado == advogado.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ advogado.get_full_name|default:advogado.username }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-12 d-flex justify-content-start mt-4">
+                        <button type="submit" class="btn btn-success me-2">
+                            <i class="fas fa-filter me-1"></i> Filtrar
+                        </button>
+                        <a href="{% url 'casos:lista_casos' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-eraser me-1"></i> Limpar
+                        </a>
                     </div>
                 </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Lista de Casos</h4>
+            <div>
+                <a href="{% url 'casos:exportar_excel' %}?{{ request.GET.urlencode }}" class="btn btn-info me-2">
+                    <i class="fas fa-file-excel me-1"></i> Exportar Excel (Filtrado)
+                </a>
+                
+                <a href="{% url 'casos:selecionar_produto_cliente' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i> Abrir Novo Caso
+                </a>
             </div>
-        </form>
-    </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th scope="col" class="ps-3">ID</th>
+                            <th scope="col">Título</th>
+                            <th scope="col">Cliente</th>
+                            <th scope="col">Produto</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Data de Entrada</th>
+                            <th scope="col">Responsável</th>
+                            <th scope="col">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for caso in casos %}
+                        <tr>
+                            <td class="ps-3">{{ caso.id|stringformat:"04d" }}</td>
+                            <td>{{ caso.titulo|truncatechars:50 }}</td>
+                            <td>{{ caso.cliente.nome }}</td>
+                            <td>{{ caso.produto.nome }}</td>
+                            <td>
+                                <span class="badge {% if caso.status == 'ATIVO' %}bg-success{% else %}bg-secondary{% endif %}">
+                                    {{ caso.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ caso.data_entrada|date:"d/m/Y" }}</td>
+                            <td>{{ caso.advogado_responsavel.first_name|default:"-" }}</td>
+                            <td>
+                                <a href="{{ caso.get_absolute_url }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-eye"></i> Ver Detalhes
+                                </a>
+                                <a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-edit"></i> Editar
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center p-5">
+                                <p class="mb-0 text-muted">Nenhum caso encontrado com os filtros aplicados.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        </div>
 
-    <!-- Barra de Ações (Exportar, Novo) -->
-    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 24px;">
-        <a href="{% url 'casos:exportar_excel' %}?{{ request.GET.urlencode }}" class="btn btn-info">Exportar Excel</a>
-        <a href="{% url 'casos:selecionar_produto_cliente' %}" class="btn btn-primary">Abrir Novo Caso</a>
-    </div>
-
-    <!-- Card da Tabela -->
-    <div class="data-table-container">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Título</th>
-                    <th>Cliente</th>
-                    <th>Produto</th>
-                    <th>Status</th>
-                    <th>Data de Entrada</th>
-                    <th>Responsável</th>
-                    <th style="text-align: right;">Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for caso in casos %}
-                <tr>
-                    <td>{{ caso.id|stringformat:"05d" }}</td>
-                    <td>{{ caso.titulo|default:"(sem título)"|truncatechars:40 }}</td>
-                    <td>{{ caso.cliente.nome }}</td>
-                    <td>{{ caso.produto.nome }}</td>
-                    <td>{{ caso.get_status_display }}</td>
-                    <td>{{ caso.data_entrada|date:"d/m/Y" }}</td>
-                    <td>{% if caso.advogado_responsavel %}{{ caso.advogado_responsavel.get_full_name|default:caso.advogado_responsavel.username }}{% else %}-{% endif %}</td>
-                    <td class="actions">
-                        <a href="{% url 'casos:detalhe_caso' pk=caso.pk %}" class="action-btn btn-info">Ver Detalhes</a>
-                        <a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="action-btn btn-edit">Editar</a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="8">
-                        <div class="empty-state">
-                            <p>Nenhum caso encontrado com os filtros aplicados.</p>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+</div>
 {% endblock %}
