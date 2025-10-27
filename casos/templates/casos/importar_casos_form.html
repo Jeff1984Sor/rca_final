@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Importar Casos{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-9 col-lg-8"> {# Um pouco mais largo para acomodar #}
+
+            {% include 'casos/partials/app_messages.html' %} 
+
+            <div class="card shadow border-0">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-upload me-2"></i>Importação Massiva de Casos</h4>
+                </div>
+                <div class="card-body p-4">
+                    <p class="card-text text-muted mb-4">
+                        Selecione o Cliente, Produto e suba a planilha Excel (.xlsx). A planilha deve usar o cabeçalho gerado pelo sistema.
+                    </p>
+                    
+                    <form method="post" action="{% url 'casos:importar_casos_view' %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row mb-3"> {# Linha para os selects #}
+                            <div class="col-md-6"> {# Coluna Cliente #}
+                                <label for="cliente-select" class="form-label fw-bold">Cliente <span class="text-danger">*</span></label>
+                                <select class="form-select form-select-lg" id="cliente-select" name="cliente" required>
+                                    <option value="" disabled selected>-- Selecione --</option>
+                                    {% for cliente in clientes %}
+                                        <option value="{{ cliente.id }}">{{ cliente.nome }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6"> {# Coluna Produto #}
+                                <label for="produto-select" class="form-label fw-bold">Produto <span class="text-danger">*</span></label>
+                                <select class="form-select form-select-lg" id="produto-select" name="produto" required>
+                                    <option value="" disabled selected>-- Selecione --</option>
+                                    {% for produto in produtos %}
+                                        <option value="{{ produto.id }}">{{ produto.nome }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-4"> {# Espaçamento antes do botão #}
+                            <label for="arquivo-excel" class="form-label fw-bold">Arquivo Excel (.xlsx) <span class="text-danger">*</span></label>
+                            <input type="file" class="form-control form-control-lg" id="arquivo-excel" name="arquivo_excel" accept=".xlsx" required>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4"> 
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-upload me-2"></i> Iniciar Migração
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

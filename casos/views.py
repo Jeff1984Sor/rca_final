@@ -1,44 +1,58 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import get_user_model
-from django.http import HttpResponse
-from django.db.models import Sum
-from django.utils import timezone
-from django.urls import reverse
-from django.views.decorators.http import require_POST
-from datetime import date, timedelta
-from dateutil.relativedelta import relativedelta
-from decimal import Decimal
-import openpyxl
+# 1. Imports Padrão do Python
+import logging
 from io import BytesIO
+from datetime import date, timedelta, datetime
+from decimal import Decimal
+import re # Se você usa para validação
+
+# 2. Imports de Terceiros
+import openpyxl
+from dateutil.relativedelta import relativedelta
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 from reportlab.lib.units import inch
-from campos_custom.models import EstruturaDeCampos
-
-# Importações de modelos de outros apps
-from clientes.models import Cliente
-from produtos.models import Produto
-from datetime import datetime
-
-# Importações de modelos locais
-from .models import Caso, Andamento, ModeloAndamento, Timesheet, Acordo, Parcela, Despesa, FluxoInterno
-from campos_custom.models import ValorCampoPersonalizado
-
-from integrations.sharepoint import SharePoint
-
-# Importações de formulários locais
-from .forms import CasoDinamicoForm, AndamentoForm, TimesheetForm, AcordoForm, DespesaForm
-from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.viewsets import ModelViewSet
-from .serializers import CasoSerializer
-
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 
+# 3. Imports do Django e Locais
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import get_user_model
+from django.http import HttpResponse
+from django.db.models import Sum
+from django.db import transaction, IntegrityError # Adicionado IntegrityError
+from django.utils import timezone
+from django.urls import reverse
+from django.views.decorators.http import require_POST
+from django.contrib import messages
+from django.core.exceptions import ValidationError
+
+# Modelos de outros apps
+from clientes.models import Cliente
+from produtos.models import Produto
+
+# Modelos e Forms locais (do app 'casos')
+from .models import Caso, Andamento, ModeloAndamento, Timesheet, Acordo, Parcela, Despesa, FluxoInterno
+from .forms import CasoDinamicoForm, AndamentoForm, TimesheetForm, AcordoForm, DespesaForm
+from .serializers import CasoSerializer
+try:
+    from .utils import get_cabecalho_exportacao
+except ImportError:
+    # Se utils.py não existir, defina a função aqui ou remova o try/except
+    # (Pode remover se você colocou a função diretamente no views.py)
+    pass 
+
+# Modelos do app 'campos_custom'
+from campos_custom.models import EstruturaDeCampos, CampoPersonalizado, ValorCampoPersonalizado
+
+# Integrações
+from integrations.sharepoint import SharePoint
+
+logger = logging.getLogger('casos_app')
 User = get_user_model()
 
 @login_required
@@ -939,3 +953,403 @@ class CasoAPIViewSet(viewsets.ModelViewSet):
     #     caso = get_object_or_404(Caso, external_id=external_id)
     #     serializer = self.get_serializer(caso)
     #     return Response(serializer.data)
+
+
+@login_required
+def selecionar_filtros_exportacao(request):
+    """
+    Tela que permite ao usuário selecionar o Cliente e o Produto 
+    para definir o escopo da exportação (o que define os campos personalizados).
+    """
+    if request.method == 'POST':
+        cliente_id = request.POST.get('cliente')
+        produto_id = request.POST.get('produto')
+        
+        # A validação básica é feita pelo HTML
+        if cliente_id and produto_id:
+            # Redireciona para a URL de exportação dinâmica
+            return redirect('casos:exportar_casos_dinamico', cliente_id=cliente_id, produto_id=produto_id)
+            
+    # Lógica GET: Carrega todos os clientes e produtos para os <select>
+    clientes = Cliente.objects.all().order_by('nome')
+    produtos = Produto.objects.all().order_by('nome')
+    
+    context = {
+        'clientes': clientes, 
+        'produtos': produtos,
+        'titulo': 'Exportação Dinâmica de Casos'
+    }
+    return render(request, 'casos/selecionar_filtros_exportacao.html', context)
+
+
+@login_required
+def exportar_casos_dinamico(request, cliente_id, produto_id):
+    """
+    Busca os dados dos Casos (fixos e personalizados) para a combinação Cliente/Produto 
+    e gera um arquivo Excel dinâmico.
+    """
+    
+    # Busca o Cliente e Produto, retornando 404 se não existirem
+    cliente = get_object_or_404(Cliente, id=cliente_id)
+    produto = get_object_or_404(Produto, id=produto_id)
+
+    # 1. Obter Cabeçalhos e Chaves Dinamicamente
+    # lista_chaves: ['id', 'titulo', 'cliente__nome', 'personalizado_numero_processo', ...]
+    lista_chaves, lista_cabecalhos = get_cabecalho_exportacao(cliente, produto)
+    
+    # 2. Filtrar Casos
+    # Filtra os casos da combinação, e pré-busca os relacionamentos (select_related)
+    # e os valores personalizados (prefetch_related) para otimizar o banco de dados.
+    casos_queryset = Caso.objects.filter(
+        cliente=cliente, 
+        produto=produto
+    ).select_related(
+        'cliente', 
+        'produto', 
+        'advogado_responsavel' # Exemplo de FK que pode estar nos fixos
+    ).prefetch_related(
+        'valores_personalizados__campo' # Busca os valores e os metadados do campo
+    ).order_by('-data_entrada')
+    
+    # 3. Preparar a Exportação (OpenPyXL)
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = f'Export_{produto.nome[:30]}' # Limita o título da aba
+    
+    # Adicionar o Cabeçalho
+    sheet.append(lista_cabecalhos)
+    sheet.append(lista_chaves)
+    
+    # 4. Adicionar Linhas de Dados
+    for caso in casos_queryset:
+        linha_dados = []
+        
+        # Mapeia os valores personalizados para acesso rápido
+        # {'personalizado_nome_variavel': valor, ...}
+        valores_personalizados_case = {
+            f'personalizado_{v.campo.nome_variavel}': v.valor 
+            for v in caso.valores_personalizados.all()
+        }
+        
+        for chave in lista_chaves:
+            valor = '-' # Valor padrão se a chave não for encontrada
+
+            # --- TRATAMENTO DE CAMPOS FIXOS (sem prefixo 'personalizado_') ---
+            if not chave.startswith('personalizado_'):
+                
+                # 1. Trata campos de Foreign Key (FK) para mostrar o nome (Ex: cliente__nome)
+                if '__' in chave:
+                    partes = chave.split('__')
+                    # Tenta acessar o objeto FK (e.g., caso.cliente) e depois o atributo (e.g., .nome)
+                    obj = getattr(caso, partes[0], None)
+                    valor = getattr(obj, partes[1], '-') if obj else '-'
+                
+                # 2. Trata campos de status (mostra o nome de exibição)
+                elif chave == 'status':
+                    valor = caso.get_status_display()
+                
+                # 3. Trata campos simples (acessa o atributo direto)
+                else:
+                    valor = getattr(caso, chave, '-')
+            
+            # --- TRATAMENTO DE CAMPOS PERSONALIZADOS ---
+            else:
+                # A chave tem o formato 'personalizado_nome_variavel'
+                valor = valores_personalizados_case.get(chave, '-')
+            
+            # Garante que o valor é uma string para a planilha (evita erros de tipo)
+            linha_dados.append(str(valor)) 
+
+        sheet.append(linha_dados)
+        
+    # 5. Retornar a Resposta
+    # Usa BytesIO para criar o arquivo Excel na memória antes de enviar
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    
+    response = HttpResponse(
+        output,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    # Define o nome do arquivo que o usuário fará download
+    filename = f'casos_exportados_{cliente.nome}_{produto.nome}.xlsx'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+# NOTA: O fluxo de controle (redirecionamento após o POST) já foi implementado 
+# na view 'selecionar_filtros_exportacao' (Passo 1).
+
+@login_required
+def importar_casos_view(request):
+    """
+    Permite o upload de um arquivo Excel e processa a importação de casos.
+    """
+    clientes = Cliente.objects.all().order_by('nome')
+    produtos = Produto.objects.all().order_by('nome')
+
+    if request.method == 'POST':
+        # 1. Obtém os dados de seleção
+        cliente_id = request.POST.get('cliente')
+        produto_id = request.POST.get('produto')
+        arquivo_excel = request.FILES.get('arquivo_excel')
+
+        if not (cliente_id and produto_id and arquivo_excel):
+            messages.error(request, "Todos os campos são obrigatórios.")
+            return redirect('casos:importar_casos_view')
+
+        try:
+            # Redireciona para a função de processamento real
+            return processar_importacao_excel(request, cliente_id, produto_id, arquivo_excel)
+        except ValidationError as e:
+            messages.error(request, f"Erro na Importação: {e.message}")
+        except Exception as e:
+            messages.error(request, f"Erro inesperado: {str(e)}")
+            
+        return redirect('casos:importar_casos_view')
+
+    context = {
+        'clientes': clientes,
+        'produtos': produtos,
+        'titulo': 'Importação Massiva de Casos'
+    }
+    return render(request, 'casos/importar_casos_form.html', context)
+logger = logging.getLogger('casos_app')
+
+def processar_importacao_excel(request, cliente_id, produto_id, arquivo_excel):
+    logger.info(f"Iniciando importação (Criação Apenas) para Cliente ID {cliente_id}, Produto ID {produto_id}")
+    
+    current_user = request.user # Pode ser útil para logs ou campos 'criado_por'
+    cliente = get_object_or_404(Cliente, id=cliente_id)
+    produto = get_object_or_404(Produto, id=produto_id)
+    
+    # 1. Obter Chaves Válidas (para saber quais colunas processar)
+    # Usamos a função de cabeçalho para saber quais campos existem para esta combinação C+P
+    lista_chaves_validas, _ = get_cabecalho_exportacao(cliente, produto)
+    chaves_validas_set = set(lista_chaves_validas)
+    logger.debug(f"Chaves válidas esperadas para esta estrutura: {lista_chaves_validas}")
+
+    # Busca a ESTRUTURA para a geração de título e mapeamento de campos
+    estrutura_campos = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).prefetch_related('campos').first()
+    if not estrutura_campos:
+         logger.error(f"Nenhuma EstruturaDeCampos encontrada para Cliente {cliente_id} e Produto {produto_id}.")
+         messages.error(request, "Nenhuma estrutura de campos personalizados encontrada para esta combinação de Cliente e Produto.")
+         return redirect('casos:importar_casos_view')
+         
+    # Cria um mapa {nome_variavel: objeto_CampoPersonalizado} para acesso rápido
+    campos_meta_map = {cm.nome_variavel: cm for cm in estrutura_campos.campos.all()}
+
+    # 2. Ler Excel
+    try:
+        workbook = openpyxl.load_workbook(arquivo_excel)
+        sheet = workbook.active
+        logger.info(f"Arquivo Excel '{arquivo_excel.name}' carregado. Planilha: '{sheet.title}'")
+    except Exception as e:
+        logger.error(f"Erro ao carregar Excel: {e}", exc_info=True)
+        raise ValidationError("O arquivo não é um Excel válido (.xlsx) ou está corrompido.")
+
+    # 3. Ler Cabeçalho da Planilha
+    if sheet.max_row < 2:
+         logger.warning("Planilha vazia ou contém apenas o cabeçalho.")
+         raise ValidationError("A planilha não contém dados para importar (mínimo 2 linhas).")
+
+    excel_headers_raw = [cell.value for cell in sheet[1]]
+    # Normaliza: minúsculas, troca espaço por underscore
+    excel_headers = [str(h).strip().lower().replace(' ', '_') if h else '' for h in excel_headers_raw]
+    logger.info(f"Cabeçalhos lidos: {excel_headers_raw}")
+    logger.debug(f"Cabeçalhos normalizados: {excel_headers}")
+
+    # 4. Criar Mapa de Cabeçalhos (Excel -> Chave Interna Django)
+    header_map = {} # {excel_header_norm: chave_interna_valida}
+    for excel_header_norm in excel_headers:
+        # Tentativa 1: Nome exato (campos fixos como 'data_entrada', 'status')
+        if excel_header_norm in chaves_validas_set:
+            header_map[excel_header_norm] = excel_header_norm
+        # Tentativa 2: Nome da variável de campo personalizado (ex: excel 'numero_processo' -> django 'personalizado_numero_processo')
+        else:
+            chave_possivel = f'personalizado_{excel_header_norm}'
+            if chave_possivel in chaves_validas_set:
+                header_map[excel_header_norm] = chave_possivel
+            else:
+                 logger.warning(f"Cabeçalho '{excel_header_norm}' da planilha não corresponde a nenhum campo fixo ou personalizado válido. Será ignorado.")
+    logger.debug(f"Mapa de cabeçalhos: {header_map}") 
+    
+    # Validação Mínima: Garante que pelo menos um campo reconhecido existe
+    if not header_map:
+        logger.error("Nenhum cabeçalho na planilha corresponde aos campos esperados.")
+        raise ValidationError("O cabeçalho da planilha não corresponde aos campos fixos ou personalizados esperados para esta combinação Cliente/Produto.")
+
+
+    # 5. Iniciar Transação
+    casos_criados = 0
+    linhas_processadas = 0
+    erros_linhas = [] # Guarda erros por linha
+
+    try:
+        with transaction.atomic():
+            # Iterar pelas linhas
+            for row_index, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+                linhas_processadas += 1
+                logger.debug(f"Processando linha {row_index}...")
+
+                dados_caso_fixos = {}
+                dados_personalizados_para_salvar = {} # {objeto_CampoPersonalizado: valor}
+                dados_personalizados_para_titulo = {} # {nome_variavel: valor}
+
+                row_data_dict = dict(zip(excel_headers, row))
+                logger.debug(f"Dados brutos linha {row_index}: {row_data_dict}")
+
+                # Flag para saber se a linha tem dados válidos
+                linha_valida = False
+
+                # Mapear dados da linha
+                for header_norm, cell_value in row_data_dict.items():
+                    # Ignora células vazias E cabeçalhos não mapeados
+                    if cell_value is None or not header_norm or header_norm not in header_map: 
+                        continue
+                        
+                    chave_interna = header_map[header_norm]
+                    linha_valida = True # Marcar que a linha tem pelo menos um dado útil
+
+                    # --- Processar Valor (Campos Fixos) ---
+                    if not chave_interna.startswith('personalizado_') and '__' not in chave_interna:
+                        campo_caso = chave_interna # Ex: 'data_entrada'
+                        
+                        # TRATAMENTO DE DATA (Exemplo)
+                        if campo_caso in ['data_entrada', 'data_encerramento']:
+                             if isinstance(cell_value, datetime):
+                                dados_caso_fixos[campo_caso] = cell_value.date()
+                             elif isinstance(cell_value, date):
+                                 dados_caso_fixos[campo_caso] = cell_value
+                             else: # Tentar parsear string AAAA-MM-DD
+                                 try:
+                                     # Tenta formato AAAA-MM-DD primeiro
+                                     dados_caso_fixos[campo_caso] = datetime.strptime(str(cell_value).split(' ')[0], '%Y-%m-%d').date()
+                                 except (ValueError, TypeError):
+                                     try:
+                                         # Tenta formato DD/MM/AAAA (comum no Brasil)
+                                         dados_caso_fixos[campo_caso] = datetime.strptime(str(cell_value).split(' ')[0], '%d/%m/%Y').date()
+                                     except (ValueError, TypeError):
+                                         logger.warning(f"Valor de data inválido '{cell_value}' na linha {row_index}, coluna '{header_norm}'. Ignorando campo.")
+                        
+                        # TRATAMENTO DE STATUS (Exemplo: Aceitar 'Ativo' ou 'ATIVO')
+                        elif campo_caso == 'status':
+                            # Normaliza para a chave interna (ex: 'ATIVO')
+                            valor_status = str(cell_value).strip().upper()
+                            # Valida se é uma chave válida (opcional, mas bom)
+                            if any(valor_status == choice[0] for choice in Caso.STATUS_CHOICES):
+                                dados_caso_fixos[campo_caso] = valor_status
+                            else:
+                                logger.warning(f"Valor de status inválido '{cell_value}' na linha {row_index}. Ignorando campo.")
+                        
+                        # Outros campos fixos
+                        else:
+                            dados_caso_fixos[campo_caso] = cell_value
+                    
+                    # --- Processar Valor (Campos Personalizados) ---
+                    elif chave_interna.startswith('personalizado_'):
+                        nome_variavel = chave_interna.split('personalizado_')[1]
+                        valor_str = str(cell_value)
+                        dados_personalizados_para_titulo[nome_variavel] = valor_str
+                        
+                        campo_meta = campos_meta_map.get(nome_variavel)
+                        if campo_meta:
+                            dados_personalizados_para_salvar[campo_meta] = valor_str
+                        else:
+                            logger.warning(f"Metadados para nome_variavel '{nome_variavel}' (coluna '{header_norm}') não encontrados na estrutura. Valor ignorado.")
+
+                # Se a linha não tinha nenhum dado mapeado, pular
+                if not linha_valida:
+                    logger.info(f"Linha {row_index} ignorada por não conter dados mapeáveis.")
+                    continue
+
+                # 6. Criar o Caso (sem título)
+                try:
+                    # Garante que campos obrigatórios (sem default) tenham algum valor
+                    if 'data_entrada' not in dados_caso_fixos:
+                         dados_caso_fixos['data_entrada'] = date.today() # Define um padrão se ausente
+                         logger.warning(f"Linha {row_index}: 'data_entrada' não fornecida, usando data atual.")
+                    # Adicione outras validações de campos obrigatórios aqui se necessário
+
+                    novo_caso = Caso.objects.create(
+                        cliente=cliente,
+                        produto=produto,
+                        titulo="[Título Pendente]", # Título temporário
+                        **dados_caso_fixos
+                    )
+                    logger.info(f"Caso preliminar criado (ID {novo_caso.id}) para linha {row_index}.")
+                except IntegrityError as e:
+                    erro_msg = f"Erro de integridade ao criar caso para linha {row_index}: {e}. Dados: {dados_caso_fixos}"
+                    logger.error(erro_msg)
+                    erros_linhas.append(f"Linha {row_index}: {erro_msg}")
+                    continue # Pula para a próxima linha
+
+                # 7. Salvar Campos Personalizados
+                for campo_meta, valor_a_salvar in dados_personalizados_para_salvar.items():
+                    ValorCampoPersonalizado.objects.create(
+                        caso=novo_caso,
+                        campo=campo_meta,
+                        valor=valor_a_salvar
+                    )
+                logger.debug(f"Campos personalizados salvos para caso ID {novo_caso.id}")
+
+                # 8. Gerar Título (Copie/Adapte sua lógica de criar_caso)
+                titulo_final = f"Caso Importado #{novo_caso.id}" # Título Padrão se a lógica falhar
+                
+                # VERIFIQUE SE ESTE BLOCO 'IF' EXISTE E ESTÁ CORRETO
+                if produto.padrao_titulo and estrutura_campos: 
+                    titulo_formatado = produto.padrao_titulo
+                    logger.debug(f"Iniciando geração de título para caso {novo_caso.id} com padrão: '{titulo_formatado}'") # LOG
+                    
+                    # Usa os dados que já mapeamos e salvamos
+                    # 'dados_personalizados_para_titulo' deve ter {nome_variavel: valor}
+                    for campo_estrutura in estrutura_campos.campos.all(): 
+                        chave_variavel = campo_estrutura.nome_variavel
+                        # Pega o valor do dicionário que montamos ao ler a linha
+                        valor = dados_personalizados_para_titulo.get(chave_variavel, '') 
+                        placeholder = f'{{{chave_variavel}}}'
+                        logger.debug(f"Substituindo '{placeholder}' por '{valor}'") # LOG
+                        titulo_formatado = titulo_formatado.replace(placeholder, str(valor))
+                        
+                    titulo_final = titulo_formatado
+                    logger.info(f"Título gerado para caso ID {novo_caso.id}: '{titulo_final}'") # LOG
+                else:
+                    logger.warning(f"Não foi possível gerar título automático para caso {novo_caso.id}. Produto sem padrão ou estrutura não encontrada.") # LOG
+                
+                # VERIFIQUE SE ESTE SAVE EXISTE
+                # Salva o título no caso recém-criado
+                novo_caso.titulo = titulo_final
+                novo_caso.save(update_fields=['titulo']) 
+                logger.info(f"Título final salvo para caso ID {novo_caso.id}.") # LOG
+                # --- FIM DA GERAÇÃO DE TÍTULO ---
+                casos_criados += 1
+
+            # Fim do Loop pelas linhas
+
+            # Se houve erros em linhas específicas, informa o usuário mas NÃO reverte a transação
+            if erros_linhas:
+                 messages.warning(request, 
+                     f"Importação concluída com {len(erros_linhas)} erros em linhas específicas (verifique os logs). {casos_criados} casos foram criados com sucesso."
+                 )
+            else:
+                 messages.success(request, 
+                     f"Importação concluída com sucesso! {casos_criados} novos casos foram criados."
+                 )
+            
+            # Se você quisesse reverter TUDO em caso de QUALQUER erro de linha:
+            # if erros_linhas:
+            #    raise ValidationError("Houve erros durante a importação. Nenhuma linha foi salva.")
+
+            return redirect('casos:importar_casos_view') # Redireciona para a lista
+
+    except ValidationError as e: # Captura erros de validação gerais (arquivo, cabeçalho)
+        logger.error(f"Erro de validação durante importação: {e.message}")
+        messages.error(request, f"Erro na Importação: {e.message}")
+    except Exception as e: # Captura outros erros inesperados
+        logger.error(f"Erro inesperado durante importação: {str(e)}", exc_info=True)
+        messages.error(request, f"Erro inesperado durante a importação. Verifique os logs do servidor.")
+        
+    # Se chegou aqui, houve um erro antes ou durante a transação
+    logger.warning("Redirecionando de volta ao formulário devido a erro.")
+    return redirect('casos:importar_casos_view')

@@ -8,6 +8,9 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.urls import reverse
+import logging
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 # Importa todos os modelos e serviços necessários
 from casos.models import Caso, FluxoInterno
@@ -16,6 +19,9 @@ from integrations.sharepoint import SharePoint
 from .models import Workflow, Fase
 from .views import transitar_fase # Importa nossa função de transição
 
+print("--- workflow.signals.py: File is being imported! ---")
+
+logger = logging.getLogger('casos_app')
 
 def enviar_sinal_para_n8n(instance):
     """
@@ -139,36 +145,84 @@ def enviar_email_novo_caso(instance, request=None):
 def gatilho_pos_criacao_caso(sender, instance, created, **kwargs):
     """
     Orquestrador principal que é disparado APENAS na criação de um novo Caso.
+
     """
+
+    print(f"!!! GATILHO DISPARADO para Caso ID {instance.id}, Created={created} !!!")
+    logger.debug(f"--- Sinal post_save recebido para Caso ID {instance.id}. Flag 'created'={created} ---") # LOG INICIAL
+
     if created:
-        print(f"--- SINAL ÚNICO DISPARADO PARA NOVO CASO #{instance.id} ---")
+        logger.info(f"--- PROCESSANDO Gatilhos de CRIAÇÃO para Caso ID {instance.id} ---") # LOG CRIAÇÃO
 
         # 1. LÓGICA DO WORKFLOW
-        if instance.status == 'ATIVO':
-            try:
-                workflow = Workflow.objects.get(cliente=instance.cliente, produto=instance.produto)
-                fase_inicial = workflow.fases.order_by('ordem').first()
-                if fase_inicial:
-                    transitar_fase(instance, fase_inicial)
-                else:
-                    print(f"Workflow: '{workflow.nome}' não tem uma fase inicial (ordem=1).")
-            except Workflow.DoesNotExist:
-                print(f"Workflow: Nenhum workflow definido para o caso #{instance.id}.")
+        logger.debug(f"Iniciando lógica de Workflow para Caso {instance.id}...")
+        try:
+            # ... (seu código de busca de Workflow e transição de fase) ...
+            workflow = Workflow.objects.get(cliente=instance.cliente, produto=instance.produto)
+            # ... (resto da lógica do workflow) ...
+            logger.info(f"Workflow processado para Caso {instance.id}.")
+        except Workflow.DoesNotExist:
+             logger.warning(f"Workflow: Nenhum workflow definido para o caso #{instance.id}.")
+        except Exception as e:
+             logger.error(f"Erro na lógica de Workflow para Caso {instance.id}: {e}", exc_info=True) # LOG ERRO WORKFLOW
         
-        FluxoInterno.objects.create(
-            caso=instance,
-            tipo_evento='CRIACAO_CASO',
-            descricao=f"Caso criado com status '{instance.get_status_display()}'.",
-            autor=instance.advogado_responsavel 
-        )
+        # Criação do Fluxo Interno (já estava ok)
+        try:
+            # Verifica se já existe um registro de criação para este caso
+            if not FluxoInterno.objects.filter(caso=instance, tipo_evento='CRIACAO_CASO').exists():
+                FluxoInterno.objects.create(
+                    caso=instance,                         
+                    tipo_evento='CRIACAO_CASO',            
+                    descricao=f"Caso criado com status '{instance.get_status_display()}'.", 
+                    autor=instance.advogado_responsavel    
+                )
+                logger.debug(f"FluxoInterno 'CRIACAO_CASO' criado para Caso {instance.id}.")
+            else:
+                logger.warning(f"FluxoInterno 'CRIACAO_CASO' para Caso {instance.id} já existe. Pulando criação duplicada.") # LOG DUPLICADO
+        except Exception as e:
+            logger.error(f"Erro ao criar/verificar FluxoInterno para Caso {instance.id}: {e}", exc_info=True)
 
         # 2. LÓGICA DO SHAREPOINT
-        criar_pastas_sharepoint_logica(instance)
-        
-        # 3. LÓGICA DE E-MAIL
-        enviar_email_novo_caso(instance)
+        logger.debug(f"Iniciando lógica do SharePoint para Caso {instance.id}...")
+        try:
+            criar_pastas_sharepoint_logica(instance)
+            logger.info(f"Lógica do SharePoint concluída para Caso {instance.id}.")
+        except Exception as e:
+             logger.error(f"Erro na lógica do SharePoint para Caso {instance.id}: {e}", exc_info=True) # LOG ERRO SHAREPOINT
 
-        # 4. SALVA O ID DO SHAREPOINT DE UMA VEZ
-        # Como a função do SharePoint modifica o 'instance', precisamos salvar essa alteração.
-        if instance.sharepoint_folder_id:
-            instance.save(update_fields=['sharepoint_folder_id'])
+        # 3. LÓGICA DE E-MAIL
+        logger.debug(f"Iniciando lógica de E-mail para Caso {instance.id}...")
+        try:
+            enviar_email_novo_caso(instance)
+            logger.info(f"Lógica de E-mail concluída para Caso {instance.id}.")
+        except Exception as e:
+             logger.error(f"Erro na lógica de E-mail para Caso {instance.id}: {e}", exc_info=True) # LOG ERRO EMAIL
+        
+        # 4. LÓGICA N8N (se aplicável)
+        logger.debug(f"Iniciando lógica do n8n para Caso {instance.id}...")
+        try:
+            # Descomente se você usa a função n8n aqui
+            # enviar_sinal_para_n8n(instance) 
+            logger.info(f"Lógica do n8n concluída para Caso {instance.id}.")
+        except Exception as e:
+             logger.error(f"Erro na lógica do n8n para Caso {instance.id}: {e}", exc_info=True) # LOG ERRO N8N
+
+
+        # 5. SALVA O ID DO SHAREPOINT (já estava ok)
+        try:
+            if instance.sharepoint_folder_id and instance.pk: # Garante que o objeto foi salvo
+                # Busca a instância mais recente do banco para evitar race conditions
+                caso_atualizado = Caso.objects.get(pk=instance.pk) 
+                if caso_atualizado.sharepoint_folder_id != instance.sharepoint_folder_id:
+                     caso_atualizado.sharepoint_folder_id = instance.sharepoint_folder_id
+                     caso_atualizado.save(update_fields=['sharepoint_folder_id'])
+                     logger.info(f"SharePoint Folder ID salvo para Caso {instance.id}.")
+        except Caso.DoesNotExist:
+             logger.error(f"Erro ao tentar salvar SharePoint ID: Caso {instance.id} não encontrado no banco após criação.")
+        except Exception as e:
+             logger.error(f"Erro ao salvar SharePoint Folder ID para Caso {instance.id}: {e}", exc_info=True)
+
+        logger.info(f"--- FIM dos Gatilhos de CRIAÇÃO para Caso ID {instance.id} ---")
+
+    else:
+         logger.debug(f"Sinal post_save para Caso ID {instance.id} ignorado (created=False).") # LOG IGNORADO

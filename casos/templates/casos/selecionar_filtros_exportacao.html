@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Exportação Dinâmica{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Exportação Dinâmica de Casos</h4>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        Selecione a combinação de Cliente e Produto para definir a estrutura (campos fixos + campos personalizados) dos dados que você deseja exportar.
+                    </p>
+                    <hr>
+
+                    <form method="post" action="{% url 'casos:selecionar_filtros_exportacao' %}">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="cliente-select" class="form-label required-label">Cliente</label>
+                                <select class="form-select" id="cliente-select" name="cliente" required>
+                                    <option value="">-- Selecione o Cliente --</option>
+                                    {% for cliente in clientes %}
+                                        <option value="{{ cliente.id }}">{{ cliente.nome }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="produto-select" class="form-label required-label">Produto</label>
+                                <select class="form-select" id="produto-select" name="produto" required>
+                                    <option value="">-- Selecione o Produto --</option>
+                                    {% for produto in produtos %}
+                                        <option value="{{ produto.id }}">{{ produto.nome }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                        </div> <div class="d-flex justify-content-end mt-4">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-file-excel me-2"></i> Gerar Exportação
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

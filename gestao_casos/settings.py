@@ -12,8 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Instancia o leitor de variáveis de ambiente e lê o arquivo .env
 env = Env()
-env.read_env()
-
+env.read_env(str(BASE_DIR / ".env"))
 # Pega a chave secreta da variável de ambiente. Essencial para segurança.
 # O `env.str()` garante que o programa vai quebrar se a variável não for encontrada.
 SECRET_KEY = env.str('SECRET_KEY')
@@ -32,12 +31,6 @@ CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
 # ==============================================================================
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
 
     # Apps de terceiros
     'django_htmx',
@@ -54,7 +47,43 @@ INSTALLED_APPS = [
     'campos_custom.apps.CamposCustomConfig',
     'produtos.apps.ProdutosConfig',
     'workflow.apps.WorkflowConfig',
+
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+
 ]
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO', # Mostra mensagens INFO, WARNING, ERROR, CRITICAL
+        # Mude para 'DEBUG' se precisar de mais detalhes
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+        # Logger específico para o nosso app 'casos'
+        'casos_app': {
+            'handlers': ['console'],
+            'level': 'DEBUG', # Mostra TUDO (DEBUG, INFO, WARNING, ERROR) para este app
+            'propagate': True,
+        },
+    },
+}
 
 
 # ==============================================================================

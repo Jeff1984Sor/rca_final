@@ -6,7 +6,7 @@
     
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
-    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- FONTES E ÍCONES -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -96,6 +96,11 @@
         td.actions { white-space: nowrap; text-align: right; }
         .empty-state { padding: 40px; text-align: center; color: var(--text-medium); border: 2px dashed var(--border-color); border-radius: 8px; }
 
+        .required-label::before {
+            content: '* ';
+            color: red;
+        }
+
         .logout-button {
         background: none;
         border: 1px solid #475569;
@@ -122,19 +127,31 @@
         <div class="navbar-links">
             <a href="{% url 'core:home' %}">Início</a>
             <a href="{% url 'workflow:lista_todas_acoes' %}">Tarefas da Equipe</a> <!-- NOVO LINK AQUI -->
-            <a href="{% url 'workflow:kanban' %}">Visão dos Casos por Fase</a> <!-- NOVO LINK AQUI -->
+            <a href="{% url 'workflow:kanban' %}">Visão dos Casos por Fase</a> 
             <a href="{% url 'casos:lista_casos' %}">Casos</a>
             <a href="{% url 'clientes:lista_clientes' %}">Clientes</a>
-            <a href="{% url 'equipamentos:equipamento_list' %}">Equipamentos</a>
+            <!-- NOVO LINK <a href="{% url 'equipamentos:equipamento_list' %}">Equipamentos</a>AQUI -->
         </div>
         <div class="navbar-auth">
-            {% if user.is_authenticated %}
-                <span>Olá, {{ user.first_name|default:user.username }}</span>
-                <form action="{% url 'logout' %}" method="post" style="display: inline;">{% csrf_token %}<button type="submit" class="logout-button">Sair</button></form>
-            {% else %}
-                <a href="{% url 'login' %}">Entrar</a>
-            {% endif %}
-        </div>
+                {% if user.is_authenticated %}
+                    <span>Olá, {{ user.first_name|default:user.username }}</span>
+                    
+                    <a href="{% url 'password_change' %}" class="btn btn-sm btn-outline-secondary me-2">
+                        Trocar Senha
+                    </a>
+                    
+                    <form action="{% url 'logout' %}" method="post" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="logout-button">Sair</button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'login' %}">Entrar</a>
+                    
+                    <a href="{% url 'password_reset' %}" class="btn btn-sm btn-outline-secondary ms-2">
+                        Esqueci a Senha
+                    </a>
+                {% endif %}
+            </div>
     </div>
 
     <div class="container">

@@ -11,9 +11,7 @@ class Caso(models.Model):
     # Definindo as opções para o campo 'status'
     STATUS_CHOICES = [
         ('ATIVO', 'Ativo'),
-        ('ENCERRADO', 'Encerrado'),
-        ('AGUARDANDO_DOC', 'Aguardando Documentação'),
-        ('EM_NEGOCIACAO', 'Em Negociação'),
+        ('ENCERRADO', 'Encerrado')        
     ]
 
     # --- CAMPOS PADRÃO OBRIGATÓRIOS ---

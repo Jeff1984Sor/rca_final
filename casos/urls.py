@@ -20,7 +20,7 @@ urlpatterns_api = [
 app_name = 'casos'
 urlpatterns = [
     # A linha 'path('', include(router.urls)),' foi REMOVIDA daqui.
-    path('', views.lista_casos, name='lista_casos'),
+    path('lista/', views.lista_casos, name='lista_casos'),
     path('novo/', views.selecionar_produto_cliente, name='selecionar_produto_cliente'),
     path('novo/<int:cliente_id>/<int:produto_id>/', views.criar_caso, name='criar_caso'),
     path('<int:pk>/', views.detalhe_caso, name='detalhe_caso'),
@@ -39,4 +39,8 @@ urlpatterns = [
     path('anexo/preview/<str:item_id>/', views.preview_anexo, name='preview_anexo'),
     path('pasta/<str:parent_folder_id>/criar/', views.criar_pasta_sharepoint, name='criar_pasta'),
     path('anexo/excluir/<str:item_id>/', views.excluir_anexo_sharepoint, name='excluir_anexo'),
+    path('selecionar/', views.selecionar_filtros_exportacao, name='selecionar_filtros_exportacao'),
+    path('exportar/selecionar/', views.selecionar_filtros_exportacao, name='selecionar_filtros_exportacao'),
+    path('exportar/<int:cliente_id>/<int:produto_id>/', views.exportar_casos_dinamico, name='exportar_casos_dinamico'),
+    path('importar/', views.importar_casos_view, name='importar_casos_view'),
 ]

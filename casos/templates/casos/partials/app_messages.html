@@ -1,0 +1,13 @@
+{% comment %} Arquivo: casos/templates/casos/partials/app_messages.html {% endcomment %}
+{% if messages %}
+<div class="row justify-content-center my-3"> {# Margem vertical #}
+    <div class="col-12">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert"> {# Classes Alert #}
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
