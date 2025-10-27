@@ -236,77 +236,62 @@ def detalhe_caso(request, pk):
     
     # --- Lógica GET (Carregamento da Página) ---
     
-    # ==============================================================================
-    # LÓGICA DE BUSCA DE DADOS PERSONALIZADOS (ATUALIZADA PARA DATA E MOEDA)
+  # ==============================================================================
+    # LÓGICA DE BUSCA DE DADOS PERSONALIZADOS (GET - CORREÇÃO FINAL)
     # ==============================================================================
     
-    # Busca a ESTRUTURA de campos correta
     estrutura = EstruturaDeCampos.objects.filter(cliente=caso.cliente, produto=caso.produto).prefetch_related('campos').first()
-
-    valores_para_template = [] # Lista final para o template
+    valores_para_template = [] 
     
     if estrutura:
-        # Pega todos os valores que JÁ EXISTEM para este caso DE UMA VEZ.
-        valores_salvos_qs = caso.valores_personalizados.select_related('campo').all()
-        # Cria um dicionário para acesso rápido: {id_do_campo: objeto_valor}
-        valores_salvos_dict = {valor.campo.id: valor for valor in valores_salvos_qs}
-
-        # Itera sobre os CAMPOS DA ESTRUTURA (as definições), na ordem correta
+        valores_salvos_dict = {valor.campo.id: valor for valor in caso.valores_personalizados.select_related('campo').all()}
+        
         try:
-             # Tenta ordenar pelo 'through' model 'estruturacampoordenado'
              campos_ordenados = estrutura.campos.all().order_by('estruturacampoordenado__order')
         except Exception:
-             # Fallback se 'estruturacampoordenado' não existir ou falhar
              campos_ordenados = estrutura.campos.all()
 
         for campo_definicao in campos_ordenados:
-            
-            # Tenta encontrar o valor salvo no dicionário
             valor_salvo = valores_salvos_dict.get(campo_definicao.id)
 
             if valor_salvo:
                 # --- O VALOR EXISTE NO BANCO ---
+                valor_salvo.valor_tratado = valor_salvo.valor # Valor padrão é a string crua
                 
-                # 1. TRATAMENTO DE DATA (Converte string para objeto Date)
+                # 1. TRATAMENTO DE DATA (Lógica Única Corrigida)
                 if campo_definicao.tipo_campo == 'DATA' and valor_salvo.valor:
                     parsed_date = None
-                    # Tenta os formatos na ordem correta (AAAA-MM-DD HH:MM:SS ou AAAA-MM-DD)
-                    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'): 
-                        try:
-                            # Tenta parsear a string (ex: '2025-09-22 00:00:00')
-                            parsed_date = datetime.strptime(valor_salvo.valor, fmt).date()
-                            break # Sucesso
-                        except (ValueError, TypeError):
-                            continue # Tenta o próximo formato
+                    # Pega a string do banco (ex: '2025-09-22 00:00:00' ou '2025-09-22')
+                    # e pega APENAS a parte da data (antes do espaço)
+                    data_string = valor_salvo.valor.split(' ')[0] 
                     
-                    valor_salvo.valor_tratado = parsed_date # Passa o OBJETO DATE (ou None se falhou)
-                
-                # 2. TRATAMENTO DE MOEDA (Formata a string com R$)
+                    for fmt in ('%Y-%m-%d', '%d/%m/%Y'): # Tenta os formatos de data
+                        try:
+                            parsed_date = datetime.strptime(data_string, fmt).date()
+                            break
+                        except (ValueError, TypeError):
+                            continue
+                    
+                    if parsed_date:
+                        valor_salvo.valor_tratado = parsed_date # Passa o OBJETO DATE
+
+                # 2. TRATAMENTO DE MOEDA
                 elif campo_definicao.tipo_campo == 'MOEDA' and valor_salvo.valor:
                     try:
-                        # Tenta converter a string (ex: "15600.00" ou "15600") para Decimal
                         valor_decimal = Decimal(valor_salvo.valor)
-                        # Formata como moeda BRL (ex: "15.600,00")
                         valor_formatado = number_format(valor_decimal, decimal_pos=2, force_grouping=True)
-                        valor_salvo.valor_tratado = f"R$ {valor_formatado}" # Adiciona o símbolo
+                        valor_salvo.valor_tratado = f"R$ {valor_formatado}"
                     except (InvalidOperation, ValueError, TypeError):
-                        # Se falhar (ex: valor era "N/A"), apenas mostra o valor original
-                        valor_salvo.valor_tratado = valor_salvo.valor
-                
-                # 3. OUTROS TIPOS (Texto, Número, etc.)
-                else:
-                    valor_salvo.valor_tratado = valor_salvo.valor 
+                        valor_salvo.valor_tratado = valor_salvo.valor # Fallback
                 
                 valores_para_template.append(valor_salvo)
             
             else:
                 # --- O VALOR NÃO EXISTE NO BANCO ---
-                # Cria um "objeto" falso (placeholder) para exibir o rótulo
                 placeholder_valor = ValorCampoPersonalizado() 
                 placeholder_valor.campo = campo_definicao
                 placeholder_valor.valor = None
-                placeholder_valor.valor_tratado = None # O template tratará isso
-                
+                placeholder_valor.valor_tratado = None
                 valores_para_template.append(placeholder_valor)
     
     # ==============================================================================
