@@ -1,12 +1,20 @@
-# 1. Imports Padrão do Python
-import logging
-from io import BytesIO
-from datetime import date, timedelta, datetime
-from decimal import Decimal
-import re # Se você usa para validação
+# casos/views.py
 
-# 2. Imports de Terceiros
+# ==============================================================================
+# 1. IMPORTS PADRÃO DO PYTHON (Nativos)
+# ==============================================================================
+import logging
+import re
+from io import BytesIO
+from .forms import CasoDinamicoForm, BaseGrupoForm
+from datetime import date, timedelta, datetime
+from decimal import Decimal, InvalidOperation # Consolidação final dos tipos de decimal
+
+# ==============================================================================
+# 2. IMPORTS DE TERCEIROS (Celery, DRF, OpenPyXL, ReportLab)
+# ==============================================================================
 import openpyxl
+import requests # Para n8n/webhooks
 from dateutil.relativedelta import relativedelta
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -18,30 +26,65 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 
-# 3. Imports do Django e Locais
+# ==============================================================================
+# 3. IMPORTS DO DJANGO (Built-in, Forms e Utils)
+# ==============================================================================
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 from django.db.models import Sum
-from django.db import transaction, IntegrityError # Adicionado IntegrityError
+from django.db import transaction, IntegrityError
 from django.utils import timezone
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from decimal import Decimal, InvalidOperation # <<< VERIFIQUE SE ESTA LINHA EXISTE
-from django.utils.formats import number_format # <<< E ESTA TAMBÉM
+from django.forms import formset_factory, modelformset_factory
+from django.utils.formats import number_format # Consolidação final do formatador do Django
+
+# ==============================================================================
+# 4. IMPORTS LOCAIS (Modelos e Funções do Projeto)
+# ==============================================================================
 # Modelos de outros apps
 from clientes.models import Cliente
 from produtos.models import Produto
-from django.utils.formats import number_format # <<< ADICIONE ESTA LINHA
-from decimal import Decimal, InvalidOperation # <<< ADICIONE ESTA LINHA
+
+# Modelos do app 'campos_custom' (Novos modelos de grupo)
+from campos_custom.models import (
+    EstruturaDeCampos, 
+    InstanciaGrupoValor, 
+    ValorCampoPersonalizado,
+    OpcoesListaPersonalizada
+)
 
 # Modelos e Forms locais (do app 'casos')
 from .models import Caso, Andamento, ModeloAndamento, Timesheet, Acordo, Parcela, Despesa, FluxoInterno
-from .forms import CasoDinamicoForm, AndamentoForm, TimesheetForm, AcordoForm, DespesaForm
+from .forms import CasoDinamicoForm, AndamentoForm, TimesheetForm, AcordoForm, DespesaForm, BaseGrupoForm
 from .serializers import CasoSerializer
+
+# Tarefas/Utils (Ajuste o caminho se necessário)
+try:
+    from .utils import get_cabecalho_exportacao
+    from .tasks import processar_linha_importacao
+except ImportError as e:
+    # Captura erros de importação de utils/tasks (necessário para o linter)
+    logger_temp = logging.getLogger(__name__)
+    logger_temp.warning(f"Erro ao importar utils/tasks: {e}")
+    # Defina funções dummy se for essencial para o Django iniciar
+    def get_cabecalho_exportacao(cliente=None, produto=None): return ([], [], {})
+    def processar_linha_importacao(*args, **kwargs): pass 
+    
+
+# Integrações (SharePoint)
+from integrations.sharepoint import SharePoint
+
+
+# ==============================================================================
+# CONFIGURAÇÕES DA VIEW
+# ==============================================================================
+logger = logging.getLogger('casos_app')
+User = get_user_model()
 
 try:
     from .tasks import processar_linha_importacao
@@ -84,59 +127,125 @@ def selecionar_produto_cliente(request):
     return render(request, 'casos/selecionar_produto_cliente.html', context)
 
 
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.forms import formset_factory
+from django.db import transaction
+
+from .forms import CasoDinamicoForm, BaseGrupoForm
+
+
 @login_required
 def criar_caso(request, cliente_id, produto_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
     produto = get_object_or_404(Produto, id=produto_id)
-    
+
+    # Busca estrutura de campos
+    try:
+        estrutura = EstruturaDeCampos.objects.prefetch_related(
+            'campos', 'grupos_repetiveis__campos'
+        ).get(cliente=cliente, produto=produto)
+    except EstruturaDeCampos.DoesNotExist:
+        messages.error(request, "Estrutura de campos não definida para este Cliente/Produto. Contate o administrador.")
+        return redirect('casos:selecionar_produto_cliente')
+
+    # Formulário principal
+    form = CasoDinamicoForm(request.POST or None, cliente=cliente, produto=produto)
+
+    # Formsets dos grupos
+    grupo_formsets = {}
+    if estrutura:
+        for grupo in estrutura.grupos_repetiveis.all():
+            GrupoFormSet = formset_factory(BaseGrupoForm, extra=1, can_delete=True)  # removido can_order
+            prefix = f'grupo_{grupo.id}'
+            kwargs = {'grupo_campos': grupo, 'cliente': cliente, 'produto': produto}
+            formset = GrupoFormSet(request.POST or None, prefix=prefix, form_kwargs=kwargs)
+            grupo_formsets[grupo.id] = (grupo, formset)
+
+    # Processamento do POST
     if request.method == 'POST':
-        # 1. Passamos o CLIENTE e o PRODUTO para o formulário
-        form = CasoDinamicoForm(request.POST, cliente=cliente, produto=produto)
-        if form.is_valid():
-            dados_limpos = form.cleaned_data
-            
-            # --- LÓGICA DE GERAÇÃO DE TÍTULO ATUALIZADA ---
-            titulo_final = ""
-            if produto.padrao_titulo:
-                titulo_final = produto.padrao_titulo
-                estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
-                if estrutura:
+        formsets_validos = all(fs.is_valid() for _, fs in grupo_formsets.values())
+
+        if form.is_valid() and formsets_validos:
+            dados_limpos_principal = form.cleaned_data
+
+            try:
+                with transaction.atomic():
+                    # Combina dados para título
+                    dados_titulo_combinados = {}
+
+                    # Campos simples
                     for campo in estrutura.campos.all().distinct():
-                        valor = dados_limpos.get(f'campo_personalizado_{campo.id}') or ''
-                        # 2. Usamos o NOME DA VARIÁVEL para a substituição!
-                        chave_variavel = campo.nome_variavel 
-                        titulo_final = titulo_final.replace(f'{{{chave_variavel}}}', str(valor))
-            else:
-                titulo_final = dados_limpos.get('titulo_manual', '')
-            # --- FIM DA LÓGICA DE TÍTULO ---
+                        valor = dados_limpos_principal.get(f'campo_personalizado_{campo.id}') or ''
+                        dados_titulo_combinados[campo.nome_variavel] = str(valor)
 
-            novo_caso = Caso.objects.create(
-                cliente=cliente,
-                produto=produto,
-                data_entrada=dados_limpos['data_entrada'],
-                status=dados_limpos['status'],
-                # ... outros campos ...
-                titulo=titulo_final
-            )
+                    # Campos do primeiro grupo preenchido
+                    for grupo, formset in grupo_formsets.values():
+                        if formset.cleaned_data:
+                            primeiro_form_valido = next((fd for fd in formset.cleaned_data if fd and not fd.get('DELETE', False)), None)
+                            if primeiro_form_valido:
+                                for campo_grupo in grupo.campos.all():
+                                    valor = primeiro_form_valido.get(f'campo_personalizado_{campo_grupo.id}') or ''
+                                    dados_titulo_combinados[campo_grupo.nome_variavel] = str(valor)
+                            break
 
-            # --- LÓGICA DE SALVAR VALORES ATUALIZADA ---
-            estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
-            if estrutura:
-                for campo in estrutura.campos.all():
-                    valor = dados_limpos.get(f'campo_personalizado_{campo.id}')
-                    if valor is not None: # Salva mesmo que o valor seja vazio (ex: string vazia)
-                        ValorCampoPersonalizado.objects.create(caso=novo_caso, campo=campo, valor=str(valor))
-            # --- FIM DA LÓGICA DE SALVAR ---
-            
-            return redirect('casos:lista_casos')
-    else:
-        # 3. Passamos também na requisição GET para o formulário ser montado corretamente
-        form = CasoDinamicoForm(cliente=cliente, produto=produto)
-        
-    context = {'cliente': cliente, 'produto': produto, 'form': form}
+                    # Gera título
+                    titulo_final = produto.padrao_titulo or dados_limpos_principal.get('titulo_manual', '')
+                    for chave, valor in dados_titulo_combinados.items():
+                        titulo_final = titulo_final.replace(f'{{{chave}}}', valor)
+
+                    # Cria caso
+                    novo_caso = form.save(commit=False)
+                    novo_caso.cliente = cliente
+                    novo_caso.produto = produto
+                    novo_caso.titulo = titulo_final
+                    novo_caso.save()
+                    form.save_m2m()
+
+                    # Salva campos simples
+                    for campo in estrutura.campos.all():
+                        valor = dados_limpos_principal.get(f'campo_personalizado_{campo.id}')
+                        if valor is not None:
+                            ValorCampoPersonalizado.objects.create(
+                                caso=novo_caso,
+                                instancia_grupo=None,
+                                campo=campo,
+                                valor=str(valor)
+                            )
+
+                    # Salva grupos repetíveis
+                    for grupo, formset in grupo_formsets.values():
+                        for index, form_grupo in enumerate(formset):
+                            if form_grupo.has_changed() and not form_grupo.cleaned_data.get('DELETE', False):
+                                instancia = InstanciaGrupoValor.objects.create(
+                                    caso=novo_caso,
+                                    grupo=grupo,
+                                    ordem_instancia=index  # usa posição do loop
+                                )
+                                for campo_grupo in grupo.campos.all():
+                                    valor = form_grupo.cleaned_data.get(f'campo_personalizado_{campo_grupo.id}')
+                                    if valor is not None:
+                                        ValorCampoPersonalizado.objects.create(
+                                            caso=None,
+                                            instancia_grupo=instancia,
+                                            campo=campo_grupo,
+                                            valor=str(valor)
+                                        )
+
+                messages.success(request, f"Caso '{novo_caso.titulo}' criado com sucesso.")
+                return redirect('casos:detalhe_caso', pk=novo_caso.pk)
+
+            except Exception as e:
+                messages.error(request, f"Erro ao salvar o caso: {e}")
+
+    context = {
+        'cliente': cliente,
+        'produto': produto,
+        'form': form,
+        'grupo_formsets': grupo_formsets.values()
+    }
     return render(request, 'casos/criar_caso_form.html', context)
-
-
 
 @login_required
 def lista_casos(request):
@@ -168,16 +277,18 @@ def lista_casos(request):
     }
     return render(request, 'casos/lista_casos.html', context)
 
+
 def detalhe_caso(request, pk):
     caso = get_object_or_404(Caso, pk=pk)
-    caso.refresh_from_db() # Garante que estamos vendo o estado mais atual
-    
-    # --- Lógica POST (Sua lógica original, sem mudanças) ---
+    caso.refresh_from_db()
+
+    # Forms padrão
     form_andamento = AndamentoForm()
     form_timesheet = TimesheetForm(user=request.user)
     form_acordo = AcordoForm(user=request.user)
     form_despesa = DespesaForm(user=request.user)
 
+    # Lógica POST (mantida)
     if request.method == 'POST':
         if 'submit_andamento' in request.POST:
             form_andamento = AndamentoForm(request.POST)
@@ -186,10 +297,9 @@ def detalhe_caso(request, pk):
                 novo_andamento.caso = caso
                 novo_andamento.autor = request.user
                 novo_andamento.save()
-                FluxoInterno.objects.create(caso=caso, tipo_evento='ANDAMENTO', descricao=f"Novo andamento adicionado.", autor=request.user)
-                url_destino = reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})
-                return redirect(f'{url_destino}?aba=andamentos')
-        
+                FluxoInterno.objects.create(caso=caso, tipo_evento='ANDAMENTO', descricao="Novo andamento adicionado.", autor=request.user)
+                return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})}?aba=andamentos")
+
         elif 'submit_timesheet' in request.POST:
             form_timesheet = TimesheetForm(request.POST, user=request.user)
             if form_timesheet.is_valid():
@@ -199,19 +309,13 @@ def detalhe_caso(request, pk):
                     horas, minutos = map(int, tempo_str.split(':'))
                     novo_timesheet.tempo = timedelta(hours=horas, minutes=minutos)
                 except (ValueError, TypeError):
-                    form_timesheet.add_error('tempo', 'Formato de tempo inválido. Use HH:MM.')
+                    form_timesheet.add_error('tempo', 'Formato inválido. Use HH:MM.')
                 else:
                     novo_timesheet.caso = caso
                     novo_timesheet.save()
-                    FluxoInterno.objects.create(caso=caso, tipo_evento='TIMESHEET', descricao=f"Lançamento de {novo_timesheet.tempo} realizado por {novo_timesheet.advogado}.", autor=request.user)
-                    Andamento.objects.create(
-                        caso=caso,
-                        data_andamento=novo_timesheet.data_execucao,
-                        descricao=f"Lançamento de Timesheet:\nTempo: {tempo_str}\nAdvogado: {novo_timesheet.advogado}\nDescrição: {novo_timesheet.descricao}",
-                        autor=request.user
-                    )
-                    url_destino = reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})
-                    return redirect(f'{url_destino}?aba=timesheet')
+                    FluxoInterno.objects.create(caso=caso, tipo_evento='TIMESHEET', descricao=f"Lançamento de {novo_timesheet.tempo}.", autor=request.user)
+                    Andamento.objects.create(caso=caso, data_andamento=novo_timesheet.data_execucao, descricao=f"Timesheet:\nTempo: {tempo_str}", autor=request.user)
+                    return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})}?aba=timesheet")
 
         elif 'submit_acordo' in request.POST:
             form_acordo = AcordoForm(request.POST, user=request.user)
@@ -219,107 +323,67 @@ def detalhe_caso(request, pk):
                 novo_acordo = form_acordo.save(commit=False)
                 novo_acordo.caso = caso
                 novo_acordo.save()
-                FluxoInterno.objects.create(caso=caso, tipo_evento='ACORDO', descricao=f"Novo acordo de R$ {novo_acordo.valor_total} em {novo_acordo.numero_parcelas}x criado.", autor=request.user)
-                # ... (Sua lógica de criação de parcelas vai aqui) ...
-                url_destino = reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})
-                return redirect(f'{url_destino}?aba=acordos')
-        
+                FluxoInterno.objects.create(caso=caso, tipo_evento='ACORDO', descricao=f"Acordo de R$ {novo_acordo.valor_total}.", autor=request.user)
+                return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})}?aba=acordos")
+
         elif 'submit_despesa' in request.POST:
             form_despesa = DespesaForm(request.POST, user=request.user)
             if form_despesa.is_valid():
                 nova_despesa = form_despesa.save(commit=False)
                 nova_despesa.caso = caso
                 nova_despesa.save()
-                FluxoInterno.objects.create(caso=caso, tipo_evento='DESPESA', descricao=f"Nova despesa de R$ {nova_despesa.valor} lançada: '{nova_despesa.descricao}'.", autor=request.user)
-                url_destino = reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})
-                return redirect(f'{url_destino}?aba=despesas')
-    
-    # --- Lógica GET (Carregamento da Página) ---
-    
-  # ==============================================================================
-    # LÓGICA DE BUSCA DE DADOS PERSONALIZADOS (GET - CORREÇÃO FINAL)
-    # ==============================================================================
-    
+                FluxoInterno.objects.create(caso=caso, tipo_evento='DESPESA', descricao=f"Despesa de R$ {nova_despesa.valor}.", autor=request.user)
+                return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})}?aba=despesas")
+
+    # --- Lógica GET ---
     estrutura = EstruturaDeCampos.objects.filter(cliente=caso.cliente, produto=caso.produto).prefetch_related('campos').first()
-    valores_para_template = [] 
-    
+    valores_para_template = []
+
     if estrutura:
         valores_salvos_dict = {valor.campo.id: valor for valor in caso.valores_personalizados.select_related('campo').all()}
-        
-        try:
-             campos_ordenados = estrutura.campos.all().order_by('estruturacampoordenado__order')
-        except Exception:
-             campos_ordenados = estrutura.campos.all()
+        campos_ordenados = estrutura.campos.all().order_by('estruturacampoordenado__order')
 
         for campo_definicao in campos_ordenados:
             valor_salvo = valores_salvos_dict.get(campo_definicao.id)
-
             if valor_salvo:
-                # --- O VALOR EXISTE NO BANCO ---
-                valor_salvo.valor_tratado = valor_salvo.valor # Valor padrão é a string crua
-                
-                # 1. TRATAMENTO DE DATA (Lógica Única Corrigida)
+                valor_salvo.valor_tratado = valor_salvo.valor
                 if campo_definicao.tipo_campo == 'DATA' and valor_salvo.valor:
-                    parsed_date = None
-                    # Pega a string do banco (ex: '2025-09-22 00:00:00' ou '2025-09-22')
-                    # e pega APENAS a parte da data (antes do espaço)
-                    data_string = valor_salvo.valor.split(' ')[0] 
-                    
-                    for fmt in ('%Y-%m-%d', '%d/%m/%Y'): # Tenta os formatos de data
-                        try:
-                            parsed_date = datetime.strptime(data_string, fmt).date()
-                            break
-                        except (ValueError, TypeError):
-                            continue
-                    
-                    if parsed_date:
-                        valor_salvo.valor_tratado = parsed_date # Passa o OBJETO DATE
-
-                # 2. TRATAMENTO DE MOEDA
+                    try:
+                        valor_salvo.valor_tratado = datetime.strptime(valor_salvo.valor.split(' ')[0], '%Y-%m-%d').date()
+                    except ValueError:
+                        valor_salvo.valor_tratado = valor_salvo.valor
                 elif campo_definicao.tipo_campo == 'MOEDA' and valor_salvo.valor:
                     try:
                         valor_decimal = Decimal(valor_salvo.valor)
-                        valor_formatado = number_format(valor_decimal, decimal_pos=2, force_grouping=True)
-                        valor_salvo.valor_tratado = f"R$ {valor_formatado}"
-                    except (InvalidOperation, ValueError, TypeError):
-                        valor_salvo.valor_tratado = valor_salvo.valor # Fallback
-                
+                        valor_salvo.valor_tratado = f"R$ {number_format(valor_decimal, decimal_pos=2, force_grouping=True)}"
+                    except (InvalidOperation, ValueError):
+                        valor_salvo.valor_tratado = valor_salvo.valor
                 valores_para_template.append(valor_salvo)
-            
             else:
-                # --- O VALOR NÃO EXISTE NO BANCO ---
-                placeholder_valor = ValorCampoPersonalizado() 
-                placeholder_valor.campo = campo_definicao
-                placeholder_valor.valor = None
-                placeholder_valor.valor_tratado = None
-                valores_para_template.append(placeholder_valor)
-    
-    # ==============================================================================
-    # O RESTO DO CÓDIGO DA VIEW (Sua lógica original)
-    # ==============================================================================
+                placeholder = ValorCampoPersonalizado(campo=campo_definicao, valor=None)
+                placeholder.valor_tratado = None
+                valores_para_template.append(placeholder)
 
+    grupos_de_valores_salvos = caso.grupos_de_valores.select_related('grupo').prefetch_related('valores__campo').order_by('grupo__nome_grupo', 'ordem_instancia')
+
+    # Dados adicionais
     andamentos = caso.andamentos.select_related('autor').all()
     modelos_andamento = ModeloAndamento.objects.all()
     timesheets = caso.timesheets.select_related('advogado').all()
     acordos = caso.acordos.prefetch_related('parcelas').all()
     despesas = caso.despesas.select_related('advogado').all()
     historico_fases = caso.historico_fases.select_related('fase').order_by('data_entrada')
-    
     acoes_pendentes = caso.acoes_pendentes.filter(status='PENDENTE').select_related('acao', 'responsavel')
     acoes_concluidas = caso.acoes_pendentes.filter(status='CONCLUIDA').select_related('acao', 'concluida_por').order_by('-data_conclusao')
 
     soma_tempo_obj = timesheets.aggregate(total_tempo=Sum('tempo'))
-    tempo_total = soma_tempo_obj['total_tempo'] # Já é um timedelta ou None
-    
-    saldo_devedor_total = Decimal('0.00')
-    # Otimização: Usar o prefetch para calcular o saldo em Python
-    for acordo in acordos:
-        saldo_acordo = sum(p.valor_parcela for p in acordo.parcelas.all() if p.status == 'EMITIDA' and p.valor_parcela is not None)
-        saldo_devedor_total += saldo_acordo
-            
+    tempo_total = soma_tempo_obj['total_tempo']
+    saldo_devedor_total = sum(sum(p.valor_parcela for p in acordo.parcelas.all() if p.status == 'EMITIDA') for acordo in acordos)
     soma_despesas_obj = despesas.aggregate(total_despesas=Sum('valor'))
     total_despesas = soma_despesas_obj['total_despesas'] or Decimal('0.00')
     fluxo_interno = caso.fluxo_interno.select_related('autor').all()
+
+    # SharePoint anexos
     itens_anexos = []
     folder_name = "Raiz"
     if caso.sharepoint_folder_id:
@@ -327,19 +391,16 @@ def detalhe_caso(request, pk):
             sp = SharePoint()
             itens_anexos = sp.listar_conteudo_pasta(caso.sharepoint_folder_id)
         except Exception as e:
-            # (Mantém o print de log que você tinha)
-            print(f"Erro ao buscar anexos da pasta raiz para o caso #{caso.id}: {e}")
+            print(f"Erro ao buscar anexos: {e}")
 
-    # Montagem do Contexto Final
     context = {
         'caso': caso,
         'form_andamento': form_andamento,
         'form_timesheet': form_timesheet,
         'form_acordo': form_acordo,
         'form_despesa': form_despesa,
-        
-        'valores_personalizados': valores_para_template, # <<< LISTA ATUALIZADA
-        
+        'valores_personalizados': valores_para_template,
+        'grupos_de_valores_salvos': grupos_de_valores_salvos,
         'andamentos': andamentos,
         'modelos_andamento': modelos_andamento,
         'timesheets': timesheets,
@@ -357,100 +418,130 @@ def detalhe_caso(request, pk):
         'root_folder_id': caso.sharepoint_folder_id,
         'folder_name': folder_name,
     }
-    
+
     return render(request, 'casos/detalhe_caso.html', context)
+
+
+
 
 @login_required
 def editar_caso(request, pk):
-    # 1. Busca os objetos principais
     caso = get_object_or_404(Caso, pk=pk)
-    produto = caso.produto
     cliente = caso.cliente
-    
-    # 2. Monta o dicionário de dados iniciais (LÓGICA ATUALIZADA)
-    dados_iniciais = {
-        'status': caso.status,
-        'data_entrada': caso.data_entrada,
-        'data_encerramento': caso.data_encerramento,
-        'advogado_responsavel': caso.advogado_responsavel,
-    }
-    
-    # --- LÓGICA DE CAMPOS PERSONALIZADOS CORRIGIDA ---
-    valores_salvos_qs = caso.valores_personalizados.select_related('campo').all()
-    
-    for v in valores_salvos_qs:
-        chave_formulario = f'campo_personalizado_{v.campo.id}'
-        valor_final = v.valor # Valor padrão (string)
+    produto = caso.produto
 
-        # CORREÇÃO DA LÓGICA DE PARSE DE DATA
-        if v.campo.tipo_campo == 'DATA' and v.valor:
-            parsed_date = None
-            # Tenta os formatos na ordem correta
-            for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'): 
-                try:
-                    # Tenta parsear a string COMPLETA primeiro
-                    parsed_date = datetime.strptime(v.valor, fmt).date()
-                    break # Sucesso
-                except (ValueError, TypeError):
-                    continue # Tenta o próximo formato
-            
-            if parsed_date:
-                valor_final = parsed_date # PASSA O OBJETO DATE
-            # else: mantém a string original se o parse falhar
-        
-        dados_iniciais[chave_formulario] = valor_final
-    # --- FIM DA LÓGICA CORRIGIDA ---
+    # Busca estrutura
+    try:
+        estrutura = EstruturaDeCampos.objects.prefetch_related(
+            'campos', 'grupos_repetiveis__campos'
+        ).get(cliente=cliente, produto=produto)
+    except EstruturaDeCampos.DoesNotExist:
+        messages.error(request, "Estrutura de campos não definida para este Cliente/Produto.")
+        return redirect('casos:lista_casos')
 
-    if not produto.padrao_titulo:
-        dados_iniciais['titulo_manual'] = caso.titulo
-        
-    # 3. Processa o formulário se for uma submissão (POST)
+    # Form principal com instance
+    form = CasoDinamicoForm(request.POST or None, instance=caso, cliente=cliente, produto=produto)
+
+    # Formsets com dados salvos
+    grupo_formsets = {}
+    for grupo in estrutura.grupos_repetiveis.all():
+        GrupoFormSet = formset_factory(BaseGrupoForm, extra=0, can_delete=True)
+        prefix = f'grupo_{grupo.id}'
+        kwargs = {'grupo_campos': grupo, 'cliente': cliente, 'produto': produto}
+
+        # ✅ Prepara dados iniciais para cada instância salva
+        instancias_salvas = caso.grupos_de_valores.filter(grupo=grupo).prefetch_related('valores__campo')
+        initial_data = []
+        for instancia in instancias_salvas:
+            dados_instancia = {}
+            for valor in instancia.valores.all():
+                dados_instancia[f'campo_personalizado_{valor.campo.id}'] = valor.valor
+            initial_data.append(dados_instancia)
+
+        # ✅ Se não houver instâncias salvas, adiciona um formulário vazio
+        if not initial_data:
+            initial_data = [{}]
+
+        formset = GrupoFormSet(request.POST or None, prefix=prefix, form_kwargs=kwargs, initial=initial_data)
+        grupo_formsets[grupo.id] = (grupo, formset)
+
+    # Processamento do POST
     if request.method == 'POST':
-        form = CasoDinamicoForm(request.POST, cliente=cliente, produto=produto)
-        if form.is_valid():
-            dados_limpos = form.cleaned_data
-            
-            caso.status = dados_limpos['status']
-            caso.data_entrada = dados_limpos['data_entrada']
-            caso.data_encerramento = dados_limpos.get('data_encerramento')
-            caso.advogado_responsavel = dados_limpos.get('advogado_responsavel')
-            
-            # Lógica de atualizar o título (Sua lógica original)
-            if produto.padrao_titulo:
-                titulo_formatado = produto.padrao_titulo
-                estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
-                if estrutura:
-                    for campo in estrutura.campos.all():
-                        valor = dados_limpos.get(f'campo_personalizado_{campo.id}') or ''
-                        chave_variavel = campo.nome_variavel
-                        titulo_formatado = titulo_formatado.replace(f'{{{chave_variavel}}}', str(valor))
-                caso.titulo = titulo_formatado
-            else:
-                caso.titulo = dados_limpos.get('titulo_manual', '')
-                
-            caso.save() # Salva campos fixos e título
+        formsets_validos = all(fs.is_valid() for _, fs in grupo_formsets.values())
 
-            # Lógica de atualizar valores personalizados (Sua lógica original)
-            estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
-            if estrutura:
-                for campo in estrutura.campos.all():
-                    valor_novo = dados_limpos.get(f'campo_personalizado_{campo.id}')
-                    # Garante que o valor salvo seja uma string
-                    valor_a_salvar = str(valor_novo) if valor_novo is not None else ''
-                    
-                    ValorCampoPersonalizado.objects.update_or_create(
-                        caso=caso, 
-                        campo=campo, 
-                        defaults={'valor': valor_a_salvar}
-                    )
-                    
-            return redirect('casos:detalhe_caso', pk=caso.pk)
-    else:
-        # 4. Se for (GET), cria o formulário passando os dados iniciais CORRIGIDOS
-        form = CasoDinamicoForm(initial=dados_iniciais, cliente=cliente, produto=produto)
-        
-    context = {'cliente': cliente, 'produto': produto, 'form': form, 'caso': caso}
-    return render(request, 'casos/criar_caso_form.html', context)
+        if form.is_valid() and formsets_validos:
+            try:
+                with transaction.atomic():
+                    # Atualiza título
+                    dados_titulo_combinados = {}
+                    for campo in estrutura.campos.all():
+                        valor = form.cleaned_data.get(f'campo_personalizado_{campo.id}') or ''
+                        dados_titulo_combinados[campo.nome_variavel] = str(valor)
+
+                    for grupo, formset in grupo_formsets.values():
+                        if formset.cleaned_data:
+                            primeiro_form_valido = next((fd for fd in formset.cleaned_data if fd and not fd.get('DELETE', False)), None)
+                            if primeiro_form_valido:
+                                for campo_grupo in grupo.campos.all():
+                                    valor = primeiro_form_valido.get(f'campo_personalizado_{campo_grupo.id}') or ''
+                                    dados_titulo_combinados[campo_grupo.nome_variavel] = str(valor)
+                            break
+
+                    titulo_final = produto.padrao_titulo or form.cleaned_data.get('titulo_manual', '')
+                    for chave, valor in dados_titulo_combinados.items():
+                        titulo_final = titulo_final.replace(f'{{{chave}}}', valor)
+
+                    # Salva caso
+                    caso = form.save(commit=False)
+                    caso.titulo = titulo_final
+                    caso.save()
+                    form.save_m2m()
+
+                    # Atualiza campos simples
+                    caso.valores_personalizados.all().delete()
+                    for campo in estrutura.campos.all():
+                        valor = form.cleaned_data.get(f'campo_personalizado_{campo.id}')
+                        if valor is not None:
+                            ValorCampoPersonalizado.objects.create(
+                                caso=caso,
+                                instancia_grupo=None,
+                                campo=campo,
+                                valor=str(valor)
+                            )
+
+                    # Atualiza grupos repetíveis
+                    caso.grupos_de_valores.all().delete()
+                    for grupo, formset in grupo_formsets.values():
+                        for index, form_grupo in enumerate(formset):
+                            if form_grupo.has_changed() and not form_grupo.cleaned_data.get('DELETE', False):
+                                instancia = InstanciaGrupoValor.objects.create(
+                                    caso=caso,
+                                    grupo=grupo,
+                                    ordem_instancia=index
+                                )
+                                for campo_grupo in grupo.campos.all():
+                                    valor = form_grupo.cleaned_data.get(f'campo_personalizado_{campo_grupo.id}')
+                                    if valor is not None:
+                                        ValorCampoPersonalizado.objects.create(
+                                            caso=None,
+                                            instancia_grupo=instancia,
+                                            campo=campo_grupo,
+                                            valor=str(valor)
+                                        )
+
+                messages.success(request, f"Caso '{caso.titulo}' editado com sucesso.")
+                return redirect('casos:detalhe_caso', pk=caso.pk)
+
+            except Exception as e:
+                messages.error(request, f"Erro ao atualizar o caso: {e}")
+
+    context = {
+        'caso': caso,
+        'form': form,
+        'grupo_formsets': grupo_formsets.values()
+    }
+    return render(request, 'casos/editar_caso.html', context)
+
 
 @login_required
 def exportar_casos_excel(request):

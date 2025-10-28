@@ -3,6 +3,8 @@
 import campos_custom.models
 import django.db.models.deletion
 from django.db import migrations, models
+# IMPORTAÇÃO CORRIGIDA: Importa a função de validação (que agora está fora da classe)
+from campos_custom.models import validate_variable_name 
 
 
 class Migration(migrations.Migration):
@@ -20,7 +22,14 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('nome_campo', models.CharField(max_length=100, verbose_name='Nome Visível (Rótulo)')),
-                ('nome_variavel', models.CharField(help_text='Ex: NumeroAviso, ValorCausa, DataSentenca. Sem espaços ou caracteres especiais.', max_length=50, unique=True, validators=[campos_custom.models.CampoPersonalizado.validate_variable_name], verbose_name='Nome da Variável (para relatórios)')),
+                # CORREÇÃO NA LINHA ABAIXO: Usa a função importada 'validate_variable_name'
+                ('nome_variavel', models.CharField(
+                    help_text='Ex: NumeroAviso, ValorCausa, DataSentenca. Sem espaços ou caracteres especiais.', 
+                    max_length=50, 
+                    unique=True, 
+                    validators=[validate_variable_name], # <<< AQUI ESTÁ A CORREÇÃO
+                    verbose_name='Nome da Variável (para relatórios)'
+                )),
                 ('tipo_campo', models.CharField(choices=[('TEXTO', 'Texto Curto (String)'), ('NUMERO_INT', 'Número Inteiro'), ('NUMERO_DEC', 'Número Decimal'), ('MOEDA', 'Moeda (R$)'), ('LISTA_USUARIOS', 'Lista de Usuários'), ('LISTA_UNICA', 'Lista de Opções (Escolha Única)'), ('LISTA_MULTIPLA', 'Lista de Opções (Escolha Múltipla)'), ('DATA', 'Data')], max_length=20, verbose_name='Tipo do Campo')),
                 ('opcoes_lista', models.TextField(blank=True, help_text='Separadas por vírgula. Ex: Opção A, Opção B', verbose_name='Opções (para Lista de Opções)')),
             ],

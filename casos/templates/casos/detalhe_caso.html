@@ -226,37 +226,71 @@
     <!-- Aba 1: Detalhes -->
     <!-- Aba 1: Detalhes (VERSÃO FINAL COM FORMATAÇÃO DE MOEDA) -->
     <div id="detalhes" class="tab-content">
+
+        <!-- DADOS DO CASO -->
         <div class="form-section">
             <h3 class="section-title">Dados do Caso</h3>
             <div class="details-grid">
                 <div class="detail-item"><label>Status</label><span>{{ caso.get_status_display }}</span></div>
                 <div class="detail-item"><label>Data de Entrada</label><span>{{ caso.data_entrada|date:"d/m/Y" }}</span></div>
                 <div class="detail-item"><label>Fase do Workflow</label><span>{{ caso.fase_atual_wf.nome|default:"Não iniciado" }}</span></div>
-                <div class="detail-item"><label>Advogado Responsável</label><span>{% if caso.advogado_responsavel %}{{ caso.advogado_responsavel.get_full_name|default:caso.advogado_responsavel.username }}{% else %}Não atribuído{% endif %}</span></div>
+                <div class="detail-item"><label>Advogado Responsável</label>
+                    <span>{% if caso.advogado_responsavel %}{{ caso.advogado_responsavel.get_full_name|default:caso.advogado_responsavel.username }}{% else %}Não atribuído{% endif %}</span>
+                </div>
                 <div class="detail-item"><label>Data de Encerramento</label><span>{{ caso.data_encerramento|date:"d/m/Y"|default:"-" }}</span></div>
             </div>
         </div>
+
+        <!-- DADOS ADICIONAIS (CAMPOS SIMPLES) -->
         {% if valores_personalizados %}
         <div class="form-section">
             <h3 class="section-title">Dados Adicionais</h3>
             <div class="details-grid">
                 {% for valor in valores_personalizados %}
-                    <div class="detail-item">
-                        <label>{{ valor.campo.nome_campo }}</label>
-                        <span>
-                            {% if valor.campo.tipo_campo == 'DATA' %}
-                                <p>{{ valor.valor_tratado|date:"d/m/Y"|default:"-" }}</p>
-                            {% elif valor.campo.tipo_campo == 'MOEDA' %}
-                                {{ valor.valor_tratado|currency }}
-                            {% else %}
-                                {{ valor.valor_tratado|default:"-" }}
-                            {% endif %}
-                        </span>
-                    </div>
+                    {% if not valor.instancia_grupo %} <!-- Só mostra se não pertence a grupo -->
+                        <div class="detail-item">
+                            <label>{{ valor.campo.nome_campo }}</label>
+                            <span>
+                                {% if valor.campo.tipo_campo == 'DATA' %}
+                                    {{ valor.valor|date:"d/m/Y"|default:"-" }}
+                                {% elif valor.campo.tipo_campo == 'MOEDA' %}
+                                    {{ valor.valor|currency }}
+                                {% else %}
+                                    {{ valor.valor|default:"-" }}
+                                {% endif %}
+                            </span>
+                        </div>
+                    {% endif %}
                 {% endfor %}
             </div>
         </div>
         {% endif %}
+
+        <!-- GRUPOS REPETÍVEIS -->
+        {% if grupos_de_valores_salvos %}
+            {% for instancia in grupos_de_valores_salvos %}
+            <div class="form-section">
+                <h3 class="section-title">{{ instancia.grupo.nome_grupo }} ({{ forloop.counter }})</h3>
+                <div class="details-grid">
+                    {% for valor_do_grupo in instancia.valores.all %}
+                        <div class="detail-item">
+                            <label>{{ valor_do_grupo.campo.nome_campo }}</label>
+                            <span>
+                                {% if valor_do_grupo.campo.tipo_campo == 'DATA' %}
+                                    {{ valor_do_grupo.valor|date:"d/m/Y"|default:"-" }}
+                                {% elif valor_do_grupo.campo.tipo_campo == 'MOEDA' %}
+                                    {{ valor_do_grupo.valor|currency }}
+                                {% else %}
+                                    {{ valor_do_grupo.valor|default:"-" }}
+                                {% endif %}
+                            </span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+
     </div>
 
     <!-- Aba 2: Ações -->

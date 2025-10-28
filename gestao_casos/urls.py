@@ -14,7 +14,7 @@ urlpatterns = [
     # 1. Rotas de Admin e Bibliotecas
     path('admin/', admin.site.urls),
     path('casos/', include('casos.urls')),
-    path('api/v1/', include(casos_api_urls)),
+    #path('api/v1/', include(casos_api_urls)),
     path('api-token-auth/', authtoken_views.obtain_auth_token),
     path('trocar-senha/ok/', auth_views.PasswordChangeDoneView.as_view(template_name='registration/password_change_done.html'), name='password_change_done'),
     path('reset-senha/', include('django.contrib.auth.urls')), 

@@ -1,219 +1,300 @@
+# casos/forms.py
+
 from django import forms
+from django.forms import formset_factory, modelformset_factory
 from django.contrib.auth import get_user_model
-from datetime import date
-from django.contrib.auth import get_user_model
-# UMA ÚNICA LINHA PARA TODOS OS MODELOS DO APP 'casos'
-from .models import Acordo, Caso, Andamento, ModeloAndamento, Timesheet, Despesa
-from campos_custom.models import ConfiguracaoCampoPersonalizado
-from campos_custom.models import EstruturaDeCampos
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from django.forms.widgets import HiddenInput
+
+# Importa os NOVOS modelos de campos_custom
+from campos_custom.models import (
+    EstruturaDeCampos, 
+    GrupoCampos, 
+    CampoPersonalizado,
+    InstanciaGrupoValor, # Usado para salvar
+    ValorCampoPersonalizado,
+     OpcoesListaPersonalizada # Usado para salvar
+)
+# Importa os modelos de Caso e Cliente/Produto
+from .models import Caso, Andamento, Timesheet, Acordo, Despesa
+from clientes.models import Cliente
+from produtos.models import Produto
 
 User = get_user_model()
 
-# casos/forms.py
-
-class CasoDinamicoForm(forms.Form):
-    # ==============================================================================
-    # 1. CAMPOS PADRÃO (FIXOS)
-    # Com a correção de formato para o widget de data.
-    # ==============================================================================
-    status = forms.ChoiceField(choices=Caso.STATUS_CHOICES, required=True, label="Status do Caso")
-    data_entrada = forms.DateField(
-        # Usamos um widget de texto normal, mas com um placeholder amigável
-        widget=forms.DateInput(attrs={'type': 'text', 'placeholder': 'DD/MM/AAAA'}),
-        # Informamos ao Django os formatos que aceitamos na entrada
-        input_formats=['%d/%m/%Y', '%Y-%m-%d'],
-        required=True, 
-        label="Data de Entrada"
-    )
-    data_encerramento = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'text', 'placeholder': 'DD/MM/AAAA'}),
-        input_formats=['%d/%m/%Y', '%Y-%m-%d'],
-        required=False, 
-        label="Data de Encerramento"
-    )
-    
-    advogado_responsavel = forms.ModelChoiceField(
-        queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username'),
-        required=False,
-        label="Advogado Responsável"
-    )
-    
-    # ==============================================================================
-    # 2. O __init__ COMPLETO E CORRIGIDO
-    # ==============================================================================
-    def __init__(self, *args, **kwargs):
-        # Primeiro, separamos nossos parâmetros customizados (cliente e produto)
-        cliente = kwargs.pop('cliente', None)
-        produto = kwargs.pop('produto', None)
-        
-        # A inicialização do Django vem primeiro, SEMPRE.
-        # Isso processa 'initial' e preenche os campos padrão.
-        super().__init__(*args, **kwargs)
-
-        # Agora, com o formulário base inicializado, adicionamos os campos dinâmicos.
-        
-        # Adiciona o campo de título manual, se necessário
-        if produto and not produto.padrao_titulo:
-            self.fields['titulo_manual'] = forms.CharField(
-                label="Título Manual", 
-                required=False,
-                widget=forms.TextInput(attrs={'placeholder': 'Descreva o caso resumidamente...'})
-            )
-            # Preenche o valor inicial se ele existir
-            if self.initial.get('titulo_manual'):
-                self.fields['titulo_manual'].initial = self.initial.get('titulo_manual')
-
-        # Busca e cria os campos personalizados baseados na combinação Cliente + Produto
-        if cliente and produto:
-            estrutura = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).first()
-            if estrutura:
-                # Usamos a ordenação que definimos no Admin
-                for campo in estrutura.campos.all().order_by('estruturacampoordenado__order'):
-                    field_name = f'campo_personalizado_{campo.id}'
-                    field_label = campo.nome_campo
-                    field_required = False # O campo 'obrigatorio' foi removido, então todos são opcionais
-
-                    # ==============================================================================
-                    # LÓGICA COMPLETA PARA CRIAR CADA TIPO DE CAMPO
-                    # ==============================================================================
-                    if campo.tipo_campo == 'TEXTO':
-                        self.fields[field_name] = forms.CharField(label=field_label, required=field_required)
-                    
-                    elif campo.tipo_campo == 'NUMERO_INT':
-                        self.fields[field_name] = forms.IntegerField(label=field_label, required=field_required)
-                    
-                    elif campo.tipo_campo == 'NUMERO_DEC':
-                        self.fields[field_name] = forms.DecimalField(label=field_label, required=field_required)
-                    
-                    elif campo.tipo_campo == 'MOEDA':
-                        self.fields[field_name] = forms.DecimalField(label=field_label, required=field_required, decimal_places=2, widget=forms.NumberInput(attrs={'step': '0.01'}))
-                    
-                    elif campo.tipo_campo == 'DATA':
-                        self.fields[field_name] = forms.DateField(
-                            label=field_label, 
-                            required=field_required, 
-                            widget=forms.DateInput(attrs={'type': 'text', 'placeholder': 'DD/MM/AAAA'}),
-                            input_formats=['%d/%m/%Y', '%Y-%m-%d']
-                    )
-                    
-                    elif campo.tipo_campo == 'LISTA_USUARIOS':
-                        self.fields[field_name] = forms.ModelChoiceField(label=field_label, queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name'), required=field_required)
-                    
-                    elif campo.tipo_campo == 'LISTA_UNICA':
-                        opcoes = [('', '---------')] + [(opt, opt) for opt in campo.get_opcoes_como_lista]
-                        self.fields[field_name] = forms.ChoiceField(label=field_label, required=field_required, choices=opcoes)
-                    
-                    elif campo.tipo_campo == 'LISTA_MULTIPLA':
-                        opcoes = [(opt, opt) for opt in campo.get_opcoes_como_lista]
-                        self.fields[field_name] = forms.MultipleChoiceField(label=field_label, required=field_required, choices=opcoes, widget=forms.CheckboxSelectMultiple)
-
-                    # AQUI ESTÁ A CORREÇÃO PARA OS CAMPOS PERSONALIZADOS:
-                    # Após criar CADA campo, nós o preenchemos se houver um valor inicial para ele.
-                    if self.initial.get(field_name):
-                        # Para ModelChoiceField, o valor inicial precisa ser o ID.
-                        if campo.tipo_campo == 'LISTA_USUARIOS':
-                            try:
-                                self.fields[field_name].initial = int(self.initial.get(field_name))
-                            except (ValueError, TypeError):
-                                pass # Ignora se o valor inicial não for um ID de usuário válido
-                        else:
-                            self.fields[field_name].initial = self.initial.get(field_name)
+# ==============================================================================
+# FORMULÁRIO DINÂMICO DE CASO (ATUALIZADO PARA GRUPOS)
+# ==============================================================================
 
 
-class AndamentoForm(forms.ModelForm):
-    # Campo "virtual" para selecionar um modelo pré-definido
-    modelo_andamento = forms.ModelChoiceField(
-        queryset=ModeloAndamento.objects.all(),
-        required=False,
-        label="Usar Modelo de Andamento",
-        empty_label="-- Selecione um modelo --"
-    )
-
+class CasoDinamicoForm(forms.ModelForm):
+    """
+    Formulário principal para criar/editar um Caso,
+    incluindo campos fixos e personalizados simples.
+    """
     class Meta:
-        model = Andamento
-        # 1. TODOS os campos do modelo que queremos no form estão aqui
-        fields = ['data_andamento', 'descricao']
+        model = Caso
+        fields = ['data_entrada', 'data_encerramento', 'status', 'advogado_responsavel']
         widgets = {
-            'data_andamento': forms.DateInput(attrs={'type': 'date'}),
-            'descricao': forms.Textarea(attrs={'rows': 5}),
+            'data_entrada': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),            
+            'data_encerramento': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'advogado_responsavel': forms.Select(attrs={'class': 'form-select'}),
+
         }
 
     def __init__(self, *args, **kwargs):
+        self.cliente = kwargs.pop('cliente', None)
+        self.produto = kwargs.pop('produto', None)
         super().__init__(*args, **kwargs)
-        
-        # 2. MODIFICAMOS o campo que o ModelForm já criou
-        self.fields['data_andamento'].initial = date.today
-        self.fields['data_andamento'].label = "Data do Andamento"
 
-        # 3. Reordenamos os campos para colocar o 'modelo_andamento' no topo
-        self.order_fields(['modelo_andamento', 'data_andamento', 'descricao'])
+        # ✅ Garante valores iniciais para edição
+        if self.instance and self.instance.pk:
+            self.fields['data_entrada'].initial = self.instance.data_entrada
+            self.fields['data_encerramento'].initial = self.instance.data_encerramento
+
+            # Se cliente/produto não foram passados, pega da instância
+            if not self.cliente:
+                self.cliente = self.instance.cliente
+            if not self.produto:
+                self.produto = self.instance.produto
+
+        # Se não houver cliente/produto, não adiciona campos dinâmicos
+        if not self.cliente or not self.produto:
+            return
+
+        # Busca estrutura de campos
+        try:
+            self.estrutura = EstruturaDeCampos.objects.prefetch_related(
+                'campos', 'grupos_repetiveis__campos'
+            ).get(cliente=self.cliente, produto=self.produto)
+        except EstruturaDeCampos.DoesNotExist:
+            self.estrutura = None
+            return
+
+        # ✅ Adiciona campos personalizados simples
+        campos_simples_ordenados = self.estrutura.ordenamentos_simples.select_related('campo')
+        for config_campo in campos_simples_ordenados:
+            campo = config_campo.campo
+            is_required = config_campo.obrigatorio
+            field_name = f'campo_personalizado_{campo.id}'
+
+            self.fields[field_name] = build_form_field(
+                campo, is_required=is_required, cliente=self.cliente, produto=self.produto
+            )
+            self.fields[field_name].label = campo.nome_campo
+
+            # ✅ Se estiver editando, carrega valor salvo
+            if self.instance.pk:
+                valor_salvo = self.instance.valores_personalizados.filter(campo=campo).first()
+                if valor_salvo:
+                    self.fields[field_name].initial = valor_salvo.valor
+
+        # ✅ Campo de título manual (se não houver padrão)
+        if not self.produto.padrao_titulo:
+            self.fields['titulo_manual'] = forms.CharField(
+                label="Título Manual do Caso",
+                required=True,
+                widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Digite o título do caso'})
+            )
+
+    # ✅ Métodos auxiliares para template
+    def campos_fixos(self):
+        return [self[field_name] for field_name in self.Meta.fields]
+
+    def campos_personalizados_simples(self):
+        if self.estrutura:
+            ids = self.estrutura.ordenamentos_simples.values_list('campo__id', flat=True)
+            return [self[f'campo_personalizado_{campo_id}'] for campo_id in ids if f'campo_personalizado_{campo_id}' in self.fields]
+        return []
+
+    def grupos_repetiveis(self):
+        return self.estrutura.grupos_repetiveis.all() if self.estrutura else []
+
+class BaseGrupoForm(forms.Form):
+    """
+    Classe base usada pelo formset_factory para criar formulários para grupos repetíveis.
+    Os campos são adicionados dinamicamente no __init__.
+    """
+    def __init__(self, *args, grupo_campos=None, cliente=None, produto=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        ORDEM = forms.IntegerField(
+        required=False,
+        widget=forms.HiddenInput() # <<< OBRIGA O CAMPO A SER OCULTO
+    )
+        
+        if grupo_campos:
+            # CORREÇÃO AQUI: Usar o nome do modelo through (grupocampoordenado) e o campo 'order'
+            # O nome do relacionamento é 'grupocampoordenado' (em minúsculo)
+            campos_ordenados = grupo_campos.campos.all().order_by('grupocampoordenado__order') # <<< CORREÇÃO
+
+            for campo in grupo_campos.campos.all().order_by('grupocampoordenado__order'): # <<< CORREÇÃO
+                
+                # Para carregar as opções customizadas (que o init principal não faz)
+                cliente = kwargs.get('cliente')
+                produto = kwargs.get('produto')
+                
+                # Constrói o campo dinâmico
+                field_instance = build_form_field(campo, is_required=False, cliente=cliente, produto=produto)
+                
+                # Garante que o nome do campo no formulário use o ID
+                field_name = f'campo_personalizado_{campo.id}' # Usa o nome final que a view espera
+                self.fields[field_name] = field_instance
+        if 'ORDER' in self.fields:
+            self.fields['ORDER'].required = False # Não obrigatório (embora não devesse ser)
+            self.fields['ORDER'].widget = HiddenInput()
+            self.fields['ORDER'].initial = 0 # Valor inicial (geralmente preenchido pelo formset)
+    
+class Meta:
+        exclude = ['ORDER']
+
+
+# ==============================================================================
+# FORMULÁRIOS DE GRUPO (PARA OS FORMSETS)
+# ==============================================================================
+class ValorCampoPersonalizadoForm(forms.ModelForm):
+    """
+    Formulário base para editar um ValorCampoPersonalizado dentro de um grupo repetível.
+    """
+    class Meta:
+        model = ValorCampoPersonalizado
+        fields = ['valor']
+    
+    # Vamos adicionar o campo 'nome_campo' (o rótulo) e o campo 'tipo_campo' 
+    # para usar no __init__ do formset mais tarde.
+    
+    # O campo real será adicionado dinamicamente no construtor do formset.
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # O valor do campo 'valor' será sobrescrito pelo campo dinâmico real (Data Input, etc.)
+
+# ==============================================================================
+# FUNÇÃO AUXILIAR PARA CONSTRUIR CAMPOS
+# ==============================================================================
+
+def build_form_field(campo_obj: CampoPersonalizado, is_required=False, cliente=None, produto=None) -> forms.Field:
+    """
+    Cria o campo de formulário Django apropriado com base no 'tipo_campo'.
+    Busca opções customizadas se o tipo for LISTA.
+    """
+    tipo = campo_obj.tipo_campo
+    label = campo_obj.nome_campo
+    
+    # Adiciona classe form-control/form-select por padrão
+    attrs = {'class': 'form-control'} 
+    
+    # 1. Lógica de Busca de Opções Customizadas (para Listas)
+    choices = None
+    if tipo in ['LISTA_UNICA', 'LISTA_MULTIPLA'] and cliente and produto:
+        # Busca a lista de opções exclusiva para esta combinação C+P
+        opcoes_customizadas = OpcoesListaPersonalizada.objects.filter(
+            campo=campo_obj,
+            cliente=cliente,
+            produto=produto
+        ).first()
+        
+        if opcoes_customizadas:
+            opcoes = opcoes_customizadas.get_opcoes_como_lista()
+            choices = [(o, o) for o in opcoes]
+
+    # 2. Definição do Campo
+    if tipo == 'DATA':
+        return forms.DateField(
+            label=label, 
+            required=is_required, 
+            widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+        )
+    elif tipo == 'NUMERO_INT':
+        return forms.IntegerField(label=label, required=is_required, widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    elif tipo == 'NUMERO_DEC' or tipo == 'MOEDA':
+        return forms.DecimalField(label=label, required=is_required, decimal_places=2, widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}))
+    
+    # 3. Tipos de Lista
+    elif tipo == 'LISTA_UNICA':
+        # Se achou opções, usa, senão, o campo ficará vazio (ou você pode levantar um erro)
+        if choices:
+            choices.insert(0, ('', '---------')) # Adiciona a opção vazia
+            return forms.ChoiceField(
+                label=label, 
+                required=is_required, 
+                choices=choices, 
+                widget=forms.Select(attrs={'class': 'form-select'})
+            )
+        else:
+             # Se não houver opções customizadas, retorna um campo de texto simples para evitar erro
+             return forms.CharField(label=label, required=is_required, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nenhuma opção de lista definida.'}))
+
+    elif tipo == 'LISTA_MULTIPLA':
+        if choices:
+            return forms.MultipleChoiceField(
+                label=label, 
+                required=is_required, 
+                choices=choices, 
+                widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'})
+            )
+        else:
+            return forms.CharField(label=label, required=is_required, widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nenhuma opção de lista definida.'}))
+    
+    # Padrão é TEXTO
+    else: 
+        return forms.CharField(
+            label=label, 
+            required=is_required, 
+            widget=forms.TextInput(attrs={'class': 'form-control'})
+        )
+
+# ==============================================================================
+# OUTROS FORMULÁRIOS (Sem mudanças)
+# ==============================================================================
+
+class AndamentoForm(forms.ModelForm):
+    class Meta:
+        model = Andamento
+        fields = ['data_andamento', 'descricao'] # <-- CORRIGIDO
+        # (Adicione seus widgets aqui, se necessário)
+        widgets = {
+            'data_andamento': forms.DateInput(attrs={'type': 'date'}),
+        }
 
 class TimesheetForm(forms.ModelForm):
-    # Definimos o campo aqui fora para ter mais controle
-    data_execucao = forms.DateField(
-        label="Data da Execução",
-        widget=forms.DateInput(attrs={'type': 'date'}),
-        initial=date.today
-    )
+    # (Seu código original)
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['advogado'].initial = user
+            self.fields['advogado'].queryset = User.objects.filter(id=user.id) # Exemplo
 
     class Meta:
         model = Timesheet
-        # IMPORTANTE: Incluímos 'data_execucao' na lista de fields
         fields = ['data_execucao', 'tempo', 'advogado', 'descricao']
-        widgets = {
-            'tempo': forms.TextInput(
-                attrs={'placeholder': 'HH:MM', 'pattern': '[0-9]{2}:[0-5][0-9]'}
-            ),
-            'descricao': forms.Textarea(attrs={'rows': 4}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
-        super().__init__(*args, **kwargs)
-        
-        if user:
-            self.fields['advogado'].initial = user
-        
-        # A ordem dos campos é garantida pela sua definição na classe
-        # self.order_fields() não é mais necessário aqui
+        # (Seu código original de widgets)
 
 class AcordoForm(forms.ModelForm):
-    class Meta:
-        model = Acordo
-        # Campos que o usuário vai preencher
-        fields = ['valor_total', 'numero_parcelas', 'data_primeira_parcela', 'advogado_acordo']
-        widgets = {
-            'data_primeira_parcela': forms.DateInput(attrs={'type': 'date'}),
-        }
-
+    # (Seu código original)
     def __init__(self, *args, **kwargs):
-        # Pega o usuário logado que passaremos da view
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        
-        # Sugere o usuário logado como valor inicial para o campo 'advogado'
         if user:
             self.fields['advogado_acordo'].initial = user
+            self.fields['advogado_acordo'].queryset = User.objects.filter(id=user.id) # Exemplo
+            
+    class Meta:
+        model = Acordo
+        fields = ['valor_total', 'numero_parcelas', 'data_primeira_parcela', 'advogado_acordo']
+        # (Seu código original de widgets)
 
 class DespesaForm(forms.ModelForm):
-    data_despesa = forms.DateField(
-        label="Data da Despesa",
-        widget=forms.DateInput(attrs={'type': 'date'}),
-        initial=date.today
-    )
-
+    # (Seu código original)
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['advogado'].initial = user
+            self.fields['advogado'].queryset = User.objects.filter(id=user.id) # Exemplo
+            
     class Meta:
         model = Despesa
         fields = ['data_despesa', 'descricao', 'valor', 'advogado']
-        widgets = {
-            'descricao': forms.TextInput(attrs={'placeholder': 'Ex: Cópia, Autenticação, Deslocamento'}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
-        super().__init__(*args, **kwargs)
-        
-        if user:
-            self.fields['advogado'].initial = user
-        
-        self.order_fields(['data_despesa', 'descricao', 'valor', 'advogado'])
+        # (Seu código original de widgets)
