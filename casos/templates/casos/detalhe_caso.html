@@ -225,10 +225,12 @@
 
     <!-- Aba 1: Detalhes -->
     <!-- Aba 1: Detalhes (VERSÃO FINAL COM FORMATAÇÃO DE MOEDA) -->
-    <div id="detalhes" class="tab-content">
+   
+<div id="detalhes" class="tab-content">
 
-        <!-- DADOS DO CASO -->
-        <div class="form-section">
+    
+    <!-- DADOS DO CASO -->
+    <div class="form-section">
             <h3 class="section-title">Dados do Caso</h3>
             <div class="details-grid">
                 <div class="detail-item"><label>Status</label><span>{{ caso.get_status_display }}</span></div>
@@ -237,7 +239,13 @@
                 <div class="detail-item"><label>Advogado Responsável</label>
                     <span>{% if caso.advogado_responsavel %}{{ caso.advogado_responsavel.get_full_name|default:caso.advogado_responsavel.username }}{% else %}Não atribuído{% endif %}</span>
                 </div>
-                <div class="detail-item"><label>Data de Encerramento</label><span>{{ caso.data_encerramento|date:"d/m/Y"|default:"-" }}</span></div>
+                <div class="detail-item"><label>Data de Encerramento</label><span>
+                    {% if caso.data_encerramento %}
+                        {{ caso.data_encerramento|date:"d/m/Y" }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </span></div>
             </div>
         </div>
 
@@ -247,16 +255,24 @@
             <h3 class="section-title">Dados Adicionais</h3>
             <div class="details-grid">
                 {% for valor in valores_personalizados %}
-                    {% if not valor.instancia_grupo %} <!-- Só mostra se não pertence a grupo -->
+                    {% if not valor.instancia_grupo|default_if_none:'' and not valor.instancia_grupo_id|default_if_none:'' %}
                         <div class="detail-item">
                             <label>{{ valor.campo.nome_campo }}</label>
                             <span>
                                 {% if valor.campo.tipo_campo == 'DATA' %}
-                                    {{ valor.valor|date:"d/m/Y"|default:"-" }}
+                                    {% if valor.valor %}
+                                        {% if valor.valor|stringformat:"s" == valor.valor and valor.valor|length == 10 %}
+                                            {{ valor.valor|slice:"8:10" }}/{{ valor.valor|slice:"5:7" }}/{{ valor.valor|slice:"0:4" }}
+                                        {% else %}
+                                            {{ valor.valor|date:"d/m/Y" }}
+                                        {% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
                                 {% elif valor.campo.tipo_campo == 'MOEDA' %}
                                     {{ valor.valor|currency }}
                                 {% else %}
-                                    {{ valor.valor|default:"-" }}
+                                    {{ valor.valor|default_if_none:"-"|default:"-" }}
                                 {% endif %}
                             </span>
                         </div>
@@ -277,11 +293,19 @@
                             <label>{{ valor_do_grupo.campo.nome_campo }}</label>
                             <span>
                                 {% if valor_do_grupo.campo.tipo_campo == 'DATA' %}
-                                    {{ valor_do_grupo.valor|date:"d/m/Y"|default:"-" }}
+                                    {% if valor_do_grupo.valor %}
+                                        {% if valor_do_grupo.valor|stringformat:"s" == valor_do_grupo.valor and valor_do_grupo.valor|length == 10 %}
+                                            {{ valor_do_grupo.valor|slice:"8:10" }}/{{ valor_do_grupo.valor|slice:"5:7" }}/{{ valor_do_grupo.valor|slice:"0:4" }}
+                                        {% else %}
+                                            {{ valor_do_grupo.valor|date:"d/m/Y" }}
+                                        {% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
                                 {% elif valor_do_grupo.campo.tipo_campo == 'MOEDA' %}
                                     {{ valor_do_grupo.valor|currency }}
                                 {% else %}
-                                    {{ valor_do_grupo.valor|default:"-" }}
+                                    {{ valor_do_grupo.valor|default_if_none:"-"|default:"-" }}
                                 {% endif %}
                             </span>
                         </div>
@@ -293,6 +317,7 @@
 
     </div>
 
+</div>
     <!-- Aba 2: Ações -->
     <div id="acoes" class="tab-content">
         <div id="painel-acoes">{% include 'workflow/partials/painel_acoes.html' %}</div>

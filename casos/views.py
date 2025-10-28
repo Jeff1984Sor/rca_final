@@ -424,16 +424,19 @@ def detalhe_caso(request, pk):
 
 
 
+
+
 @login_required
 def editar_caso(request, pk):
     caso = get_object_or_404(Caso, pk=pk)
     cliente = caso.cliente
     produto = caso.produto
 
-    # Busca estrutura
+    # Busca estrutura de campos
     try:
         estrutura = EstruturaDeCampos.objects.prefetch_related(
-            'campos', 'grupos_repetiveis__campos'
+            'campos',
+            'grupos_repetiveis__campos'
         ).get(cliente=cliente, produto=produto)
     except EstruturaDeCampos.DoesNotExist:
         messages.error(request, "Estrutura de campos não definida para este Cliente/Produto.")
@@ -442,14 +445,14 @@ def editar_caso(request, pk):
     # Form principal com instance
     form = CasoDinamicoForm(request.POST or None, instance=caso, cliente=cliente, produto=produto)
 
-    # Formsets com dados salvos
+    # Formsets para grupos repetíveis
     grupo_formsets = {}
     for grupo in estrutura.grupos_repetiveis.all():
         GrupoFormSet = formset_factory(BaseGrupoForm, extra=0, can_delete=True)
         prefix = f'grupo_{grupo.id}'
         kwargs = {'grupo_campos': grupo, 'cliente': cliente, 'produto': produto}
 
-        # ✅ Prepara dados iniciais para cada instância salva
+        # Dados iniciais para instâncias salvas
         instancias_salvas = caso.grupos_de_valores.filter(grupo=grupo).prefetch_related('valores__campo')
         initial_data = []
         for instancia in instancias_salvas:
@@ -458,7 +461,7 @@ def editar_caso(request, pk):
                 dados_instancia[f'campo_personalizado_{valor.campo.id}'] = valor.valor
             initial_data.append(dados_instancia)
 
-        # ✅ Se não houver instâncias salvas, adiciona um formulário vazio
+        # Se não houver instâncias, adiciona um formulário vazio
         if not initial_data:
             initial_data = [{}]
 
@@ -479,13 +482,11 @@ def editar_caso(request, pk):
                         dados_titulo_combinados[campo.nome_variavel] = str(valor)
 
                     for grupo, formset in grupo_formsets.values():
-                        if formset.cleaned_data:
-                            primeiro_form_valido = next((fd for fd in formset.cleaned_data if fd and not fd.get('DELETE', False)), None)
-                            if primeiro_form_valido:
+                        for form_grupo in formset.forms:
+                            if form_grupo.has_changed() and not form_grupo.cleaned_data.get('DELETE', False):
                                 for campo_grupo in grupo.campos.all():
-                                    valor = primeiro_form_valido.get(f'campo_personalizado_{campo_grupo.id}') or ''
+                                    valor = form_grupo.cleaned_data.get(f'campo_personalizado_{campo_grupo.id}') or ''
                                     dados_titulo_combinados[campo_grupo.nome_variavel] = str(valor)
-                            break
 
                     titulo_final = produto.padrao_titulo or form.cleaned_data.get('titulo_manual', '')
                     for chave, valor in dados_titulo_combinados.items():
@@ -497,8 +498,11 @@ def editar_caso(request, pk):
                     caso.save()
                     form.save_m2m()
 
-                    # Atualiza campos simples
+                    # Remove valores antigos
                     caso.valores_personalizados.all().delete()
+                    caso.grupos_de_valores.all().delete()
+
+                    # Salva campos simples
                     for campo in estrutura.campos.all():
                         valor = form.cleaned_data.get(f'campo_personalizado_{campo.id}')
                         if valor is not None:
@@ -509,10 +513,9 @@ def editar_caso(request, pk):
                                 valor=str(valor)
                             )
 
-                    # Atualiza grupos repetíveis
-                    caso.grupos_de_valores.all().delete()
+                    # Salva grupos repetíveis
                     for grupo, formset in grupo_formsets.values():
-                        for index, form_grupo in enumerate(formset):
+                        for index, form_grupo in enumerate(formset.forms):
                             if form_grupo.has_changed() and not form_grupo.cleaned_data.get('DELETE', False):
                                 instancia = InstanciaGrupoValor.objects.create(
                                     caso=caso,
@@ -541,7 +544,6 @@ def editar_caso(request, pk):
         'grupo_formsets': grupo_formsets.values()
     }
     return render(request, 'casos/editar_caso.html', context)
-
 
 @login_required
 def exportar_casos_excel(request):

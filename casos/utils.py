@@ -8,6 +8,9 @@ from campos_custom.models import EstruturaDeCampos, CampoPersonalizado
 from clientes.models import Cliente
 from produtos.models import Produto
 
+from django import forms
+
+
 
 def get_lista_campos_fixos():
     """
@@ -75,3 +78,62 @@ def get_cabecalho_exportacao(cliente=None, produto=None):
                 
     # Retorna as 3 listas
     return (lista_chaves, lista_cabecalhos, mapa_tipos)
+
+
+
+def build_form_field(campo, is_required=False, cliente=None, produto=None):
+    """
+    Constrói dinamicamente um campo de formulário baseado no tipo do campo personalizado.
+    """
+    tipo = campo.tipo_campo
+
+    if tipo == 'TEXTO':
+        return forms.CharField(
+            required=is_required,
+            widget=forms.TextInput(attrs={'class': 'form-control'})
+        )
+
+    elif tipo == 'NUMERO_INT':
+        return forms.IntegerField(
+            required=is_required,
+            widget=forms.NumberInput(attrs={'class': 'form-control'})
+        )
+
+    elif tipo == 'NUMERO_DEC':
+        return forms.DecimalField(
+            required=is_required,
+            widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+        )
+
+    elif tipo == 'MOEDA':
+        return forms.DecimalField(
+            required=is_required,
+            widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+        )
+
+    elif tipo == 'DATA':
+        return forms.DateField(
+            required=is_required,
+            widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            input_formats=['%Y-%m-%d']
+        )
+
+    elif tipo in ['LISTA_UNICA', 'LISTA_MULTIPLA']:
+        from campos_custom.models import OpcoesListaPersonalizada
+        opcoes_obj = OpcoesListaPersonalizada.objects.filter(campo=campo, cliente=cliente, produto=produto).first()
+        choices = [(opt.strip(), opt.strip()) for opt in opcoes_obj.get_opcoes_como_lista()] if opcoes_obj else []
+
+        if tipo == 'LISTA_UNICA':
+            return forms.ChoiceField(
+                choices=[('', '--- Selecione ---')] + choices,
+                required=is_required,
+                widget=forms.Select(attrs={'class': 'form-select'})
+            )
+        else:
+            return forms.MultipleChoiceField(
+                choices=choices,
+                required=is_required,
+                widget=forms.SelectMultiple(attrs={'class': 'form-select'})
+            )
+
+    return forms.CharField(required=is_required, widget=forms.TextInput(attrs={'class': 'form-control'}))

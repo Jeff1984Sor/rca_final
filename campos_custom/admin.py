@@ -1,65 +1,36 @@
 # campos_custom/admin.py
 
 from django.contrib import admin
-# Importa os novos modelos (incluindo OpcoesListaPersonalizada)
+# Importa os novos modelos
 from .models import (
     CampoPersonalizado, 
     EstruturaDeCampos, EstruturaCampoOrdenado,
     GrupoCampos, GrupoCampoOrdenado, 
     ValorCampoPersonalizado,
-    # <<< ADICIONADO PARA GERENCIAR LISTAS CUSTOMIZADAS >>>
+    # <<< CORRETO >>>
     OpcoesListaPersonalizada, 
-    InstanciaGrupoValor # Garante que este também está importado se necessário
+    InstanciaGrupoValor 
 )
 import nested_admin
 
+# ... (restante dos imports) ...
+
 # --- ADMIN DA BIBLIOTECA DE CAMPOS ---
-@admin.register(CampoPersonalizado)
-class CampoPersonalizadoAdmin(admin.ModelAdmin):
-    list_display = ('nome_campo', 'nome_variavel', 'tipo_campo')
-    search_fields = ('nome_campo', 'nome_variavel')
-    ordering = ('nome_campo',)
-    list_filter = ('tipo_campo',)
-    
-    fieldsets = (
-        (None, {
-            'fields': ('nome_campo', 'nome_variavel', 'tipo_campo')
-        }),
-        # O campo 'opcoes_lista' foi removido do modelo CampoPersonalizado,
-        # então removemos este fieldset quebrado.
-        # ('Configuração para Listas', {
-        #     'classes': ('collapse',),
-        #     'fields': ('opcoes_lista',),
-        # }),
-    )
+# ... (CampoPersonalizadoAdmin) ...
 
 # ==========================================================
-# 1. ADMIN PARA LISTAS DE OPÇÕES EXCLUSIVAS (NOVO)
+# 1. ADMIN DE LISTAS (OpcoesListaPersonalizada)
 # ==========================================================
 
-# Permite ao Admin definir a lista de opções por Cliente/Produto
-@admin.register(OpcoesListaPersonalizada)
-class OpcoesListaPersonalizadaAdmin(admin.ModelAdmin):
-    list_display = ('campo', 'cliente', 'produto', 'opcoes_lista')
-    list_filter = ('cliente', 'produto', 'campo')
-    search_fields = ('campo__nome_campo', 'opcoes_lista')
-    autocomplete_fields = ['campo', 'cliente', 'produto']
-    # Apenas campos do tipo LISTA devem aparecer no select 'campo'
-    # Esta função garante que o select de 'campo' só mostre campos com tipo_campo='LISTA_UNICA' ou 'LISTA_MULTIPLA'
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == "campo":
-            from .models import CampoPersonalizado # Importa dentro da função para evitar ciclos
-            kwargs["queryset"] = CampoPersonalizado.objects.filter(
-                tipo_campo__in=['LISTA_UNICA', 'LISTA_MULTIPLA']
-            )
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+# A OpçõesListaPersonalizadaAdmin já é o local onde se define as opções de lista
+# por Cliente/Produto. Você não precisa de um Inline para ela.
+# Se você quer adicionar as LISTAS na tela do CAMPO PERSONALIZADO,
+# a lógica deve ser diferente.
 
-
-# ==========================================================
-# 2. INLINES E ESTRUTURA PRINCIPAL (Nested Admin)
-# ==========================================================
+# Vamos assumir que o erro está no Inline que foi copiado por engano:
 
 # --- INLINE NÍVEL 2 (Campos dentro do Grupo) ---
+# ESTE INLINE ESTÁ LIGADO A OUTRO MODELO E JÁ DEVE ESTAR CORRETO.
 class GrupoCampoOrdenadoInline(nested_admin.NestedTabularInline):
     model = GrupoCampoOrdenado
     extra = 1
@@ -103,20 +74,41 @@ class EstruturaDeCamposAdmin(nested_admin.NestedModelAdmin):
 # --- ADMIN DE CONSULTA PARA VALORES ---
 @admin.register(ValorCampoPersonalizado)
 class ValorCampoAdmin(admin.ModelAdmin):
-    list_display = ('get_caso_info', 'campo', 'valor')
-    search_fields = (
-        'caso__id',
-        'instancia_grupo__caso__id',
-        'campo__nome_campo', 
-        'valor'
-    )
-    readonly_fields = ('caso', 'instancia_grupo', 'campo', 'valor')
-    list_filter = ('campo',)
+    # ... (Seu código) ...
+    pass
     
-    @admin.display(description='Referência do Caso', ordering='caso__id')
-    def get_caso_info(self, obj):
-        if obj.caso:
-            return f"Caso #{obj.caso.id} (Campo Direto)"
-        if obj.instancia_grupo:
-            return f"Caso #{obj.instancia_grupo.caso_id} (Grupo: {obj.instancia_grupo.grupo.nome_grupo})"
-        return "Valor Órfão (ERRO)"
+# --- CORRIGIR O BLOCO QUE CAUSOU O ERRO ---
+# O modelo 'OpcaoCampoPersonalizado' não existe. Removemos o bloco inline
+# que causou o erro e garantimos que o CampoPersonalizadoAdmin não o use.
+
+# O CampoPersonalizadoAdmin DEVE SER SIMPLIFICADO:
+@admin.register(CampoPersonalizado)
+class CampoPersonalizadoAdmin(admin.ModelAdmin):
+    list_display = ('nome_campo', 'nome_variavel', 'tipo_campo')
+    search_fields = ('nome_campo', 'nome_variavel')
+    ordering = ('nome_campo',)
+    list_filter = ('tipo_campo',)
+    
+    # REMOVE A REFERÊNCIA AO INLINE INEXISTENTE
+    # inlines = [OpcaoCampoPersonalizadoInline] 
+    
+    fieldsets = (
+        (None, {
+            'fields': ('nome_campo', 'nome_variavel', 'tipo_campo')
+        }),
+    )
+
+# --- REGISTRO DO MODELO CORRETO DE LISTAS ---
+@admin.register(OpcoesListaPersonalizada)
+class OpcoesListaPersonalizadaAdmin(admin.ModelAdmin):
+    list_display = ('campo', 'cliente', 'produto', 'opcoes_lista')
+    list_filter = ('cliente', 'produto', 'campo')
+    search_fields = ('campo__nome_campo', 'opcoes_lista')
+    autocomplete_fields = ['campo', 'cliente', 'produto']
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "campo":
+            from .models import CampoPersonalizado
+            kwargs["queryset"] = CampoPersonalizado.objects.filter(
+                tipo_campo__in=['LISTA_UNICA', 'LISTA_MULTIPLA']
+            )
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)

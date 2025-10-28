@@ -5,7 +5,9 @@ from django.forms import formset_factory, modelformset_factory
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from campos_custom.models import OpcoesListaPersonalizada
 from django.forms.widgets import HiddenInput
+from .utils import build_form_field
 
 # Importa os NOVOS modelos de campos_custom
 from campos_custom.models import (
@@ -104,50 +106,70 @@ class CasoDinamicoForm(forms.ModelForm):
         return [self[field_name] for field_name in self.Meta.fields]
 
     def campos_personalizados_simples(self):
+        # Itera na ordem definida
         if self.estrutura:
-            ids = self.estrutura.ordenamentos_simples.values_list('campo__id', flat=True)
-            return [self[f'campo_personalizado_{campo_id}'] for campo_id in ids if f'campo_personalizado_{campo_id}' in self.fields]
+            # CORREÇÃO AQUI! O related_name correto é 'ordenamentos_simples'
+            # Garante que os campos simples sejam buscados corretamente pela Estrutura
+            campos_ordenados_ids = self.estrutura.ordenamentos_simples.all().values_list('campo__id', flat=True)
+            return [self[f'campo_personalizado_{campo_id}'] 
+                    for campo_id in campos_ordenados_ids 
+                    if f'campo_personalizado_{campo_id}' in self.fields]
         return []
 
     def grupos_repetiveis(self):
         return self.estrutura.grupos_repetiveis.all() if self.estrutura else []
 
+
+
 class BaseGrupoForm(forms.Form):
     """
-    Classe base usada pelo formset_factory para criar formulários para grupos repetíveis.
-    Os campos são adicionados dinamicamente no __init__.
+    Formulário usado pelo formset_factory para grupos repetíveis.
+    Adiciona campos dinamicamente com base na estrutura do grupo.
     """
     def __init__(self, *args, grupo_campos=None, cliente=None, produto=None, **kwargs):
         super().__init__(*args, **kwargs)
-        ORDEM = forms.IntegerField(
-        required=False,
-        widget=forms.HiddenInput() # <<< OBRIGA O CAMPO A SER OCULTO
-    )
-        
-        if grupo_campos:
-            # CORREÇÃO AQUI: Usar o nome do modelo through (grupocampoordenado) e o campo 'order'
-            # O nome do relacionamento é 'grupocampoordenado' (em minúsculo)
-            campos_ordenados = grupo_campos.campos.all().order_by('grupocampoordenado__order') # <<< CORREÇÃO
 
-            for campo in grupo_campos.campos.all().order_by('grupocampoordenado__order'): # <<< CORREÇÃO
-                
-                # Para carregar as opções customizadas (que o init principal não faz)
-                cliente = kwargs.get('cliente')
-                produto = kwargs.get('produto')
-                
-                # Constrói o campo dinâmico
-                field_instance = build_form_field(campo, is_required=False, cliente=cliente, produto=produto)
-                
-                # Garante que o nome do campo no formulário use o ID
-                field_name = f'campo_personalizado_{campo.id}' # Usa o nome final que a view espera
-                self.fields[field_name] = field_instance
-        if 'ORDER' in self.fields:
-            self.fields['ORDER'].required = False # Não obrigatório (embora não devesse ser)
-            self.fields['ORDER'].widget = HiddenInput()
-            self.fields['ORDER'].initial = 0 # Valor inicial (geralmente preenchido pelo formset)
-    
-class Meta:
+        # Campo oculto para ordenação (usado pelo formset)
+        self.fields['ORDER'] = forms.IntegerField(required=False, widget=HiddenInput(), initial=0)
+
+        if grupo_campos:
+            # Ordena os campos conforme definido na estrutura
+            campos_ordenados = grupo_campos.campos.all().order_by('grupocampoordenado__order')
+
+            for campo in campos_ordenados:
+                field_name = f'campo_personalizado_{campo.id}'
+
+                # ✅ Se for LISTA_UNICA ou LISTA_MULTIPLA, busca opções dinâmicas
+                if campo.tipo_campo in ['LISTA_UNICA', 'LISTA_MULTIPLA']:
+                    opcoes_obj = OpcoesListaPersonalizada.objects.filter(
+                        campo=campo, cliente=cliente, produto=produto
+                    ).first()
+
+                    choices = [(opt.strip(), opt.strip()) for opt in opcoes_obj.get_opcoes_como_lista()] if opcoes_obj else []
+
+                    if campo.tipo_campo == 'LISTA_UNICA':
+                        self.fields[field_name] = forms.ChoiceField(
+                            choices=[('', '--- Selecione ---')] + choices,
+                            required=False,
+                            widget=forms.Select(attrs={'class': 'form-select'})
+                        )
+                    else:  # LISTA_MULTIPLA
+                        self.fields[field_name] = forms.MultipleChoiceField(
+                            choices=choices,
+                            required=False,
+                            widget=forms.SelectMultiple(attrs={'class': 'form-select'})
+                        )
+
+                else:
+                    # ✅ Para outros tipos, usa build_form_field
+                    self.fields[field_name] = build_form_field(campo, is_required=False, cliente=cliente, produto=produto)
+
+                # Define o rótulo do campo
+                self.fields[field_name].label = campo.nome_campo
+
+    class Meta:
         exclude = ['ORDER']
+
 
 
 # ==============================================================================
