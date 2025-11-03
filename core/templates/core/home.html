@@ -17,21 +17,7 @@
 
 
 {% block content %}
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <h1 style="font-size: 2.25rem; font-weight: 700; margin: 0;">Visão Geral - {{ ano_selecionado }}</h1>
-        <form method="GET" action="{% url 'core:home' %}">
-            <div class="form-row" style="align-items: flex-end; margin-bottom: 0;">
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="id_ano">Selecionar Ano</label>
-                    <select id="id_ano" name="ano" onchange="this.form.submit()">
-                        {% for ano in anos_disponiveis %}
-                        <option value="{{ ano }}" {% if ano == ano_selecionado %}selected{% endif %}>{{ ano }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-        </form>
-    </div>
+    
 
 <!-- TABELA DE PERFORMANCE CORRIGIDA (AGRUPADA POR PROFISSIONAL) -->
 
