@@ -1,5 +1,6 @@
 import re
 from django import template
+from datetime import date
 
 register = template.Library()
 
@@ -65,3 +66,25 @@ def split_linebreaks(value):
     if not value:
         return []
     return re.split(r'\s*(?:\n|<br\s*/?>)+\s*', str(value).strip())
+
+@register.filter
+def days_until(value):
+    """
+    Calcula o número de dias restantes de hoje até uma data futura ('value').
+    Retorna um número inteiro.
+    """
+    if not isinstance(value, date):
+        # Se o valor não for uma data, não podemos calcular
+        return None
+    
+    today = date.today()
+    delta = value - today
+    return delta.days
+
+@register.filter
+def abs_value(value):
+    """Retorna o valor absoluto (positivo) de um número."""
+    try:
+        return abs(value)
+    except (ValueError, TypeError):
+        return value # Retorna o valor original se não for um número

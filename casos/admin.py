@@ -1,18 +1,34 @@
 # casos/admin.py
 from django.contrib import admin
-from .models import Caso, ModeloAndamento, Andamento, Timesheet, Acordo, Parcela, Despesa, FluxoInterno
+from .models import Caso, ModeloAndamento, Andamento, Timesheet, Acordo, Parcela, Despesa, FluxoInterno, RegraPrazo
 
 @admin.register(Caso)
 class CasoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'cliente', 'produto', 'status', 'advogado_responsavel', 'data_entrada')
+    # --- SUA CONFIGURAÇÃO ORIGINAL, COM A NOVA COLUNA ADICIONADA ---
+    list_display = (
+        'id', 
+        'cliente', 
+        'produto', 
+        'status', 
+        'advogado_responsavel', 
+        'data_entrada',
+        'prazo_final_calculado'  # <-- NOVA COLUNA ADICIONADA AQUI
+    )
+    
     list_filter = ('status', 'produto', 'advogado_responsavel')
-    search_fields = ('titulo', 'cliente__nome') # Busca no nome do cliente relacionado
-    autocomplete_fields = ['cliente', 'advogado_responsavel'] # Transforma em campos de busca inteligentes
+    search_fields = ('titulo', 'cliente__nome')
+    autocomplete_fields = ['cliente', 'advogado_responsavel']
 
 @admin.register(ModeloAndamento)
 class ModeloAndamentoAdmin(admin.ModelAdmin):
     list_display = ('titulo',)
     search_fields = ('titulo', 'descricao')
+
+@admin.register(RegraPrazo)
+class RegraPrazoAdmin(admin.ModelAdmin):
+    list_display = ('cliente', 'produto', 'valor_minimo', 'valor_maximo', 'prazo_em_dias')
+    list_filter = ('cliente', 'produto')
+    search_fields = ('cliente__nome', 'produto__nome')
 
 @admin.register(Andamento)
 class AndamentoAdmin(admin.ModelAdmin):

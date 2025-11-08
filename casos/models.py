@@ -6,6 +6,8 @@ from django.urls import reverse
 from produtos.models import Produto
 from django.conf import settings
 from dateutil.relativedelta import relativedelta
+from datetime import timedelta
+from decimal import Decimal, InvalidOperation
 
 class Caso(models.Model):
     # Definindo as opções para o campo 'status'
@@ -47,12 +49,71 @@ class Caso(models.Model):
     # Campo de controle
     data_criacao = models.DateTimeField(auto_now_add=True)
 
+    valor_apurado = models.DecimalField(
+        max_digits=12, decimal_places=2, verbose_name="Valor Apurado",
+        null=True, blank=True
+    )
+
     def get_absolute_url(self):
         return reverse('casos:detalhe_caso', kwargs={'pk': self.pk})
 
     def __str__(self):
         return f"Caso #{self.id} - {self.cliente.nome} ({self.produto.nome})"
     
+    @property
+    def valor_apurado_custom(self):
+        """
+        Busca o objeto ValorCampoPersonalizado para 'valor_apurado'.
+        !! IMPORTANTE: Altere 'valor_apurado' se o seu nome_variavel for outro !!
+        """
+        try:
+            return self.valores_personalizados.get(campo__nome_variavel='valor_apurado', instancia_grupo__isnull=True)
+        except self.valores_personalizados.model.DoesNotExist:
+            return None
+        
+    @property
+    def prazo_final_calculado(self):
+        from .models import RegraPrazo # Evita importação circular
+        try:
+            regra = None
+            if self.valor_apurado is not None:
+                # LÓGICA NORMAL: Se o valor foi preenchido
+                regra = RegraPrazo.objects.get(
+                    cliente=self.cliente, produto=self.produto,
+                    valor_minimo__lte=self.valor_apurado,
+                    valor_maximo__gte=self.valor_apurado
+                )
+            else:
+                # LÓGICA PADRÃO: Se o valor está vazio, pega a primeira faixa
+                regra = RegraPrazo.objects.filter(
+                    cliente=self.cliente, produto=self.produto
+                ).order_by('valor_minimo').first()
+            if self.status == 'ENCERRADO':
+                return None
+
+            if regra and self.data_entrada:
+                return self.data_entrada + timedelta(days=regra.prazo_em_dias)
+        except RegraPrazo.DoesNotExist:
+            return None
+        return None
+        
+class RegraPrazo(models.Model):
+    cliente = models.ForeignKey('clientes.Cliente', on_delete=models.CASCADE, verbose_name="Cliente")
+    produto = models.ForeignKey('produtos.Produto', on_delete=models.CASCADE, verbose_name="Produto")
+    valor_minimo = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Valor Mínimo Apurado")
+    valor_maximo = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Valor Máximo Apurado")
+    prazo_em_dias = models.PositiveIntegerField(verbose_name="Prazo (em dias)")
+
+    class Meta:
+        verbose_name = "Regra de Prazo"
+        verbose_name_plural = "Regras de Prazos"
+        unique_together = ('cliente', 'produto', 'valor_minimo', 'valor_maximo')
+        app_label = 'casos'
+
+    def __str__(self):
+        return (f"Regra: {self.cliente.nome} / {self.produto.nome} "
+                f"(R${self.valor_minimo} a R${self.valor_maximo}): {self.prazo_em_dias} dias")
+
 class ModeloAndamento(models.Model):
 
     titulo = models.CharField(max_length=200)

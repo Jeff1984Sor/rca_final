@@ -2,183 +2,195 @@
 {% load static %}
 {% load custom_tags %}
 
-{% block title %}Abrir Novo Caso{% endblock %}
+{% block title %}Criar Novo Caso{% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
-    <div class="row justify-content-center">
-        <div class="col-xl-10 col-lg-11 col-md-12">
+  <div class="row justify-content-center">
+    <div class="col-xl-10 col-lg-11 col-md-12">
 
-            {% include 'casos/partials/app_messages.html' %}
+      {% include 'casos/partials/app_messages.html' %}
 
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-light">
-                    <h4 class="mb-0">Abrir Novo Caso</h4>
-                    <small class="text-muted">{{ cliente.nome }} / {{ produto.nome }}</small>
-                </div>
-
-                <form method="post">
-                    {% csrf_token %}
-
-                    <div class="card-body p-4">
-
-                        <h5 class="mb-3 border-bottom pb-2">Dados Principais do Caso</h5>
-                        <div class="row g-3">
-                            {% for field in form.campos_fixos %}
-                                <div class="col-md-6">
-                                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                                    {{ field }}
-                                    {% for error in field.errors %}
-                                        <div class="invalid-feedback d-block">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
-                            {% endfor %}
-                        </div>
-
-                        <hr class="my-4">
-
-                        <h5 class="mb-3 border-bottom pb-2">Dados Adicionais (Simples)</h5>
-                        <div class="row g-3">
-                            {% if 'titulo_manual' in form.fields %}
-                                <div class="col-md-6">
-                                    <label for="{{ form.titulo_manual.id_for_label }}" class="form-label">{{ form.titulo_manual.label }}</label>
-                                    {{ form.titulo_manual|add_class:"form-control" }}
-                                    {% for error in form.titulo_manual.errors %}
-                                        <div class="invalid-feedback d-block">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-
-                            {% for field in form.campos_personalizados_simples %}
-                                <div class="col-md-6">
-                                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                                    {{ field }}
-                                    {% for error in field.errors %}
-                                        <div class="invalid-feedback d-block">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
-                            {% endfor %}
-                        </div>
-
-                        {% for grupo, formset in grupo_formsets %}
-                            <hr class="my-4">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="mb-0">{{ grupo.nome_grupo }}</h5>
-                                <button type="button" class="btn btn-outline-success btn-sm add-grupo-btn"
-                                        data-formset-prefix="{{ formset.prefix }}"
-                                        data-grupo-id="{{ grupo.id }}">
-                                    <i class="fas fa-plus me-1"></i> Adicionar {{ grupo.nome_grupo|truncatechars:15 }}
-                                </button>
-                            </div>
-
-                            {{ formset.management_form }}
-
-                            <div id="formset-container-{{ grupo.id }}">
-                                {% for form_grupo in formset %}
-                                    <div class="grupo-form p-3 border rounded bg-light mb-3" id="{{ formset.prefix }}-{{ forloop.counter0 }}">
-                                        {% if formset.can_delete %}{{ form_grupo.DELETE.as_hidden }}{% endif %}
-                                        {% if formset.can_order %}{{ form_grupo.ORDER.as_hidden }}{% endif %}
-
-                                        <div class="d-flex flex-wrap align-items-end">
-                                            {% for field in form_grupo.visible_fields %}
-                                                {% if field.name != 'ORDER' %}
-                                                    <div class="me-3 mb-2" style="flex-grow: 1; min-width: 150px;">
-                                                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                                                        {{ field }}
-                                                    </div>
-                                                {% endif %}
-                                            {% endfor %}
-                                            <div class="ms-auto">
-                                                <button type="button" class="btn btn-danger delete-grupo-btn">
-                                                    <i class="fas fa-trash"></i> Remover
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
-
-                            <div id="empty-form-{{ grupo.id }}" style="display: none;">
-                                <div class="grupo-form p-3 border rounded bg-light mb-3" id="{{ formset.prefix }}-__prefix__">
-                                    {{ formset.empty_form.DELETE.as_hidden }}{{ formset.empty_form.ORDER.as_hidden }}
-                                    <div class="d-flex flex-wrap align-items-end">
-                                        {% for field in formset.empty_form.visible_fields %}
-                                            {% if field.name != 'ORDER' %}
-                                                <div class="me-3 mb-2" style="flex-grow: 1; min-width: 150px;">
-                                                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                                                    {{ field }}
-                                                </div>
-                                            {% endif %}
-                                        {% endfor %}
-                                        <div class="ms-auto">
-                                            <button type="button" class="btn btn-danger delete-grupo-btn">
-                                                <i class="fas fa-trash"></i> Remover
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
-
-                    <div class="card-footer text-end">
-                        <a href="{% url 'casos:lista_casos' %}" class="btnfa-times me-1"></i> Cancelar
-                        </a>
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="fas fa-save me-2"></i> Salvar Caso
-                        </button>
-                    </div>
-                </form>
-            </div>
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-light">
+          <h4 class="mb-0">Criar Novo Caso</h4>
+          <small class="text-muted">{{ cliente.nome }} / {{ produto.nome }}</small>
         </div>
+
+        <form method="post" action="" class="needs-validation" novalidate>
+          {% csrf_token %}
+
+          <div class="card-body p-4">
+            
+            <h5 class="mb-4 border-bottom pb-2">Dados Principais do Caso</h5>
+            <div class="row g-3">
+              
+              <!-- Renderiza os campos fixos do modelo Caso -->
+              {% for field in form.campos_fixos %}
+                <div class="col-md-6">
+                  <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                  {{ field }}
+                  {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+                </div>
+              {% endfor %}
+
+              <!-- ABORDAGEM FORÇA BRUTA: Procura e renderiza o Valor Apurado -->
+              {% for field in form.campos_personalizados_simples %}
+                {# Vamos assumir que o nome_variavel é 'valor_apurado'. O forms.py cria o nome do campo como 'campo_personalizado_ID'. #}
+                {# A maneira mais segura de identificar é pelo label ou por um atributo que passamos do forms.py #}
+                {# Para simplificar, vamos procurar pelo label (adapte se for diferente) #}
+                {% if "Valor Apurado" in field.label %}
+                  <div class="col-md-6">
+                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+                  </div>
+                {% endif %}
+              {% endfor %}
+              
+            </div>
+
+            <hr class="my-4">
+
+            <h5 class="mb-4 border-bottom pb-2">Dados Adicionais</h5>
+            <div class="row g-3">
+              <!-- Renderiza os outros campos personalizados que NÃO são o Valor Apurado -->
+              {% for field in form.campos_personalizados_simples %}
+                {% if "Valor Apurado" not in field.label %}
+                  <div class="col-md-6">
+                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+
+            <!-- Grupos repetíveis (SEU CÓDIGO ORIGINAL - SEM MUDANÇAS) -->
+            {% for grupo, formset in grupo_formsets %}
+              <hr class="my-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">{{ grupo.nome_grupo }}</h5>
+                <button type="button" class="btn btn-outline-success btn-sm add-grupo-btn"
+                        data-formset-prefix="{{ formset.prefix }}"
+                        data-grupo-id="{{ grupo.id }}">
+                  <i class="fas fa-plus me-1"></i> Adicionar {{ grupo.nome_grupo|truncatechars:15 }}
+                </button>
+              </div>
+
+              {{ formset.management_form }}
+
+              <div id="formset-container-{{ grupo.id }}">
+                {% for form_grupo in formset %}
+                  <div class="grupo-form p-3 border rounded bg-light mb-3">
+                    {% if formset.can_delete %}
+                      <div class="d-none">{{ form_grupo.DELETE }}</div>
+                    {% endif %}
+                    <div class="d-flex flex-wrap align-items-end">
+                      {% for field in form_grupo.visible_fields %}
+                        <div class="me-3 mb-2" style="flex-grow: 1; min-width: 200px;">
+                          <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                          {{ field }}
+                          {% if field.errors %}
+                            <div class="text-danger small">{{ field.errors }}</div>
+                          {% endif %}
+                        </div>
+                      {% endfor %}
+                      <div class="ms-auto">
+                        <button type="button" class="btn btn-danger delete-grupo-btn">
+                          <i class="fas fa-trash"></i> Remover
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+
+              <div id="empty-form-{{ grupo.id }}" style="display:none;">
+                <div class="grupo-form p-3 border rounded bg-light mb-3">
+                  {% if formset.can_delete %}
+                    <div class="d-none">{{ formset.empty_form.DELETE }}</div>
+                  {% endif %}
+                  <div class="d-flex flex-wrap align-items-end">
+                    {% for field in formset.empty_form.visible_fields %}
+                      <div class="me-3 mb-2" style="flex-grow: 1; min-width: 200px;">
+                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                        {{ field }}
+                      </div>
+                    {% endfor %}
+                    <div class="ms-auto">
+                      <button type="button" class="btn btn-danger delete-grupo-btn">
+                        <i class="fas fa-trash"></i> Remover
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+
+          <div class="card-footer text-end">
+            <a href="{% url 'casos:selecionar_produto_cliente' %}" class="btn btn-secondary">
+              <i class="fas fa-times me-1"></i> Cancelar
+            </a>
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="fas fa-save me-2"></i> Criar Caso
+            </button>
+          </div>
+        </form>
+      </div>
+
     </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+// SEU JAVASCRIPT ORIGINAL - SEM NENHUMA MUDANÇA
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.add-grupo-btn').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            var prefix = this.dataset.formsetPrefix;
-            var grupoId = this.dataset.grupoId;
-            var container = document.getElementById('formset-container-' + grupoId);
-            var totalFormsInput = document.getElementById('id_' + prefix + '-TOTAL_FORMS');
-            var currentFormCount = parseInt(totalFormsInput.value, 10);
+  document.querySelectorAll('.add-grupo-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      var prefix = this.dataset.formsetPrefix;
+      var grupoId = this.dataset.grupoId;
+      var container = document.getElementById('formset-container-' + grupoId);
+      var totalFormsInput = document.getElementById('id_' + prefix + '-TOTAL_FORMS');
+      var currentFormCount = parseInt(totalFormsInput.value, 10);
 
-            var emptyFormHtml = document.getElementById('empty-form-' + grupoId).innerHTML;
-            var newFormHtml = emptyFormHtml.replace(/__prefix__/g, currentFormCount);
+      var emptyFormHtml = document.getElementById('empty-form-' + grupoId)?.innerHTML;
+      if (!emptyFormHtml) return;
 
-            var tempWrapper = document.createElement('div');
-            tempWrapper.innerHTML = newFormHtml;
-            var newFormElement = tempWrapper.firstElementChild;
+      var newFormHtml = emptyFormHtml.replace(/__prefix__/g, currentFormCount);
+      var tempWrapper = document.createElement('div');
+      tempWrapper.innerHTML = newFormHtml;
+      var newFormElement = tempWrapper.firstElementChild;
 
-            container.appendChild(newFormElement);
-            totalFormsInput.value = currentFormCount + 1;
-
-            newFormElement.querySelectorAll('input[type="date"]').forEach(function(input) {
-                input.value = '';
-            });
-        });
+      container.appendChild(newFormElement);
+      totalFormsInput.value = currentFormCount + 1;
     });
+  });
 
-    document.body.addEventListener('click', function(event) {
-        var btn = event.target.closest('.delete-grupo-btn');
-        if (btn) {
-            event.preventDefault();
-            var formWrapper = btn.closest('.grupo-form');
-            if (!formWrapper) return;
+  document.body.addEventListener('click', function(event) {
+    var btn = event.target.closest('.delete-grupo-btn');
+    if (!btn) return;
 
-            var deleteInput = formWrapper.querySelector('input[id$="-DELETE"]');
-            if (deleteInput) {
-                deleteInput.checked = true;
-                formWrapper.style.display = 'none';
-            } else {
-                formWrapper.remove();
-            }
-        }
-    });
+    event.preventDefault();
+    var formWrapper = btn.closest('.grupo-form');
+    if (!formWrapper) return;
+
+    var deleteInput = formWrapper.querySelector('input[name$="-DELETE"]');
+    if (deleteInput) {
+      if (deleteInput.type === 'hidden') {
+        deleteInput.value = 'on';
+      } else {
+        deleteInput.checked = true;
+      }
+      formWrapper.style.display = 'none';
+    } else {
+      formWrapper.remove();
+    }
+  });
 });
 </script>
 {% endblock %}

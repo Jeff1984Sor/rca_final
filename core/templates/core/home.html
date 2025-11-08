@@ -18,31 +18,79 @@
 
 {% block content %}
     
-
-<!-- TABELA DE PERFORMANCE CORRIGIDA (AGRUPADA POR PROFISSIONAL) -->
-
+<!-- ============================================================================== -->
+<!-- INÍCIO DA SEÇÃO ATUALIZADA: SUAS AÇÕES COM FILTROS                             -->
+<!-- ============================================================================== -->
 <div class="grid-col-span-6">
-        <div class="card">
-                <h3 class="section-title"><i class="fa-solid fa-list-check"></i> Suas Ações com Prazo para Hoje</h3>
-                <div class="data-table-container" style="box-shadow: none; border: none;">
-                    <table class="data-table">
-                        <thead><tr><th>Caso</th><th>Ação</th><th style="text-align: right;">Acessar</th></tr></thead>
-                        <tbody>
-                            {% for acao_inst in acoes_do_dia %}
-                            <tr>
-                                <td class="caso-details-cell"><strong>#{{ acao_inst.caso.id|stringformat:"05d" }}</strong><br><small>{{ acao_inst.caso.cliente.nome }} | {{ acao_inst.caso.produto.nome }}</small></td>
-                                <td>{{ acao_inst.acao.titulo|truncatechars:30 }}</td>
-                                <td style="text-align: right;"><a href="{% url 'casos:detalhe_caso' pk=acao_inst.caso.pk %}?aba=acoes" class="action-btn btn-info">Ir</a></td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="3"><div class="empty-state" style="padding: 20px;"><p>🎉 Nenhuma ação com prazo para hoje.</p></div></td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+    <div class="card">
+        
+        <!-- Formulário de Filtros de Período -->
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fa-solid fa-list-check me-2"></i> Suas Ações</h5>
+            
+            <form method="get" action="" class="d-flex align-items-center gap-2">
+                <div class="btn-group btn-group-sm">
+                    <a href="?periodo=hoje" class="btn {% if valores_filtro.periodo == 'hoje' or not valores_filtro.periodo and not valores_filtro.data_inicio %}btn-primary{% else %}btn-outline-secondary{% endif %}">Hoje</a>
+                    <a href="?periodo=semana" class="btn {% if valores_filtro.periodo == 'semana' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Semana</a>
+                    <a href="?periodo=mes" class="btn {% if valores_filtro.periodo == 'mes' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Mês</a>
                 </div>
                 
+                <input type="date" name="data_inicio" class="form-control form-control-sm" style="width: auto;" value="{{ valores_filtro.data_inicio }}">
+                <span class="text-muted">até</span>
+                <input type="date" name="data_fim" class="form-control form-control-sm" style="width: auto;" value="{{ valores_filtro.data_fim }}">
+                
+                <button type="submit" class="btn btn-sm btn-outline-primary" title="Filtrar por data">
+                    <i class="fa-solid fa-filter"></i>
+                </button>
+            </form>
         </div>
+
+        <!-- Tabela de Ações Filtradas -->
+        <div class="data-table-container" style="box-shadow: none; border: none;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Caso</th>
+                        <th>Ação</th>
+                        <th style="text-align: center;">Prazo</th>
+                        <th style="text-align: right;">Acessar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for acao_inst in acoes_filtradas %}
+                    <tr>
+                        <td class="caso-details-cell"><strong>#{{ acao_inst.caso.id|stringformat:"05d" }}</strong><br><small>{{ acao_inst.caso.cliente.nome }} | {{ acao_inst.caso.produto.nome }}</small></td>
+                        <td>{{ acao_inst.acao.titulo|truncatechars:30 }}</td>
+                        <td style="text-align: center;">
+                            {% with prazo=acao_inst.data_prazo %}
+                                {% if prazo %}
+                                    {% with dias_restantes=prazo|days_until %}
+                                        <span class="badge 
+                                            {% if dias_restantes < 0 %}bg-dark
+                                            {% elif dias_restantes == 0 %}bg-danger
+                                            {% elif dias_restantes < 7 %}bg-warning text-dark
+                                            {% else %}bg-secondary
+                                            {% endif %}
+                                        ">{{ prazo|date:"d/m/Y" }}</span>
+                                    {% endwith %}
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td style="text-align: right;"><a href="{% url 'casos:detalhe_caso' pk=acao_inst.caso.pk %}?aba=acoes" class="action-btn btn-info">Ir</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4"><div class="empty-state" style="padding: 20px;"><p>🎉 Nenhuma ação encontrada para o período selecionado.</p></div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
+<!-- ============================================================================== -->
+<!-- FIM DA SEÇÃO ATUALIZADA                                                        -->
+<!-- ============================================================================== -->
+
+<!-- TABELA DE PERFORMANCE (SEU CÓDIGO ORIGINAL - SEM MUDANÇAS) -->
 <div class="grid-col-span-12">
     {% for advogado, registros in tabela_performance.items %}
         <div class="card" style="margin-top: 24px;">
@@ -77,14 +125,12 @@
     {% endfor %}
 </div>
 
-        <!-- Ações do Dia -->
-        
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Gráfico de Status (Pizza)
+    // Gráfico de Status (Pizza) - SEU CÓDIGO ORIGINAL
     const pizzaCtx = document.getElementById('pizzaStatusChart');
     {% if dados_grafico_pizza %}
     if (pizzaCtx) {

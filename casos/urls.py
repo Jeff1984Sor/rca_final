@@ -43,4 +43,6 @@ urlpatterns = [
     path('exportar/selecionar/', views.selecionar_filtros_exportacao, name='selecionar_filtros_exportacao'),
     path('exportar/<int:cliente_id>/<int:produto_id>/', views.exportar_casos_dinamico, name='exportar_casos_dinamico'),
     path('importar/', views.importar_casos_view, name='importar_casos_view'),
+    path('visao-prazos/', views.visao_casos_prazo, name='visao_casos_prazo'),
+
 ]

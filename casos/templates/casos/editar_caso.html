@@ -4,6 +4,35 @@
 
 {% block title %}Editar Caso{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Estilos para o prazo no cabeçalho */
+.case-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+.prazo-header-destaque {
+    text-align: right;
+}
+.prazo-header-destaque small {
+    display: block;
+    font-size: 0.8rem;
+    color: #64748b; /* text-medium */
+    text-transform: uppercase;
+    font-weight: 600;
+    line-height: 1;
+}
+.prazo-header-destaque .prazo-data {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #ef4444; /* danger-color */
+    line-height: 1.2;
+}
+</style>
+{% endblock %}
+
+
 {% block content %}
 <div class="container-fluid mt-4">
   <div class="row justify-content-center">
@@ -12,19 +41,34 @@
       {% include 'casos/partials/app_messages.html' %}
 
       <div class="card shadow-sm border-0 mb-4">
+        
         <div class="card-header bg-light">
-          <h4 class="mb-0">Editar Caso</h4>
-          <small class="text-muted">{{ caso.cliente.nome }} / {{ caso.produto.nome }}</small>
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h4 class="mb-0">Editar Caso</h4>
+              <small class="text-muted">{{ caso.cliente.nome }} / {{ caso.produto.nome }}</small>
+            </div>
+            <div class="case-header-actions">
+                {% if caso.prazo_final_calculado %}
+                    <div class="prazo-header-destaque">
+                        <small>Prazo Final Atual</small>
+                        <div class="prazo-data">
+                            {{ caso.prazo_final_calculado|date:"d/m/Y" }}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+          </div>
         </div>
 
-        <!-- ✅ FORM correto -->
         <form method="post" action="" class="needs-validation" novalidate>
           {% csrf_token %}
 
           <div class="card-body p-4">
-            <!-- Dados principais -->
             <h5 class="mb-4 border-bottom pb-2">Dados Principais do Caso</h5>
             <div class="row g-3">
+              
+              <!-- ESTE LOOP AGORA RENDERIZA TODOS OS CAMPOS FIXOS, INCLUINDO 'valor_apurado' -->
               {% for field in form.campos_fixos %}
                 <div class="col-md-6">
                   <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
@@ -34,25 +78,24 @@
                   {% endif %}
                 </div>
               {% endfor %}
+              
             </div>
 
             <hr class="my-4">
 
-            <!-- Dados adicionais -->
             <h5 class="mb-4 border-bottom pb-2">Dados Adicionais</h5>
             <div class="row g-3">
+              {# Este loop renderiza os campos personalizados restantes (que não são mais o valor_apurado) #}
               {% for field in form.campos_personalizados_simples %}
-                <div class="col-md-6">
-                  <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                  {{ field }}
-                  {% if field.errors %}
-                    <div class="text-danger small">{{ field.errors }}</div>
-                  {% endif %}
-                </div>
+                  <div class="col-md-6">
+                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+                  </div>
               {% endfor %}
             </div>
 
-            <!-- Grupos repetíveis -->
+            <!-- Grupos repetíveis (SEM MUDANÇAS) -->
             {% for grupo, formset in grupo_formsets %}
               <hr class="my-4">
               <div class="d-flex justify-content-between align-items-center mb-3">
@@ -70,7 +113,7 @@
                 {% for form_grupo in formset %}
                   <div class="grupo-form p-3 border rounded bg-light mb-3">
                     {% if formset.can_delete %}
-                      <div class="d-none">{{ form_grupo.DELETE }}</div> {# ✅ checkbox escondido #}
+                      <div class="d-none">{{ form_grupo.DELETE }}</div>
                     {% endif %}
                     <div class="d-flex flex-wrap align-items-end">
                       {% for field in form_grupo.visible_fields %}
@@ -92,11 +135,10 @@
                 {% endfor %}
               </div>
 
-              <!-- Empty form com widgets completos -->
               <div id="empty-form-{{ grupo.id }}" style="display:none;">
                 <div class="grupo-form p-3 border rounded bg-light mb-3">
                   {% if formset.can_delete %}
-                    <div class="d-none">{{ formset.empty_form.DELETE }}</div> {# ✅ checkbox escondido #}
+                    <div class="d-none">{{ formset.empty_form.DELETE }}</div>
                   {% endif %}
                   <div class="d-flex flex-wrap align-items-end">
                     {% for field in formset.empty_form.visible_fields %}
@@ -117,7 +159,7 @@
           </div>
 
           <div class="card-footer text-end">
-            {% url 
+            <a href="{% url 'casos:detalhe_caso' pk=caso.pk %}" class="btn btn-secondary">
               <i class="fas fa-times me-1"></i> Cancelar
             </a>
             <button type="submit" class="btn btn-primary btn-lg">
@@ -134,6 +176,7 @@
 
 {% block extra_js %}
 <script>
+// SEU JAVASCRIPT ORIGINAL - SEM NENHUMA MUDANÇA
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.add-grupo-btn').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
@@ -143,15 +186,12 @@ document.addEventListener('DOMContentLoaded', function() {
       var container = document.getElementById('formset-container-' + grupoId);
       var totalFormsInput = document.getElementById('id_' + prefix + '-TOTAL_FORMS');
       var currentFormCount = parseInt(totalFormsInput.value, 10);
-
       var emptyFormHtml = document.getElementById('empty-form-' + grupoId)?.innerHTML;
       if (!emptyFormHtml) return;
-
       var newFormHtml = emptyFormHtml.replace(/__prefix__/g, currentFormCount);
       var tempWrapper = document.createElement('div');
       tempWrapper.innerHTML = newFormHtml;
       var newFormElement = tempWrapper.firstElementChild;
-
       container.appendChild(newFormElement);
       totalFormsInput.value = currentFormCount + 1;
     });
@@ -160,26 +200,21 @@ document.addEventListener('DOMContentLoaded', function() {
   document.body.addEventListener('click', function(event) {
     var btn = event.target.closest('.delete-grupo-btn');
     if (!btn) return;
-
     event.preventDefault();
     var formWrapper = btn.closest('.grupo-form');
     if (!formWrapper) return;
-
     var deleteInput = formWrapper.querySelector('input[name$="-DELETE"]');
     if (deleteInput) {
       if (deleteInput.type === 'hidden') {
-        deleteInput.value = 'on';   // caso tenha ficado hidden
+        deleteInput.value = 'on';
       } else {
-        deleteInput.checked = true; // se for checkbox (recomendado)
+        deleteInput.checked = true;
       }
       formWrapper.style.display = 'none';
     } else {
-      // item novo (ainda não salvo) -> remover do DOM
       formWrapper.remove();
-      // opcional: decrementar TOTAL_FORMS (só se remover o último adicionado)
     }
   });
 });
 </script>
 {% endblock %}
-``

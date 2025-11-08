@@ -27,6 +27,37 @@
         --bg-subtle: #f8fafc; /* Fundo de elementos internos, como cabeçalhos */
         --border-color: #e2e8f0;
     }
+    
+    /* ============================================================================== */
+    /* === NOVOS ESTILOS PARA O CABEÇALHO === */
+    /* ============================================================================== */
+    .case-header-actions {
+        display: flex;
+        align-items: center; /* Alinha o prazo e o botão verticalmente */
+        gap: 24px; /* Espaço entre o prazo e o botão */
+    }
+
+    .prazo-header-destaque {
+        text-align: right;
+    }
+    .prazo-header-destaque small {
+        display: block;
+        font-size: 0.8rem;
+        color: var(--text-medium);
+        text-transform: uppercase;
+        font-weight: 600;
+        line-height: 1;
+    }
+    .prazo-header-destaque .prazo-data {
+        font-size: 1.75rem; /* Aumenta o tamanho da fonte */
+        font-weight: 700;
+        color: var(--danger-color); /* Usa a cor vermelha que definimos */
+        line-height: 1.2;
+    }
+    /* ============================================================================== */
+    /* === FIM DOS NOVOS ESTILOS === */
+    /* ============================================================================== */
+
 
     /* ----- ESTRUTURA GERAL ----- */
     h1, h2, h3, h4, h5, h6 { color: var(--text-dark); }
@@ -202,11 +233,28 @@
 {% endblock %}
 
 {% block content %}
-    <!-- CABEÇALHO DO CASO -->
+    <!-- CABEÇALHO DO CASO (ATUALIZADO) -->
     <div class="card case-header">
         <div class="case-header-content">
-            <div><h1><span>#{{ caso.id }}</span> - {{ caso.titulo|default:"(Caso sem título)" }}</h1><p><strong>Cliente:</strong> {{ caso.cliente.nome }} | <strong>Produto:</strong> {{ caso.produto.nome }}</p></div>
-            <div><a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="btn-edit-header">Editar Caso</a></div>
+            <!-- Lado Esquerdo: Título e Informações -->
+            <div>
+                <h1><span>#{{ caso.id }}</span> - {{ caso.titulo|default:"(Caso sem título)" }}</h1>
+                <p><strong>Cliente:</strong> {{ caso.cliente.nome }} | <strong>Produto:</strong> {{ caso.produto.nome }}</p>
+            </div>
+            <!-- Lado Direito: Ações (Prazo + Botão) -->
+            <div class="case-header-actions">
+                {% if caso.prazo_final_calculado %}
+                    <div class="prazo-header-destaque">
+                        <small>Prazo Final</small>
+                        <div class="prazo-data">
+                            {{ caso.prazo_final_calculado|date:"d/m/Y" }}
+                        </div>
+                    </div>
+                {% endif %}
+                <div>
+                    <a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="btn-edit-header">Editar Caso</a>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -223,18 +271,33 @@
         <button class="tab-button" data-tab="anexos">Anexos</button>
     </div>
 
-    <!-- Aba 1: Detalhes -->
-    <!-- Aba 1: Detalhes (VERSÃO FINAL COM FORMATAÇÃO DE MOEDA) -->
-   
-<div id="detalhes" class="tab-content">
+    <!-- Aba 1: Detalhes (VERSÃO CORRIGIDA E FINAL) -->
+    <div id="detalhes" class="tab-content">
 
-    
-    <!-- DADOS DO CASO -->
-    <div class="form-section">
+        <!-- DADOS DO CASO -->
+        <div class="form-section">
             <h3 class="section-title">Dados do Caso</h3>
             <div class="details-grid">
                 <div class="detail-item"><label>Status</label><span>{{ caso.get_status_display }}</span></div>
                 <div class="detail-item"><label>Data de Entrada</label><span>{{ caso.data_entrada|date:"d/m/Y" }}</span></div>
+                
+                <!-- ============================================================================== -->
+                <!-- INÍCIO DA MUDANÇA: Exibindo o Valor Apurado como campo padrão                 -->
+                <!-- ============================================================================== -->
+                <div class="detail-item">
+                    <label>Valor Apurado</label>
+                    <span>
+                        {% if caso.valor_apurado %}
+                            {{ caso.valor_apurado|currency }}
+                        {% else %}
+                            <span class="text-muted">Não informado</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <!-- ============================================================================== -->
+                <!-- FIM DA MUDANÇA                                                                  -->
+                <!-- ============================================================================== -->
+
                 <div class="detail-item"><label>Fase do Workflow</label><span>{{ caso.fase_atual_wf.nome|default:"Não iniciado" }}</span></div>
                 <div class="detail-item"><label>Advogado Responsável</label>
                     <span>{% if caso.advogado_responsavel %}{{ caso.advogado_responsavel.get_full_name|default:caso.advogado_responsavel.username }}{% else %}Não atribuído{% endif %}</span>
@@ -317,7 +380,6 @@
 
     </div>
 
-</div>
     <!-- Aba 2: Ações -->
     <div id="acoes" class="tab-content">
         <div id="painel-acoes">{% include 'workflow/partials/painel_acoes.html' %}</div>
@@ -331,48 +393,45 @@
         </div>
     </div>
 
+    <!-- Aba 4: Fluxo Interno -->
     <div id="fluxo-interno" class="tab-content card">
-    <h3 class="section-title">Linha do Tempo Completa do Caso</h3>
-    
-    <div class="fluxo-timeline">
-            {% for evento in fluxo_interno %}
-                <div class="timeline-item">
-                    <!-- Ícone do Evento -->
-                    <div class="timeline-icon">
-                        {% if evento.tipo_evento == 'CRIACAO_CASO' %}<i class="fa-solid fa-star"></i>
-                        {% elif evento.tipo_evento == 'MUDANCA_FASE_WF' %}<i class="fa-solid fa-route"></i>
-                        {% elif evento.tipo_evento == 'ACAO_WF_CONCLUIDA' %}<i class="fa-solid fa-check-double"></i>
-                        {% elif evento.tipo_evento == 'ANDAMENTO' %}<i class="fa-solid fa-pencil"></i>
-                        {% elif evento.tipo_evento == 'TIMESHEET' %}<i class="fa-solid fa-clock"></i>
-                        {% elif evento.tipo_evento == 'ACORDO' %}<i class="fa-solid fa-handshake"></i>
-                        {% elif evento.tipo_evento == 'DESPESA' %}<i class="fa-solid fa-dollar-sign"></i>
-                        {% elif evento.tipo_evento == 'ANEXO' %}<i class="fa-solid fa-paperclip"></i>
-                        {% else %}<i class="fa-solid fa-circle-info"></i>
-                        {% endif %}
-                    </div>
-
-                    <!-- Conteúdo do Evento -->
-                    <div class="timeline-content">
-                        <h4>{{ evento.get_tipo_evento_display }}</h4>
-                        <div class="fluxo-descricao">
-                            {{ evento.descricao|linebreaksbr }}
-                        </div>
-                        <p class="fluxo-meta">
-                            {% if evento.autor %}
-                                por <strong>{{ evento.autor.get_full_name|default:evento.autor.username }}</strong>
-                            {% else %}
-                                por <strong>Sistema</strong>
+        <h3 class="section-title">Linha do Tempo Completa do Caso</h3>
+        <div class="fluxo-timeline">
+                {% for evento in fluxo_interno %}
+                    <div class="timeline-item">
+                        <div class="timeline-icon">
+                            {% if evento.tipo_evento == 'CRIACAO_CASO' %}<i class="fa-solid fa-star"></i>
+                            {% elif evento.tipo_evento == 'MUDANCA_FASE_WF' %}<i class="fa-solid fa-route"></i>
+                            {% elif evento.tipo_evento == 'ACAO_WF_CONCLUIDA' %}<i class="fa-solid fa-check-double"></i>
+                            {% elif evento.tipo_evento == 'ANDAMENTO' %}<i class="fa-solid fa-pencil"></i>
+                            {% elif evento.tipo_evento == 'TIMESHEET' %}<i class="fa-solid fa-clock"></i>
+                            {% elif evento.tipo_evento == 'ACORDO' %}<i class="fa-solid fa-handshake"></i>
+                            {% elif evento.tipo_evento == 'DESPESA' %}<i class="fa-solid fa-dollar-sign"></i>
+                            {% elif evento.tipo_evento == 'ANEXO' %}<i class="fa-solid fa-paperclip"></i>
+                            {% else %}<i class="fa-solid fa-circle-info"></i>
                             {% endif %}
-                            em {{ evento.data_evento|date:"d/m/Y H:i" }}
-                        </p>
+                        </div>
+                        <div class="timeline-content">
+                            <h4>{{ evento.get_tipo_evento_display }}</h4>
+                            <div class="fluxo-descricao">
+                                {{ evento.descricao|linebreaksbr }}
+                            </div>
+                            <p class="fluxo-meta">
+                                {% if evento.autor %}
+                                    por <strong>{{ evento.autor.get_full_name|default:evento.autor.username }}</strong>
+                                {% else %}
+                                    por <strong>Sistema</strong>
+                                {% endif %}
+                                em {{ evento.data_evento|date:"d/m/Y H:i" }}
+                            </p>
+                        </div>
                     </div>
-                </div>
-            {% empty %}
-                <div class="empty-state">
-                    <p>Nenhum evento registrado no fluxo interno deste caso.</p>
-                </div>
-            {% endfor %}
-        </div>
+                {% empty %}
+                    <div class="empty-state">
+                        <p>Nenhum evento registrado no fluxo interno deste caso.</p>
+                    </div>
+                {% endfor %}
+            </div>
     </div>
 
     <!-- Aba 5: Andamentos -->
@@ -405,15 +464,12 @@
         </div>
     </div>
 
-        <!-- Aba 8: Despesas (VERSÃO CORRIGIDA E ORGANIZADA) -->
+    <!-- Aba 8: Despesas -->
     <div id="despesas" class="tab-content">
-        
-        <!-- Formulário para Registrar Nova Despesa -->
         <div class="form-section">
             <h3>Registrar Nova Despesa</h3>
             <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
                 {% csrf_token %}
-                
                 <div class="form-row">
                     <div class="form-group">
                         {{ form_despesa.data_despesa.label_tag }}
@@ -424,35 +480,25 @@
                         {{ form_despesa.valor }}
                     </div>
                 </div>
-                
                 <div class="form-group">
                     {{ form_despesa.descricao.label_tag }}
                     {{ form_despesa.descricao }}
                 </div>
-                
                 <div class="form-group">
                     {{ form_despesa.advogado.label_tag }}
                     {{ form_despesa.advogado }}
                 </div>
-                
                 <button type="submit" name="submit_despesa" class="btn-submit despesa">Salvar Despesa</button>
             </form>
         </div>
-        
-        <!-- Box de Resumo do Total de Despesas -->
         <div class="summary-box">
             <h3>Total de Despesas</h3>
-            <p>{{ total_despesas|currency }}</p> {# Usando o filtro de moeda aqui também #}
+            <p>{{ total_despesas|currency }}</p>
         </div>
-        
         <hr>
-        
-        <!-- Histórico de Despesas -->
         <div class="list-toolbar">
             <h3>Histórico de Despesas</h3>
-            {# Adicione aqui botões de exportação, se desejar #}
         </div>
-        
         <table class="data-table">
             <thead>
                 <tr>
@@ -469,12 +515,7 @@
                     <td>{{ despesa.data_despesa|date:"d/m/Y" }}</td>
                     <td>{% if despesa.advogado %}{{ despesa.advogado.get_full_name|default:despesa.advogado.username }}{% else %}-{% endif %}</td>
                     <td>{{ despesa.descricao }}</td>
-                    
-                    <!-- ============================================================================== -->
-                    <!-- A CORREÇÃO DA FORMATAÇÃO DA MOEDA ESTÁ AQUI                                  -->
-                    <!-- ============================================================================== -->
                     <td>{{ despesa.valor|currency }}</td>
-                    
                     <td class="actions">
                         <a href="{% url 'casos:editar_despesa' pk=despesa.pk %}" class="action-btn btn-edit">Editar</a>
                     </td>
@@ -494,7 +535,6 @@
         {% if caso.sharepoint_folder_id %}
             <div class="anexos-container">
                 <div id="file-list-panel">
-                    <!-- O conteúdo (lista_arquivos.html) será incluído aqui -->
                     {% include 'casos/partials/lista_arquivos.html' %}
                 </div>
                 <div id="preview-panel">
