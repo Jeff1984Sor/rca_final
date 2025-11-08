@@ -2,610 +2,2050 @@
 {% load currency_tags %}
 {% load file_icons %}
 
-
-{% block title %}Detalhes do Caso #{{ caso.id }}{% endblock %}
+{% block title %}Caso #{{ caso.id }} | {{ caso.titulo }}{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* ===================================================================== */
-    /* === CSS MODERNO E COMPLETO PARA A TELA DE DETALHES DO CASO === */
-    /* ===================================================================== */
+/* ==================================================================== */
+/* 🎨 DESIGN SYSTEM - VARIÁVEIS GLOBAIS */
+/* ==================================================================== */
+:root {
+    /* Cores Principais */
+    --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --primary-solid: #667eea;
+    --primary-dark: #5568d3;
+    
+    --success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --success-solid: #10b981;
+    
+    --warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --warning-solid: #f59e0b;
+    
+    --danger: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    --danger-solid: #ef4444;
+    
+    --info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    --info-solid: #0ea5e9;
+    
+    /* Tons de Cinza */
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --gray-500: #64748b;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1e293b;
+    --gray-900: #0f172a;
+    
+    /* Sombras */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    
+    /* Transições */
+    --transition-fast: 150ms ease-in-out;
+    --transition-base: 250ms ease-in-out;
+    --transition-slow: 350ms ease-in-out;
+}
 
-    :root {
-        --primary-color: #3b82f6; /* Azul vibrante */
-        --warning-color: #f59e0b; /* Amarelo/Laranja */
-        --danger-color: #ef4444; /* Vermelho */
-        --success-color: #10b981; /* Verde */
-        --info-color: #0ea5e9; /* Ciano */
-        
-        --text-dark: #1e293b; /* Quase preto */
-        --text-medium: #64748b;
-        --text-light: #94a3b8;
-        
-        --bg-main: #f1f5f9; /* Fundo principal da página */
-        --bg-card: #ffffff; /* Fundo dos cards */
-        --bg-subtle: #f8fafc; /* Fundo de elementos internos, como cabeçalhos */
-        --border-color: #e2e8f0;
+/* ==================================================================== */
+/* 🎯 RESET E BASE */
+/* ==================================================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-attachment: fixed;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--gray-800);
+    line-height: 1.6;
+}
+
+/* ==================================================================== */
+/* 💎 HEADER HERO - GLASSMORPHISM */
+/* ==================================================================== */
+.hero-header {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 24px;
+    padding: 32px 40px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-xl), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--primary);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.hero-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 32px;
+}
+
+.hero-left {
+    flex: 1;
+}
+
+.case-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--primary);
+    color: white;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-md);
+    animation: fadeInDown 0.5s ease-out;
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.hero-title {
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: var(--gray-900);
+    margin-bottom: 12px;
+    line-height: 1.2;
+    animation: fadeIn 0.6s ease-out 0.1s both;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.hero-meta {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--gray-600);
+    font-size: 0.95rem;
+}
+
+.meta-item i {
+    color: var(--primary-solid);
+}
+
+.meta-item strong {
+    color: var(--gray-800);
+    font-weight: 600;
+}
+
+/* ==================================================================== */
+/* ⏰ PRAZO CARD - DESTAQUE VISUAL */
+/* ==================================================================== */
+.hero-prazo-card {
+    min-width: 280px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 24px;
+    border-radius: 20px;
+    color: white;
+    box-shadow: var(--shadow-xl);
+    position: relative;
+    overflow: hidden;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.hero-prazo-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: rotate 15s linear infinite;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.prazo-label {
+    font-size: 0.875rem;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.prazo-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    position: relative;
+    z-index: 1;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.prazo-status {
+    font-size: 0.8rem;
+    opacity: 0.8;
+    margin-top: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.btn-edit-hero {
+    background: white;
+    color: var(--primary-solid);
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--shadow-lg);
+    transition: all var(--transition-base);
+    position: relative;
+    z-index: 1;
+    margin-top: 16px;
+}
+
+.btn-edit-hero:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-xl);
+    color: var(--primary-dark);
+}
+
+/* ==================================================================== */
+/* 🎯 NAVEGAÇÃO POR ABAS - MODERNA */
+/* ==================================================================== */
+.tabs-container {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 8px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.tabs-container::-webkit-scrollbar {
+    display: none;
+}
+
+.tab-btn {
+    background: transparent;
+    border: none;
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+}
+
+.tab-btn i {
+    font-size: 1.1rem;
+}
+
+.tab-btn:hover {
+    color: var(--primary-solid);
+    background: var(--gray-50);
+}
+
+.tab-btn.active {
+    background: var(--primary);
+    color: white;
+    box-shadow: var(--shadow-md);
+}
+
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40%;
+    height: 3px;
+    background: white;
+    border-radius: 3px;
+}
+
+/* ==================================================================== */
+/* 📦 CONTEÚDO DAS ABAS */
+/* ==================================================================== */
+.tab-content {
+    display: none;
+    animation: fadeInUp 0.4s ease-out;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==================================================================== */
+/* 🎴 CARDS E SECTIONS */
+/* ==================================================================== */
+.card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 32px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: all var(--transition-base);
+}
+
+.card:hover {
+    box-shadow: var(--shadow-xl);
+    transform: translateY(-2px);
+}
+
+.card-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.card-title i {
+    background: var(--primary);
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+}
+
+/* ==================================================================== */
+/* 📊 GRID DE DETALHES */
+/* ==================================================================== */
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.detail-card {
+    background: var(--gray-50);
+    padding: 20px;
+    border-radius: 16px;
+    border: 2px solid var(--gray-200);
+    transition: all var(--transition-base);
+}
+
+.detail-card:hover {
+    border-color: var(--primary-solid);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-3px);
+}
+
+.detail-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--gray-500);
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.detail-label i {
+    color: var(--primary-solid);
+}
+
+.detail-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    word-break: break-word;
+}
+
+/* ==================================================================== */
+/* 🎯 STATUS BADGES */
+/* ==================================================================== */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.success {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+}
+
+.status-badge.warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.status-badge.info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
+
+/* ==================================================================== */
+/* 🎬 AÇÕES E WORKFLOW - TIMELINE */
+/* ==================================================================== */
+.timeline {
+    position: relative;
+    padding-left: 40px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--primary-solid) 0%, transparent 100%);
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 40px;
+    animation: slideIn 0.5s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.timeline-icon {
+    position: absolute;
+    left: -28px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid var(--primary-solid);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-solid);
+    font-size: 0.9rem;
+    box-shadow: var(--shadow-md);
+    z-index: 1;
+}
+
+.timeline-item.active .timeline-icon {
+    background: var(--primary);
+    color: white;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+    }
+    50% {
+        box-shadow: 0 0 0 15px rgba(102, 126, 234, 0);
+    }
+}
+
+.timeline-content {
+    background: white;
+    padding: 20px 24px;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    border-left: 4px solid var(--primary-solid);
+}
+
+.timeline-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 8px;
+}
+
+.timeline-meta {
+    font-size: 0.85rem;
+    color: var(--gray-500);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* ==================================================================== */
+/* 📋 TABELAS MODERNAS */
+/* ==================================================================== */
+.modern-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+}
+
+.modern-table thead th {
+    background: var(--gray-100);
+    padding: 16px;
+    text-align: left;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    color: var(--gray-600);
+    border: none;
+}
+
+.modern-table tbody tr {
+    background: white;
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-base);
+}
+
+.modern-table tbody tr:hover {
+    box-shadow: var(--shadow-md);
+    transform: scale(1.01);
+}
+
+.modern-table tbody td {
+    padding: 16px;
+    border: none;
+}
+
+.modern-table tbody tr td:first-child {
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+}
+
+.modern-table tbody tr td:last-child {
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+/* ==================================================================== */
+/* 🔘 BOTÕES MODERNOS */
+/* ==================================================================== */
+.btn {
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    box-shadow: var(--shadow-md);
+}
+
+.btn:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn:active {
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-success {
+    background: var(--success);
+    color: white;
+}
+
+.btn-warning {
+    background: var(--warning);
+    color: white;
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: white;
+}
+
+.btn-info {
+    background: var(--info);
+    color: white;
+}
+
+/* ==================================================================== */
+/* 🎨 FORMULÁRIOS MODERNOS */
+/* ==================================================================== */
+.form-group {
+    margin-bottom: 24px;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--gray-700);
+    margin-bottom: 8px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid var(--gray-200);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all var(--transition-base);
+    background: white;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-solid);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+/* ==================================================================== */
+/* 🎨 ESTILOS DOS INPUTS DOS FORMS (Complemento) */
+/* ==================================================================== */
+.form-control,
+input[type="text"],
+input[type="date"],
+input[type="number"],
+input[type="email"],
+input[type="time"],
+select,
+textarea {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid var(--gray-200);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all var(--transition-base);
+    background: white;
+    font-family: inherit;
+}
+
+textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 40px;
+}
+
+input[type="text"]:focus,
+input[type="date"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="time"]:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--primary-solid);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    background: white;
+}
+
+input[type="text"]:hover,
+input[type="date"]:hover,
+input[type="number"]:hover,
+select:hover,
+textarea:hover {
+    border-color: var(--gray-300);
+}
+
+/* Placeholder */
+::placeholder {
+    color: var(--gray-400);
+    opacity: 1;
+}
+
+/* ==================================================================== */
+/* 🎴 ITEM CARDS (para andamentos antigos se tiver) */
+/* ==================================================================== */
+.item-card {
+    background: white;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: all var(--transition-base);
+}
+
+.item-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-3px);
+}
+
+.item-card-header {
+    background: var(--gray-50);
+    padding: 20px 24px;
+    border-bottom: 2px solid var(--gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.item-card-header strong {
+    font-size: 1.1rem;
+    color: var(--gray-900);
+}
+
+.item-card-header small {
+    display: block;
+    margin-top: 4px;
+    color: var(--gray-600);
+    font-size: 0.85rem;
+}
+
+.item-card-body {
+    padding: 24px;
+}
+
+/* ==================================================================== */
+/* 📊 LISTA DE ARQUIVOS (SharePoint) */
+/* ==================================================================== */
+.file-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.grid-item {
+    position: relative;
+}
+
+.grid-item-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 12px;
+    background: white;
+    border-radius: 16px;
+    text-decoration: none;
+    color: var(--gray-800);
+    border: 2px solid var(--gray-200);
+    transition: all var(--transition-base);
+    min-height: 140px;
+    justify-content: center;
+}
+
+.grid-item-link:hover {
+    border-color: var(--primary-solid);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-5px);
+}
+
+.icon-container {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+    color: var(--primary-solid);
+}
+
+.icon-container .fa-folder {
+    color: var(--warning-solid);
+}
+
+.item-name {
+    font-size: 0.85rem;
+    text-align: center;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: var(--gray-700);
+    font-weight: 500;
+}
+
+.delete-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--danger-solid);
+    color: white;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    opacity: 0;
+    transition: all var(--transition-base);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-md);
+}
+
+.grid-item:hover .delete-btn {
+    opacity: 1;
+}
+
+.delete-btn:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-lg);
+}
+
+/* ==================================================================== */
+/* 📤 UPLOAD FORM */
+/* ==================================================================== */
+.upload-form-container {
+    background: white;
+    padding: 24px;
+    border-radius: 16px;
+    border: 2px dashed var(--gray-300);
+    margin-bottom: 24px;
+    transition: all var(--transition-base);
+}
+
+.upload-form-container:hover {
+    border-color: var(--primary-solid);
+    background: var(--gray-50);
+}
+
+.upload-form-container form {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.upload-label {
+    background: var(--primary);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-base);
+}
+
+.upload-label:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.file-list-preview {
+    flex: 1;
+    font-size: 0.9rem;
+    color: var(--gray-600);
+    font-style: italic;
+}
+
+input[type="file"] {
+    display: none;
+}
+
+/* ==================================================================== */
+/* 🎯 TOOLBAR (Breadcrumbs e Ações) */
+/* ==================================================================== */
+.file-browser-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 24px;
+    padding: 16px 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+}
+
+.folder-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--gray-700);
+    font-weight: 600;
+}
+
+.back-button {
+    text-decoration: none;
+    color: var(--primary-solid);
+    font-size: 1.5rem;
+    transition: all var(--transition-base);
+}
+
+.back-button:hover {
+    color: var(--primary-dark);
+    transform: translateX(-3px);
+}
+
+.new-folder-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.new-folder-form input[type="text"] {
+    padding: 10px 14px;
+    width: 200px;
+}
+
+/* ==================================================================== */
+/* 📊 PREVIEW PANEL */
+/* ==================================================================== */
+#preview-panel {
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#preview-panel iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 16px;
+}
+
+/* ==================================================================== */
+/* 🎭 ANIMAÇÕES DE LOADING */
+/* ==================================================================== */
+.loading-shimmer {
+    background: linear-gradient(
+        90deg,
+        var(--gray-200) 0%,
+        var(--gray-100) 50%,
+        var(--gray-200) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer-animation 1.5s infinite;
+}
+
+@keyframes shimmer-animation {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* ==================================================================== */
+/* 🔔 NOTIFICAÇÕES/ALERTS */
+/* ==================================================================== */
+.alert {
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+}
+
+.alert-success {
+    background: rgba(16, 185, 129, 0.1);
+    border: 2px solid var(--success-solid);
+    color: #065f46;
+}
+
+.alert-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border: 2px solid var(--warning-solid);
+    color: #92400e;
+}
+
+.alert-danger {
+    background: rgba(239, 68, 68, 0.1);
+    border: 2px solid var(--danger-solid);
+    color: #991b1b;
+}
+
+.alert-info {
+    background: rgba(14, 165, 233, 0.1);
+    border: 2px solid var(--info-solid);
+    color: #075985;
+}
+
+/* ==================================================================== */
+/* 🎨 SCROLLBAR CUSTOMIZADO */
+/* ==================================================================== */
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--gray-100);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 10px;
+    border: 3px solid var(--gray-100);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+}
+
+/* ==================================================================== */
+/* 🎯 AJUSTES FINAIS DE PARCELAS (Acordos) */
+/* ==================================================================== */
+.parcela-quitada {
+    background: rgba(16, 185, 129, 0.1) !important;
+    color: #065f46;
+}
+
+.parcela-quitada td {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+/* Hover em linha de parcela */
+.modern-table tbody tr {
+    cursor: pointer;
+}
+
+.modern-table tbody tr.parcela-quitada:hover {
+    background: rgba(16, 185, 129, 0.15) !important;
+}
+
+/* ==================================================================== */
+/* 📊 SUMMARY BOXES */
+/* ==================================================================== */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
+}
+
+.summary-box {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 24px;
+    border-radius: 20px;
+    color: white;
+    box-shadow: var(--shadow-xl);
+    position: relative;
+    overflow: hidden;
+}
+
+.summary-box::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 150%;
+    height: 150%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1), transparent);
+}
+
+.summary-label {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.summary-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    position: relative;
+    z-index: 1;
+}
+
+/* ==================================================================== */
+/* 🎭 EMPTY STATES */
+/* ==================================================================== */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--gray-500);
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: var(--gray-300);
+    margin-bottom: 20px;
+}
+
+.empty-state h3 {
+    font-size: 1.25rem;
+    margin-bottom: 8px;
+    color: var(--gray-700);
+}
+
+/* ==================================================================== */
+/* 📱 RESPONSIVIDADE */
+/* ==================================================================== */
+@media (max-width: 768px) {
+    .hero-content {
+        flex-direction: column;
     }
     
-    /* ============================================================================== */
-    /* === NOVOS ESTILOS PARA O CABEÇALHO === */
-    /* ============================================================================== */
-    .case-header-actions {
-        display: flex;
-        align-items: center; /* Alinha o prazo e o botão verticalmente */
-        gap: 24px; /* Espaço entre o prazo e o botão */
+    .hero-prazo-card {
+        width: 100%;
     }
-
-    .prazo-header-destaque {
-        text-align: right;
-    }
-    .prazo-header-destaque small {
-        display: block;
-        font-size: 0.8rem;
-        color: var(--text-medium);
-        text-transform: uppercase;
-        font-weight: 600;
-        line-height: 1;
-    }
-    .prazo-header-destaque .prazo-data {
-        font-size: 1.75rem; /* Aumenta o tamanho da fonte */
-        font-weight: 700;
-        color: var(--danger-color); /* Usa a cor vermelha que definimos */
-        line-height: 1.2;
-    }
-    /* ============================================================================== */
-    /* === FIM DOS NOVOS ESTILOS === */
-    /* ============================================================================== */
-
-
-    /* ----- ESTRUTURA GERAL ----- */
-    h1, h2, h3, h4, h5, h6 { color: var(--text-dark); }
-    hr { border: none; border-top: 1px solid var(--border-color); margin: 30px 0; }
-
-    /* ----- CABEÇALHO DO CASO ----- */
-    .case-header {
-        background-color: var(--bg-card);
-        padding: 24px 32px;
-        margin-bottom: 24px;
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
-    }
-    .case-header-content { display: flex; justify-content: space-between; align-items: center; }
-    .case-header h1 { font-size: 2rem; font-weight: 700; }
-    .case-header h1 span { color: var(--primary-color); }
-    .case-header p { font-size: 1.1rem; color: var(--text-medium); margin-top: 4px; }
-    .btn-edit-header { 
-        background-color: var(--warning-color); color: white; padding: 12px 24px; text-decoration: none;
-        border-radius: 8px; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.2s;
-    }
-    .btn-edit-header:hover { background-color: #d97706; transform: translateY(-2px); box-shadow: 0 7px 14px rgba(0,0,0,0.1); }
-
-    /* ----- NAVEGAÇÃO POR ABAS ----- */
-    .tab-nav { border-bottom: 1px solid var(--border-color); margin-bottom: 24px; }
-    .tab-nav button { background-color: transparent; border: none; padding: 15px 20px; cursor: pointer; font-size: 1rem; margin-bottom: -1px; color: var(--text-medium); font-weight: 600; }
-    .tab-nav button.active { border-bottom: 3px solid var(--primary-color); color: var(--primary-color); }
     
-    .tab-content { display: none; }
-    .js-enabled .tab-content:not(.active) { display: none; }
-    .tab-content.active { display: block; animation: fadeIn 0.4s ease-in-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* ----- COMPONENTES REUTILIZÁVEIS ----- */
-    .form-section, .list-section { background-color: var(--bg-card); border: 1px solid var(--border-color); padding: 25px 30px; margin-bottom: 25px; border-radius: 12px; }
-    .section-title { font-size: 1.5rem; color: var(--text-dark); margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
-    .form-row { display: flex; flex-wrap: wrap; gap: 20px; }
-    .form-group { flex: 1; min-width: 200px; margin-bottom: 15px; }
-    .form-group label { font-weight: 600; display: block; margin-bottom: 8px; font-size: 0.9em; color: #486581; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #dce4f2; box-sizing: border-box; font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s; background-color: var(--bg-subtle); }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { background-color: white; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(59,130,246,.25); outline: none; }
-    .btn-submit { padding: 12px 24px; font-size: 1rem; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: opacity 0.2s; }
-    .btn-submit:hover { opacity: 0.85; }
-    .list-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .list-toolbar h3 { margin: 0; font-size: 1.5em; }
-    .btn-export { background-color: var(--info-color); }
-    .btn-pdf { background-color: var(--danger-color); }
-
-    .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.95rem; }
-    .data-table th, .data-table td { border-bottom: 1px solid var(--border-color); padding: 15px; text-align: left; }
-    .data-table thead th { color: var(--text-medium); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
-    .data-table tbody tr:hover { background-color: var(--bg-subtle); }
-    td.actions { white-space: nowrap; text-align: right; }
-    .action-btn { padding: 6px 12px; font-size: 0.85em; text-decoration: none; border-radius: 5px; color: white; display: inline-block; text-align: center; transition: opacity 0.2s; font-weight: 500; }
-    .action-btn:hover { opacity: 0.8; }
-    .btn-edit { background-color: var(--warning-color); color: white; }
-    .btn-delete { background-color: var(--danger-color); color: white; margin-left: 5px; }
-
-    .summary-box { text-align: left; padding: 24px; background-color: var(--bg-subtle); border-radius: 8px; border-left: 4px solid var(--primary-color); }
-    .summary-box h3 { font-size: 1rem; color: var(--text-medium); text-transform: uppercase; font-weight: 600; }
-    .summary-box p { font-size: 2.5rem; color: var(--text-dark); font-weight: 700; }
-
-    /* ----- ESTILOS ESPECÍFICOS POR ABA ----- */
-    .detail-item {
-        display: flex; /* Ativa o Flexbox */
-        align-items: baseline; /* Alinha pela base do texto */
-        gap: 8px; /* Cria um espaço entre o rótulo e o valor */
-        margin-bottom: 10px;
+    .tabs-container {
+        flex-wrap: nowrap;
+        overflow-x: auto;
     }
-    .detail-item label { 
-        font-size: 0.85rem; 
-        color: var(--text-light); /* Cinza claro, como está */
-        text-transform: uppercase; 
-        letter-spacing: 0.5px;
-        flex-shrink: 0; /* Impede que o rótulo encolha */
-    }
-    .detail-item span { 
-        font-size: 1rem; 
-        color: var(--text-dark); /* Texto escuro, quase preto */
-        font-weight: 500; 
-    }
-
-    .item-card { border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 20px; }
-    .item-card-header { background-color: var(--bg-subtle); padding: 15px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-    .item-card-header-info strong { font-size: 1.1em; color: var(--text-dark); }
-    .item-card-header-info small { font-size: 0.85em; color: var(--text-medium); }
-    .andamento-body { padding: 20px; white-space: pre-wrap; line-height: 1.6; }
-    .acordo-body { padding: 0; }
-    .acordo-body table tbody tr { cursor: pointer; }
-    .parcela-quitada { background-color: #d1fae5 !important; color: #065f46; text-decoration: line-through; }
-
-    .despesa { background-color: var(--warning-color); }
     
-    /* Anexos */
-    .anexos-container { display: flex; gap: 20px; min-height: 60vh; }
-    #file-list-panel { flex: 1; padding: 20px; background: var(--bg-subtle); border-radius: 8px; border: 1px solid var(--border-color); }
-    #preview-panel { flex: 1; border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: center; background-color: var(--bg-subtle); }
-    .preview-placeholder { text-align: center; color: #cbd5e1; }
-    .preview-placeholder i { font-size: 4em; }
-    #preview-panel iframe { width: 100%; height: 100%; border: none; border-radius: 8px;}
-    .file-browser-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 20px; padding: 15px; background: white; border-radius: 8px; }
-    .folder-nav { display: flex; align-items: center; }
-    .back-button { margin-right: 15px; text-decoration: none; color: #555; font-size: 1.2em; }
-    .new-folder-form { display: flex; align-items: center; gap: 5px; }
-    .new-folder-form input[type="text"] { padding: 8px; }
-    .upload-form-container { padding: 15px; background-color: #f8fafc; border-radius: 8px; border: 2px dashed #dce4f2; margin-bottom: 20px; }
-    .upload-form-container form { display: flex; align-items: center; gap: 15px; }
-    input[type="file"] { display: none; }
-    .upload-label { background-color: #6c757d; color: white; padding: 10px 15px; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
-    .upload-label:hover { background-color: #5a6268; }
-    .file-list-preview { font-size: 0.9em; color: #555; flex-grow: 1; }
-    .progress-container { flex-grow: 1; display: flex; align-items: center; gap: 10px; }
-    #progress-bar { width: 100%; height: 10px; }
+    .details-grid {
+        grid-template-columns: 1fr;
+    }
+}
 
-    .file-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 15px;
+/* ==================================================================== */
+/* ✨ ANIMAÇÕES ESPECIAIS */
+/* ==================================================================== */
+@keyframes gradient-shift {
+    0% {
+        background-position: 0% 50%;
     }
-    .grid-item { position: relative; text-align: center; }
-    .grid-item-link { display: flex; flex-direction: column; align-items: center; padding: 15px 10px; background-color: #f8fafc; border-radius: 8px; text-decoration: none; color: #334e68; border: 1px solid #eee; transition: all 0.2s ease-in-out; }
-    .grid-item-link:hover { background-color: #e9ecef; border-color: #007bff; transform: translateY(-5px); }
-    .icon-container { font-size: 2.5em; margin-bottom: 10px; color: #007bff; }
-    .icon-container .fa-folder { color: #f59e0b; }
-    .item-name { font-size: 0.85em; word-break: break-all; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: 2.5em; }
-    .delete-btn { position: absolute; top: 5px; right: 5px; background: none; border: none; color: #dc3545; cursor: pointer; font-size: 0.9em; opacity: 0; transition: opacity 0.2s; }
-    .grid-item:hover .delete-btn { opacity: 1; }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
 
-    .fase-atual-nome { color: var(--primary-color); }
-    .acoes-section { margin-bottom: 30px; }
-    .section-title { font-size: 1.2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 20px; color: var(--text-medium); text-transform: uppercase; letter-spacing: 1px; }
-    .acao-pendente { border-left: 4px solid var(--warning-color); }
-    .icon-pendente { color: var(--warning-color); }
-    .acao-concluida { border-left: 4px solid var(--success-color); }
-    .icon-concluida { color: var(--success-color); }
-    .concluida-info { margin-left: auto; font-size: 0.85em; color: var(--text-medium); }
-    .comentario-concluido { background-color: var(--bg-subtle); border-left: 3px solid var(--border-color); padding: 10px; margin-top: 10px; font-size: 0.9em; white-space: pre-wrap; border-radius: 4px; }
-    .btn-sim { background-color: var(--success-color); }
-    .btn-nao { background-color: var(--danger-color); }
-    .empty-state { padding: 40px; text-align: center; color: var(--text-medium); border: 2px dashed var(--border-color); border-radius: 8px; }
-    .workflow-timeline { border-left: 3px solid var(--border-color); }
-    .timeline-icon { border: 4px solid var(--bg-main); left: -18.5px; }
-    .fase-atual .timeline-icon { background-color: var(--primary-color); }
+.animated-gradient {
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
+}
 
-        /* Estilos para a Aba de Fluxo Interno */
-    .fluxo-timeline {
-        position: relative;
-        padding-left: 30px;
-        border-left: 3px solid #e9ecef;
-    }
-    /* Reutiliza o .timeline-item e .timeline-icon do workflow */
-    .fluxo-timeline .timeline-content h4 {
-        margin: 0 0 8px;
-        font-size: 1.1em;
-        color: var(--text-dark);
-    }
-    .fluxo-descricao {
-        background-color: var(--bg-subtle);
-        padding: 10px 15px;
-        border-radius: 5px;
-        margin-bottom: 8px;
-        white-space: pre-wrap;
-    }
-    .fluxo-meta {
-        font-size: 0.85em;
-        color: var(--text-medium);
-    }
-    .fluxo-timeline .timeline-icon {
-        background-color: var(--primary-color);
-    }
+/* Loading Spinner */
+.spinner {
+    border: 3px solid var(--gray-200);
+    border-top: 3px solid var(--primary-solid);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
 </style>
 {% endblock %}
 
 {% block content %}
-    <!-- CABEÇALHO DO CASO (ATUALIZADO) -->
-    <div class="card case-header">
-        <div class="case-header-content">
-            <!-- Lado Esquerdo: Título e Informações -->
-            <div>
-                <h1><span>#{{ caso.id }}</span> - {{ caso.titulo|default:"(Caso sem título)" }}</h1>
-                <p><strong>Cliente:</strong> {{ caso.cliente.nome }} | <strong>Produto:</strong> {{ caso.produto.nome }}</p>
+<!-- 💎 HERO HEADER -->
+<div class="hero-header">
+    <div class="hero-content">
+        <div class="hero-left">
+            <div class="case-badge animated-gradient">
+                <i class="fa-solid fa-folder-open"></i>
+                Caso #{{ caso.id }}
             </div>
-            <!-- Lado Direito: Ações (Prazo + Botão) -->
-            <div class="case-header-actions">
-                {% if caso.prazo_final_calculado %}
-                    <div class="prazo-header-destaque">
-                        <small>Prazo Final</small>
-                        <div class="prazo-data">
-                            {{ caso.prazo_final_calculado|date:"d/m/Y" }}
+            <h1 class="hero-title">{{ caso.titulo|default:"Caso sem título" }}</h1>
+            
+            <div class="hero-meta">
+                <div class="meta-item">
+                    <i class="fa-solid fa-building"></i>
+                    <strong>{{ caso.cliente.nome }}</strong>
+                </div>
+                <div class="meta-item">
+                    <i class="fa-solid fa-box"></i>
+                    <strong>{{ caso.produto.nome }}</strong>
+                </div>
+                <div class="meta-item">
+                    <i class="fa-solid fa-calendar"></i>
+                    {{ caso.data_entrada|date:"d/m/Y" }}
+                </div>
+                <div class="meta-item">
+                    <span class="status-badge success">
+                        <i class="fa-solid fa-circle-check"></i>
+                        {{ caso.get_status_display }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <div>
+            {% if caso.prazo_final_calculado %}
+            <div class="hero-prazo-card">
+                <div class="prazo-label">
+                    <i class="fa-solid fa-clock"></i>
+                    Prazo Final
+                </div>
+                <div class="prazo-value">
+                    {{ caso.prazo_final_calculado|date:"d/m" }}
+                </div>
+                <div class="prazo-status">
+                    {{ caso.prazo_final_calculado|date:"Y" }}
+                </div>
+                <a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="btn-edit-hero">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    Editar Caso
+                </a>
+            </div>
+            {% else %}
+            <a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="btn btn-primary">
+                <i class="fa-solid fa-pen-to-square"></i>
+                Editar Caso
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 🎯 NAVEGAÇÃO TABS -->
+<div class="tabs-container">
+    <button class="tab-btn" data-tab="detalhes">
+        <i class="fa-solid fa-circle-info"></i>
+        Detalhes
+    </button>
+    <button class="tab-btn" data-tab="acoes">
+        <i class="fa-solid fa-list-check"></i>
+        Ações
+    </button>
+    <button class="tab-btn" data-tab="workflow">
+        <i class="fa-solid fa-diagram-project"></i>
+        Workflow
+    </button>
+    <button class="tab-btn" data-tab="fluxo-interno">
+        <i class="fa-solid fa-timeline"></i>
+        Fluxo
+    </button>
+    <button class="tab-btn" data-tab="andamentos">
+        <i class="fa-solid fa-file-lines"></i>
+        Andamentos
+    </button>
+    <button class="tab-btn" data-tab="timesheet">
+        <i class="fa-solid fa-clock"></i>
+        Timesheet
+    </button>
+    <button class="tab-btn" data-tab="acordos">
+        <i class="fa-solid fa-handshake"></i>
+        Acordos
+    </button>
+    <button class="tab-btn" data-tab="despesas">
+        <i class="fa-solid fa-dollar-sign"></i>
+        Despesas
+    </button>
+    <button class="tab-btn" data-tab="anexos">
+        <i class="fa-solid fa-paperclip"></i>
+        Anexos
+    </button>
+</div>
+
+<!-- 📋 ABA: DETALHES -->
+<div id="detalhes" class="tab-content">
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fa-solid fa-circle-info"></i>
+            Informações do Caso
+        </h2>
+        
+        <div class="details-grid">
+            <div class="detail-card">
+                <div class="detail-label">
+                    <i class="fa-solid fa-flag"></i>
+                    Status
+                </div>
+                <div class="detail-value">{{ caso.get_status_display }}</div>
+            </div>
+            
+            <div class="detail-card">
+                <div class="detail-label">
+                    <i class="fa-solid fa-calendar-days"></i>
+                    Data Entrada
+                </div>
+                <div class="detail-value">{{ caso.data_entrada|date:"d/m/Y" }}</div>
+            </div>
+            
+            {% if caso.valor_apurado %}
+            <div class="detail-card">
+                <div class="detail-label">
+                    <i class="fa-solid fa-money-bill-wave"></i>
+                    Valor Apurado
+                </div>
+                <div class="detail-value">{{ caso.valor_apurado|currency }}</div>
+            </div>
+            {% endif %}
+            
+            <div class="detail-card">
+                <div class="detail-label">
+                    <i class="fa-solid fa-route"></i>
+                    Fase Atual
+                </div>
+                <div class="detail-value">{{ caso.fase_atual_wf.nome|default:"Não iniciado" }}</div>
+            </div>
+            
+            <div class="detail-card">
+                <div class="detail-label">
+                    <i class="fa-solid fa-user-tie"></i>
+                    Responsável
+                </div>
+                <div class="detail-value">
+                    {% if caso.advogado_responsavel %}
+                        {{ caso.advogado_responsavel.get_full_name|default:caso.advogado_responsavel.username }}
+                    {% else %}
+                        Não atribuído
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Campos Personalizados -->
+    {% if valores_personalizados %}
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fa-solid fa-sliders"></i>
+            Dados Adicionais
+        </h2>
+        
+        <div class="details-grid">
+            {% for valor in valores_personalizados %}
+                {% if not valor.instancia_grupo|default_if_none:'' and not valor.instancia_grupo_id|default_if_none:'' %}
+                    <div class="detail-card">
+                        <div class="detail-label">
+                            <i class="fa-solid fa-tag"></i>
+                            {{ valor.campo.nome_campo }}
+                        </div>
+                        <div class="detail-value">
+                            {% if valor.campo.tipo_campo == 'DATA' %}
+                                {% if valor.valor %}
+                                    {{ valor.valor|date:"d/m/Y" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            {% elif valor.campo.tipo_campo == 'MOEDA' %}
+                                {{ valor.valor|currency }}
+                            {% else %}
+                                {{ valor.valor|default:"-" }}
+                            {% endif %}
                         </div>
                     </div>
                 {% endif %}
-                <div>
-                    <a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="btn-edit-header">Editar Caso</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- NAVEGAÇÃO POR ABAS -->
-    <div class="tab-nav">
-        <button class="tab-button" data-tab="detalhes">Detalhes</button>
-        <button class="tab-button" data-tab="acoes">Ações</button>
-        <button class="tab-button" data-tab="workflow">Workflow</button>
-        <button class="tab-button" data-tab="fluxo-interno">Fluxo Interno</button>
-        <button class="tab-button" data-tab="andamentos">Andamentos</button>
-        <button class="tab-button" data-tab="timesheet">Timesheet</button>
-        <button class="tab-button" data-tab="acordos">Acordos</button>
-        <button class="tab-button" data-tab="despesas">Despesas</button>
-        <button class="tab-button" data-tab="anexos">Anexos</button>
-    </div>
-
-    <!-- Aba 1: Detalhes (VERSÃO CORRIGIDA E FINAL) -->
-    <div id="detalhes" class="tab-content">
-
-        <!-- DADOS DO CASO -->
-        <div class="form-section">
-            <h3 class="section-title">Dados do Caso</h3>
-            <div class="details-grid">
-                <div class="detail-item"><label>Status</label><span>{{ caso.get_status_display }}</span></div>
-                <div class="detail-item"><label>Data de Entrada</label><span>{{ caso.data_entrada|date:"d/m/Y" }}</span></div>
-                
-                <!-- ============================================================================== -->
-                <!-- INÍCIO DA MUDANÇA: Exibindo o Valor Apurado como campo padrão                 -->
-                <!-- ============================================================================== -->
-                <div class="detail-item">
-                    <label>Valor Apurado</label>
-                    <span>
-                        {% if caso.valor_apurado %}
-                            {{ caso.valor_apurado|currency }}
-                        {% else %}
-                            <span class="text-muted">Não informado</span>
-                        {% endif %}
-                    </span>
-                </div>
-                <!-- ============================================================================== -->
-                <!-- FIM DA MUDANÇA                                                                  -->
-                <!-- ============================================================================== -->
-
-                <div class="detail-item"><label>Fase do Workflow</label><span>{{ caso.fase_atual_wf.nome|default:"Não iniciado" }}</span></div>
-                <div class="detail-item"><label>Advogado Responsável</label>
-                    <span>{% if caso.advogado_responsavel %}{{ caso.advogado_responsavel.get_full_name|default:caso.advogado_responsavel.username }}{% else %}Não atribuído{% endif %}</span>
-                </div>
-                <div class="detail-item"><label>Data de Encerramento</label><span>
-                    {% if caso.data_encerramento %}
-                        {{ caso.data_encerramento|date:"d/m/Y" }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </span></div>
-            </div>
-        </div>
-
-        <!-- DADOS ADICIONAIS (CAMPOS SIMPLES) -->
-        {% if valores_personalizados %}
-        <div class="form-section">
-            <h3 class="section-title">Dados Adicionais</h3>
-            <div class="details-grid">
-                {% for valor in valores_personalizados %}
-                    {% if not valor.instancia_grupo|default_if_none:'' and not valor.instancia_grupo_id|default_if_none:'' %}
-                        <div class="detail-item">
-                            <label>{{ valor.campo.nome_campo }}</label>
-                            <span>
-                                {% if valor.campo.tipo_campo == 'DATA' %}
-                                    {% if valor.valor %}
-                                        {% if valor.valor|stringformat:"s" == valor.valor and valor.valor|length == 10 %}
-                                            {{ valor.valor|slice:"8:10" }}/{{ valor.valor|slice:"5:7" }}/{{ valor.valor|slice:"0:4" }}
-                                        {% else %}
-                                            {{ valor.valor|date:"d/m/Y" }}
-                                        {% endif %}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                {% elif valor.campo.tipo_campo == 'MOEDA' %}
-                                    {{ valor.valor|currency }}
-                                {% else %}
-                                    {{ valor.valor|default_if_none:"-"|default:"-" }}
-                                {% endif %}
-                            </span>
-                        </div>
-                    {% endif %}
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- GRUPOS REPETÍVEIS -->
-        {% if grupos_de_valores_salvos %}
-            {% for instancia in grupos_de_valores_salvos %}
-            <div class="form-section">
-                <h3 class="section-title">{{ instancia.grupo.nome_grupo }} ({{ forloop.counter }})</h3>
-                <div class="details-grid">
-                    {% for valor_do_grupo in instancia.valores.all %}
-                        <div class="detail-item">
-                            <label>{{ valor_do_grupo.campo.nome_campo }}</label>
-                            <span>
-                                {% if valor_do_grupo.campo.tipo_campo == 'DATA' %}
-                                    {% if valor_do_grupo.valor %}
-                                        {% if valor_do_grupo.valor|stringformat:"s" == valor_do_grupo.valor and valor_do_grupo.valor|length == 10 %}
-                                            {{ valor_do_grupo.valor|slice:"8:10" }}/{{ valor_do_grupo.valor|slice:"5:7" }}/{{ valor_do_grupo.valor|slice:"0:4" }}
-                                        {% else %}
-                                            {{ valor_do_grupo.valor|date:"d/m/Y" }}
-                                        {% endif %}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                {% elif valor_do_grupo.campo.tipo_campo == 'MOEDA' %}
-                                    {{ valor_do_grupo.valor|currency }}
-                                {% else %}
-                                    {{ valor_do_grupo.valor|default_if_none:"-"|default:"-" }}
-                                {% endif %}
-                            </span>
-                        </div>
-                    {% endfor %}
-                </div>
-            </div>
             {% endfor %}
-        {% endif %}
-
-    </div>
-
-    <!-- Aba 2: Ações -->
-    <div id="acoes" class="tab-content">
-        <div id="painel-acoes">{% include 'workflow/partials/painel_acoes.html' %}</div>
-    </div>
-
-    <!-- Aba 3: Workflow -->
-    <div id="workflow" class="tab-content">
-        <h3 class="section-title">Linha do Tempo do Workflow</h3>
-        <div class="workflow-timeline">
-            {% for historico in historico_fases %}<div class="timeline-item {% if not historico.data_saida %}fase-atual{% endif %}"><div class="timeline-icon"><i class="fa-solid fa-circle-check"></i></div><div class="timeline-content"><h3>{{ historico.fase.nome }}</h3><p>Entrou em: {{ historico.data_entrada|date:"d/m/Y H:i" }}{% if not historico.data_saida %}<span class="tempo-na-fase"> ({{ historico.data_entrada|tempo_decorrido }})</span>{% endif %}</p></div></div>{% empty %}<div class="empty-state"><p>O workflow para este caso ainda não foi iniciado.</p></div>{% endfor %}
         </div>
     </div>
-
-    <!-- Aba 4: Fluxo Interno -->
-    <div id="fluxo-interno" class="tab-content card">
-        <h3 class="section-title">Linha do Tempo Completa do Caso</h3>
-        <div class="fluxo-timeline">
-                {% for evento in fluxo_interno %}
-                    <div class="timeline-item">
-                        <div class="timeline-icon">
-                            {% if evento.tipo_evento == 'CRIACAO_CASO' %}<i class="fa-solid fa-star"></i>
-                            {% elif evento.tipo_evento == 'MUDANCA_FASE_WF' %}<i class="fa-solid fa-route"></i>
-                            {% elif evento.tipo_evento == 'ACAO_WF_CONCLUIDA' %}<i class="fa-solid fa-check-double"></i>
-                            {% elif evento.tipo_evento == 'ANDAMENTO' %}<i class="fa-solid fa-pencil"></i>
-                            {% elif evento.tipo_evento == 'TIMESHEET' %}<i class="fa-solid fa-clock"></i>
-                            {% elif evento.tipo_evento == 'ACORDO' %}<i class="fa-solid fa-handshake"></i>
-                            {% elif evento.tipo_evento == 'DESPESA' %}<i class="fa-solid fa-dollar-sign"></i>
-                            {% elif evento.tipo_evento == 'ANEXO' %}<i class="fa-solid fa-paperclip"></i>
-                            {% else %}<i class="fa-solid fa-circle-info"></i>
+    {% endif %}
+    
+    <!-- Grupos Repetíveis -->
+    {% if grupos_de_valores_salvos %}
+        {% for instancia in grupos_de_valores_salvos %}
+        <div class="card">
+            <h2 class="card-title">
+                <i class="fa-solid fa-layer-group"></i>
+                {{ instancia.grupo.nome_grupo }} #{{ forloop.counter }}
+            </h2>
+            
+            <div class="details-grid">
+                {% for valor_do_grupo in instancia.valores.all %}
+                    <div class="detail-card">
+                        <div class="detail-label">
+                            <i class="fa-solid fa-circle-dot"></i>
+                            {{ valor_do_grupo.campo.nome_campo }}
+                        </div>
+                        <div class="detail-value">
+                            {% if valor_do_grupo.campo.tipo_campo == 'DATA' %}
+                                {{ valor_do_grupo.valor|date:"d/m/Y" }}
+                            {% elif valor_do_grupo.campo.tipo_campo == 'MOEDA' %}
+                                {{ valor_do_grupo.valor|currency }}
+                            {% else %}
+                                {{ valor_do_grupo.valor|default:"-" }}
                             {% endif %}
                         </div>
-                        <div class="timeline-content">
-                            <h4>{{ evento.get_tipo_evento_display }}</h4>
-                            <div class="fluxo-descricao">
-                                {{ evento.descricao|linebreaksbr }}
-                            </div>
-                            <p class="fluxo-meta">
-                                {% if evento.autor %}
-                                    por <strong>{{ evento.autor.get_full_name|default:evento.autor.username }}</strong>
-                                {% else %}
-                                    por <strong>Sistema</strong>
-                                {% endif %}
-                                em {{ evento.data_evento|date:"d/m/Y H:i" }}
-                            </p>
-                        </div>
-                    </div>
-                {% empty %}
-                    <div class="empty-state">
-                        <p>Nenhum evento registrado no fluxo interno deste caso.</p>
                     </div>
                 {% endfor %}
             </div>
-    </div>
+        </div>
+        {% endfor %}
+    {% endif %}
+</div>
 
-    <!-- Aba 5: Andamentos -->
-    <div id="andamentos" class="tab-content">
-        <div class="form-section"><h3>Registrar Novo Andamento</h3><form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">{% csrf_token %}<div class="form-group">{{ form_andamento.modelo_andamento.label_tag }}{{ form_andamento.modelo_andamento }}</div><div class="form-row"><div class="form-group">{{ form_andamento.data_andamento.label_tag }}{{ form_andamento.data_andamento }}</div></div><div class="form-group">{{ form_andamento.descricao.label_tag }}{{ form_andamento.descricao }}</div><button type="submit" name="submit_andamento" class="btn-submit andamento">Salvar Andamento</button></form></div>
-        <hr>
-        <div class="list-toolbar"><h3>Histórico de Andamentos</h3><div><a href="{% url 'casos:exportar_andamentos_excel' pk=caso.pk %}" class="btn-export">Exportar Excel</a></div></div>
-        <div class="item-list">{% for andamento in andamentos %}<div class="item-card"><div class="item-card-header"><div class="item-card-header-info"><strong>Data: {{ andamento.data_andamento|date:"d/m/Y" }}</strong><small>por {% if andamento.autor %}{{ andamento.autor.get_full_name|default:andamento.autor.username }}{% else %}(usuário removido){% endif %} em {{ andamento.data_criacao|date:"d/m/Y H:i" }}</small></div></div><div class="andamento-body">{{ andamento.descricao|linebreaksbr }}</div></div>{% empty %}<div class="empty-state"><p>Nenhum andamento registrado.</p></div>{% endfor %}</div>
+<!-- 🎯 ABA: AÇÕES -->
+<div id="acoes" class="tab-content">
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fa-solid fa-list-check"></i>
+            Painel de Ações
+        </h2>
+        <div id="painel-acoes">
+            {% include 'workflow/partials/painel_acoes.html' %}
+        </div>
     </div>
+</div>
 
-    <!-- Aba 6: Timesheet -->
-    <div id="timesheet" class="tab-content">
-        <div class="form-section"><h3>Registrar Novo Lançamento</h3><form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">{% csrf_token %}<div class="form-row"><div class="form-group">{{ form_timesheet.data_execucao.label_tag }}{{ form_timesheet.data_execucao }}</div><div class="form-group">{{ form_timesheet.tempo.label_tag }}{{ form_timesheet.tempo }}</div></div><div class="form-group">{{ form_timesheet.advogado.label_tag }}{{ form_timesheet.advogado }}</div><div class="form-group">{{ form_timesheet.descricao.label_tag }}{{ form_timesheet.descricao }}</div><button type="submit" name="submit_timesheet" class="btn-submit timesheet">Salvar Lançamento</button></form></div>
-        <div class="summary-box"><h3>Tempo Total Gasto</h3><p>{{ tempo_total|format_timedelta }}</p></div>
-        <hr>
-        <div class="list-toolbar"><h3>Histórico de Lançamentos</h3><div><a href="{% url 'casos:exportar_timesheet_excel' pk=caso.pk %}" class="btn-export">Exportar Excel</a><a href="{% url 'casos:exportar_timesheet_pdf' pk=caso.pk %}" class="btn-pdf">Exportar PDF</a></div></div>
-        <table class="data-table"><thead><tr><th>Data</th><th>Tempo</th><th>Advogado</th><th>Descrição</th><th>Ações</th></tr></thead>
-            <tbody>{% for ts in timesheets %}<tr><td>{{ ts.data_execucao|date:"d/m/Y" }}</td><td>{{ ts.tempo }}</td><td>{% if ts.advogado %}{{ ts.advogado.get_full_name|default:ts.advogado.username }}{% else %}-{% endif %}</td><td>{{ ts.descricao|linebreaksbr }}</td><td class="actions"><a href="{% url 'casos:editar_timesheet' pk=ts.pk %}" class="action-btn btn-edit">Editar</a><a href="{% url 'casos:deletar_timesheet' pk=ts.pk %}" class="action-btn btn-delete">Deletar</a></td></tr>{% empty %}<tr><td colspan="5" style="text-align: center; padding: 20px;">Nenhum lançamento de horas.</td></tr>{% endfor %}</tbody>
-        </table>
+<!-- 📊 ABA: WORKFLOW -->
+<div id="workflow" class="tab-content">
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fa-solid fa-diagram-project"></i>
+            Timeline do Workflow
+        </h2>
+        
+        <div class="timeline">
+            {% for historico in historico_fases %}
+                <div class="timeline-item {% if not historico.data_saida %}active{% endif %}">
+                    <div class="timeline-icon">
+                        <i class="fa-solid fa-{% if not historico.data_saida %}spinner fa-spin{% else %}check{% endif %}"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h3 class="timeline-title">{{ historico.fase.nome }}</h3>
+                        <div class="timeline-meta">
+                            <span>
+                                <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                                Entrada: {{ historico.data_entrada|date:"d/m/Y H:i" }}
+                            </span>
+                            {% if historico.data_saida %}
+                                <span>
+                                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                                    Saída: {{ historico.data_saida|date:"d/m/Y H:i" }}
+                                </span>
+                            {% else %}
+                                <span class="status-badge info">
+                                    <i class="fa-solid fa-hourglass-half"></i>
+                                    Fase Atual
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="empty-state">
+                    <i class="fa-solid fa-diagram-project"></i>
+                    <h3>Workflow não iniciado</h3>
+                    <p>O workflow para este caso ainda não foi iniciado.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- ⏱️ ABA: FLUXO INTERNO -->
+<div id="fluxo-interno" class="tab-content">
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fa-solid fa-timeline"></i>
+            Linha do Tempo Completa
+        </h2>
+        
+        <div class="timeline">
+            {% for evento in fluxo_interno %}
+                <div class="timeline-item">
+                    <div class="timeline-icon" style="
+                        {% if evento.tipo_evento == 'CRIACAO_CASO' %}background: linear-gradient(135deg, #667eea, #764ba2);
+                        {% elif evento.tipo_evento == 'MUDANCA_FASE_WF' %}background: linear-gradient(135deg, #4facfe, #00f2fe);
+                        {% elif evento.tipo_evento == 'ACAO_WF_CONCLUIDA' %}background: linear-gradient(135deg, #11998e, #38ef7d);
+                        {% elif evento.tipo_evento == 'ANDAMENTO' %}background: linear-gradient(135deg, #f093fb, #f5576c);
+                        {% else %}background: linear-gradient(135deg, #fa709a, #fee140);
+                        {% endif %}
+                        color: white; border: none;">
+                        {% if evento.tipo_evento == 'CRIACAO_CASO' %}<i class="fa-solid fa-star"></i>
+                        {% elif evento.tipo_evento == 'MUDANCA_FASE_WF' %}<i class="fa-solid fa-route"></i>
+                        {% elif evento.tipo_evento == 'ACAO_WF_CONCLUIDA' %}<i class="fa-solid fa-check-double"></i>
+                        {% elif evento.tipo_evento == 'ANDAMENTO' %}<i class="fa-solid fa-pencil"></i>
+                        {% elif evento.tipo_evento == 'TIMESHEET' %}<i class="fa-solid fa-clock"></i>
+                        {% elif evento.tipo_evento == 'ACORDO' %}<i class="fa-solid fa-handshake"></i>
+                        {% elif evento.tipo_evento == 'DESPESA' %}<i class="fa-solid fa-dollar-sign"></i>
+                        {% else %}<i class="fa-solid fa-circle-info"></i>
+                        {% endif %}
+                    </div>
+                    <div class="timeline-content">
+                        <h3 class="timeline-title">{{ evento.get_tipo_evento_display }}</h3>
+                        <p style="margin: 12px 0; color: var(--gray-700);">{{ evento.descricao|linebreaksbr }}</p>
+                        <div class="timeline-meta">
+                            <span>
+                                <i class="fa-solid fa-user"></i>
+                                {% if evento.autor %}{{ evento.autor.get_full_name|default:evento.autor.username }}{% else %}Sistema{% endif %}
+                            </span>
+                            <span>
+                                <i class="fa-solid fa-calendar"></i>
+                                {{ evento.data_evento|date:"d/m/Y H:i" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="empty-state">
+                    <i class="fa-solid fa-timeline"></i>
+                    <h3>Nenhum evento registrado</h3>
+                    <p>O fluxo interno deste caso ainda está vazio.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- 📝 ABA: ANDAMENTOS -->
+<div id="andamentos" class="tab-content">
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fa-solid fa-plus-circle"></i>
+            Novo Andamento
+        </h2>
+        
+        <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">{{ form_andamento.modelo_andamento.label }}</label>
+                {{ form_andamento.modelo_andamento }}
+            </div>
+            <div class="form-group">
+                <label class="form-label">{{ form_andamento.data_andamento.label }}</label>
+                {{ form_andamento.data_andamento }}
+            </div>
+            <div class="form-group">
+                <label class="form-label">{{ form_andamento.descricao.label }}</label>
+                {{ form_andamento.descricao }}
+            </div>
+            <button type="submit" name="submit_andamento" class="btn btn-primary">
+                <i class="fa-solid fa-save"></i>
+                Salvar Andamento
+            </button>
+        </form>
     </div>
     
-    <!-- Aba 7: Acordos -->
-    <div id="acordos" class="tab-content">
-        <div class="form-section"><h3>Registrar Novo Acordo</h3><form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">{% csrf_token %}<div class="form-row"><div class="form-group">{{ form_acordo.valor_total.label_tag }}{{ form_acordo.valor_total }}</div><div class="form-group">{{ form_acordo.numero_parcelas.label_tag }}{{ form_acordo.numero_parcelas }}</div></div><div class="form-row"><div class="form-group">{{ form_acordo.data_primeira_parcela.label_tag }}{{ form_acordo.data_primeira_parcela }}</div><div class="form-group">{{ form_acordo.advogado_acordo.label_tag }}{{ form_acordo.advogado_acordo }}</div></div><button type="submit" name="submit_acordo" class="btn-submit acordo">Salvar Acordo</button></form></div>
-        <hr>
-        <div class="summary-box"><h3>Saldo Devedor</h3><p>R$ {{ saldo_devedor_total|default:"0.00" }}</p></div>
-        <div class="acordo-list">
-            <div class="list-toolbar"><h3>Acordos Registrados</h3></div>
-            <div class="item-list">{% for acordo in acordos %}<div class="item-card"><div class="item-card-header"><div class="item-card-header-info"><strong>Acordo de R$ {{ acordo.valor_total }} em {{ acordo.numero_parcelas }}x</strong><small>Criado em {{ acordo.data_criacao|date:"d/m/Y" }} por {% if acordo.advogado_acordo %}{{ acordo.advogado_acordo.get_full_name|default:acordo.advogado_acordo.username }}{% else %}-{% endif %}</small></div><a href="{% url 'casos:editar_acordo' pk=acordo.pk %}" class="action-btn btn-edit">Editar</a></div><div class="acordo-body"><table class="data-table"><thead><tr><th>Nº</th><th>Vencimento</th><th>Pagamento</th><th>Valor</th><th>Status</th></tr></thead><tbody>{% for parcela in acordo.parcelas.all %}{% include 'casos/partials/parcela_linha.html' with parcela=parcela %}{% endfor %}</tbody></table></div></div>{% empty %}<div class="empty-state"><p>Nenhum acordo registrado.</p></div>{% endfor %}</div>
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <h2 class="card-title" style="margin: 0;">
+                <i class="fa-solid fa-file-lines"></i>
+                Histórico
+            </h2>
+            <a href="{% url 'casos:exportar_andamentos_excel' pk=caso.pk %}" class="btn btn-success">
+                <i class="fa-solid fa-file-excel"></i>
+                Exportar Excel
+            </a>
+        </div>
+        
+        <div class="timeline">
+            {% for andamento in andamentos %}
+                <div class="timeline-item">
+                    <div class="timeline-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c); color: white; border: none;">
+                        <i class="fa-solid fa-pencil"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h3 class="timeline-title">{{ andamento.data_andamento|date:"d/m/Y" }}</h3>
+                        <p style="margin: 12px 0; white-space: pre-wrap;">{{ andamento.descricao }}</p>
+                        <div class="timeline-meta">
+                            <span>
+                                <i class="fa-solid fa-user"></i>
+                                {% if andamento.autor %}{{ andamento.autor.get_full_name|default:andamento.autor.username }}{% else %}(removido){% endif %}
+                            </span>
+                            <span>
+                                <i class="fa-solid fa-clock"></i>
+                                {{ andamento.data_criacao|date:"d/m/Y H:i" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="empty-state">
+                    <i class="fa-solid fa-file-lines"></i>
+                    <h3>Nenhum andamento registrado</h3>
+                    <p>Adicione o primeiro andamento acima.</p>
+                </div>
+            {% endfor %}
         </div>
     </div>
+</div>
 
-    <!-- Aba 8: Despesas -->
-    <div id="despesas" class="tab-content">
-        <div class="form-section">
-            <h3>Registrar Nova Despesa</h3>
-            <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
-                {% csrf_token %}
-                <div class="form-row">
-                    <div class="form-group">
-                        {{ form_despesa.data_despesa.label_tag }}
-                        {{ form_despesa.data_despesa }}
-                    </div>
-                    <div class="form-group">
-                        {{ form_despesa.valor.label_tag }}
-                        {{ form_despesa.valor }}
-                    </div>
+<!-- ⏱️ ABA: TIMESHEET -->
+<div id="timesheet" class="tab-content">
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fa-solid fa-plus-circle"></i>
+            Novo Lançamento
+        </h2>
+        
+        <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
+            {% csrf_token %}
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group">
+                    <label class="form-label">{{ form_timesheet.data_execucao.label }}</label>
+                    {{ form_timesheet.data_execucao }}
                 </div>
                 <div class="form-group">
-                    {{ form_despesa.descricao.label_tag }}
-                    {{ form_despesa.descricao }}
+                    <label class="form-label">{{ form_timesheet.tempo.label }}</label>
+                    {{ form_timesheet.tempo }}
                 </div>
-                <div class="form-group">
-                    {{ form_despesa.advogado.label_tag }}
-                    {{ form_despesa.advogado }}
-                </div>
-                <button type="submit" name="submit_despesa" class="btn-submit despesa">Salvar Despesa</button>
-            </form>
+            </div>
+            <div class="form-group">
+                <label class="form-label">{{ form_timesheet.advogado.label }}</label>
+                {{ form_timesheet.advogado }}
+            </div>
+            <div class="form-group">
+                <label class="form-label">{{ form_timesheet.descricao.label }}</label>
+                {{ form_timesheet.descricao }}
+            </div>
+            <button type="submit" name="submit_timesheet" class="btn btn-primary">
+                <i class="fa-solid fa-save"></i>
+                Salvar Lançamento
+            </button>
+        </form>
+    </div>
+    
+    <div class="summary-grid">
+        <div class="summary-box animated-gradient">
+            <div class="summary-label">
+                <i class="fa-solid fa-clock"></i>
+                Tempo Total Gasto
+            </div>
+            <div class="summary-value">{{ tempo_total|format_timedelta }}</div>
         </div>
-        <div class="summary-box">
-            <h3>Total de Despesas</h3>
-            <p>{{ total_despesas|currency }}</p>
+    </div>
+    
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <h2 class="card-title" style="margin: 0;">
+                <i class="fa-solid fa-list"></i>
+                Histórico
+            </h2>
+            <div style="display: flex; gap: 12px;">
+                <a href="{% url 'casos:exportar_timesheet_excel' pk=caso.pk %}" class="btn btn-success">
+                    <i class="fa-solid fa-file-excel"></i>
+                    Excel
+                </a>
+                <a href="{% url 'casos:exportar_timesheet_pdf' pk=caso.pk %}" class="btn btn-danger">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    PDF
+                </a>
+            </div>
         </div>
-        <hr>
-        <div class="list-toolbar">
-            <h3>Histórico de Despesas</h3>
-        </div>
-        <table class="data-table">
+        
+        <table class="modern-table">
             <thead>
                 <tr>
                     <th>Data</th>
+                    <th>Tempo</th>
                     <th>Advogado</th>
                     <th>Descrição</th>
-                    <th>Valor (R$)</th>
-                    <th class="actions">Ações</th>
+                    <th style="text-align: right;">Ações</th>
                 </tr>
             </thead>
             <tbody>
-                {% for despesa in despesas %}
+                {% for ts in timesheets %}
                 <tr>
-                    <td>{{ despesa.data_despesa|date:"d/m/Y" }}</td>
-                    <td>{% if despesa.advogado %}{{ despesa.advogado.get_full_name|default:despesa.advogado.username }}{% else %}-{% endif %}</td>
-                    <td>{{ despesa.descricao }}</td>
-                    <td>{{ despesa.valor|currency }}</td>
-                    <td class="actions">
-                        <a href="{% url 'casos:editar_despesa' pk=despesa.pk %}" class="action-btn btn-edit">Editar</a>
+                    <td><strong>{{ ts.data_execucao|date:"d/m/Y" }}</strong></td>
+                    <td><span class="status-badge info">{{ ts.tempo }}</span></td>
+                    <td>{% if ts.advogado %}{{ ts.advogado.get_full_name|default:ts.advogado.username }}{% else %}-{% endif %}</td>
+                    <td style="max-width: 300px;">{{ ts.descricao|truncatewords:10 }}</td>
+                    <td style="text-align: right;">
+                        <a href="{% url 'casos:editar_timesheet' pk=ts.pk %}" class="btn btn-warning" style="padding: 8px 16px; font-size: 0.85rem;">
+                            <i class="fa-solid fa-pen"></i>
+                            Editar
+                        </a>
+                        <a href="{% url 'casos:deletar_timesheet' pk=ts.pk %}" class="btn btn-danger" style="padding: 8px 16px; font-size: 0.85rem;">
+                            <i class="fa-solid fa-trash"></i>
+                            Deletar
+                        </a>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5" style="text-align: center; padding: 20px;">Nenhuma despesa registrada.</td>
+                    <td colspan="5">
+                        <div class="empty-state">
+                            <i class="fa-solid fa-clock"></i>
+                            <h3>Nenhum lançamento</h3>
+                        </div>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+</div>
 
-    <!-- Aba 9: Anexos-->
-    <div id="anexos" class="tab-content">
-        <h2>Anexos do Caso (SharePoint)</h2>
+<!-- 🤝 ABA: ACORDOS -->
+<div id="acordos" class="tab-content">
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fa-solid fa-plus-circle"></i>
+            Novo Acordo
+        </h2>
+        
+        <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
+            {% csrf_token %}
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group">
+                    <label class="form-label">{{ form_acordo.valor_total.label }}</label>
+                    {{ form_acordo.valor_total }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form_acordo.numero_parcelas.label }}</label>
+                    {{ form_acordo.numero_parcelas }}
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group">
+                    <label class="form-label">{{ form_acordo.data_primeira_parcela.label }}</label>
+                    {{ form_acordo.data_primeira_parcela }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form_acordo.advogado_acordo.label }}</label>
+                    {{ form_acordo.advogado_acordo }}
+                </div>
+            </div>
+            <button type="submit" name="submit_acordo" class="btn btn-primary">
+                <i class="fa-solid fa-save"></i>
+                Salvar Acordo
+            </button>
+        </form>
+    </div>
+    
+    <div class="summary-grid">
+        <div class="summary-box animated-gradient">
+            <div class="summary-label">
+                <i class="fa-solid fa-money-bill-wave"></i>
+                Saldo Devedor Total
+            </div>
+            <div class="summary-value">R$ {{ saldo_devedor_total|default:"0.00" }}</div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fa-solid fa-handshake"></i>
+            Acordos Registrados
+        </h2>
+        
+        {% for acordo in acordos %}
+            <div style="background: var(--gray-50); padding: 24px; border-radius: 16px; margin-bottom: 20px; border: 2px solid var(--gray-200);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <div>
+                        <h3 style="font-size: 1.25rem; color: var(--gray-900); margin-bottom: 4px;">
+                            Acordo de R$ {{ acordo.valor_total }} em {{ acordo.numero_parcelas }}x
+                        </h3>
+                        <p style="color: var(--gray-600); font-size: 0.9rem;">
+                            Criado em {{ acordo.data_criacao|date:"d/m/Y" }} por 
+                            {% if acordo.advogado_acordo %}{{ acordo.advogado_acordo.get_full_name|default:acordo.advogado_acordo.username }}{% else %}-{% endif %}
+                        </p>
+                    </div>
+                    <a href="{% url 'casos:editar_acordo' pk=acordo.pk %}" class="btn btn-warning">
+                        <i class="fa-solid fa-pen"></i>
+                        Editar
+                    </a>
+                </div>
+                
+                <table class="modern-table" style="margin-top: 16px;">
+                    <thead>
+                        <tr>
+                            <th>Nº</th>
+                            <th>Vencimento</th>
+                            <th>Pagamento</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for parcela in acordo.parcelas.all %}
+                        {% include 'casos/partials/parcela_linha.html' with parcela=parcela %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% empty %}
+            <div class="empty-state">
+                <i class="fa-solid fa-handshake"></i>
+                <h3>Nenhum acordo registrado</h3>
+                <p>Adicione o primeiro acordo acima.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- 💰 ABA: DESPESAS -->
+<div id="despesas" class="tab-content">
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fa-solid fa-plus-circle"></i>
+            Nova Despesa
+        </h2>
+        
+        <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
+            {% csrf_token %}
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group">
+                    <label class="form-label">{{ form_despesa.data_despesa.label }}</label>
+                    {{ form_despesa.data_despesa }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form_despesa.valor.label }}</label>
+                    {{ form_despesa.valor }}
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">{{ form_despesa.descricao.label }}</label>
+                {{ form_despesa.descricao }}
+            </div>
+            <div class="form-group">
+                <label class="form-label">{{ form_despesa.advogado.label }}</label>
+                {{ form_despesa.advogado }}
+            </div>
+            <button type="submit" name="submit_despesa" class="btn btn-primary">
+                <i class="fa-solid fa-save"></i>
+                Salvar Despesa
+            </button>
+        </form>
+    </div>
+    
+    <div class="summary-grid">
+        <div class="summary-box animated-gradient">
+            <div class="summary-label">
+                <i class="fa-solid fa-dollar-sign"></i>
+                Total de Despesas
+            </div>
+            <div class="summary-value">{{ total_despesas|currency }}</div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fa-solid fa-list"></i>
+            Histórico de Despesas
+        </h2>
+        
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Advogado</th>
+                    <th>Descrição</th>
+                    <th>Valor</th>
+                    <th style="text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for despesa in despesas %}
+                <tr>
+                    <td><strong>{{ despesa.data_despesa|date:"d/m/Y" }}</strong></td>
+                    <td>{% if despesa.advogado %}{{ despesa.advogado.get_full_name|default:despesa.advogado.username }}{% else %}-{% endif %}</td>
+                    <td>{{ despesa.descricao }}</td>
+                    <td><strong>{{ despesa.valor|currency }}</strong></td>
+                    <td style="text-align: right;">
+                        <a href="{% url 'casos:editar_despesa' pk=despesa.pk %}" class="btn btn-warning" style="padding: 8px 16px; font-size: 0.85rem;">
+                            <i class="fa-solid fa-pen"></i>
+                            Editar
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">
+                        <div class="empty-state">
+                            <i class="fa-solid fa-dollar-sign"></i>
+                            <h3>Nenhuma despesa registrada</h3>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 📎 ABA: ANEXOS -->
+<div id="anexos" class="tab-content">
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fa-solid fa-paperclip"></i>
+            Anexos do SharePoint
+        </h2>
+        
         {% if caso.sharepoint_folder_id %}
-            <div class="anexos-container">
-                <div id="file-list-panel">
+            <div style="display: flex; gap: 24px; min-height: 60vh;">
+                <div id="file-list-panel" style="flex: 1; background: var(--gray-50); padding: 24px; border-radius: 16px;">
                     {% include 'casos/partials/lista_arquivos.html' %}
                 </div>
-                <div id="preview-panel">
-                    <div class="preview-placeholder">
+                <div id="preview-panel" style="flex: 1; background: var(--gray-50); border-radius: 16px; display: flex; align-items: center; justify-content: center;">
+                    <div class="empty-state">
                         <i class="fa-solid fa-eye"></i>
+                        <h3>Visualização de Arquivo</h3>
                         <p>Clique em um arquivo para visualizá-lo aqui.</p>
                     </div>
                 </div>
             </div>
         {% else %}
             <div class="empty-state">
+                <i class="fa-solid fa-folder-open"></i>
+                <h3>Pasta não criada</h3>
                 <p>Nenhuma pasta foi criada no SharePoint para este caso.</p>
             </div>
         {% endif %}
     </div>
+</div>
 
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    document.body.classList.add('js-enabled');
-
-    const tabButtons = document.querySelectorAll('.tab-button');
+    // ========================================
+    // 🎯 SISTEMA DE TABS
+    // ========================================
+    const tabButtons = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
-
+    
     function activateTab(tabId) {
-        tabButtons.forEach(button => { button.classList.toggle('active', button.dataset.tab === tabId); });
-        tabContents.forEach(content => { content.classList.toggle('active', content.id === tabId); });
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+        
+        const activeBtn = document.querySelector(`[data-tab="${tabId}"]`);
+        const activeContent = document.getElementById(tabId);
+        
+        if (activeBtn) activeBtn.classList.add('active');
+        if (activeContent) activeContent.classList.add('active');
     }
-
+    
     tabButtons.forEach(button => {
-        button.addEventListener('click', () => { activateTab(button.dataset.tab); });
+        button.addEventListener('click', () => {
+            activateTab(button.dataset.tab);
+        });
     });
-
+    
+    // Ativar aba da URL ou primeira
     const urlParams = new URLSearchParams(window.location.search);
     const abaUrl = urlParams.get('aba');
-    const abaInicial = (abaUrl && document.getElementById(abaUrl)) ? abaUrl : 'detalhes';
-    activateTab(abaInicial);
-
-    // --- Lógicas Específicas ---
+    activateTab(abaUrl || 'detalhes');
+    
+    // ========================================
+    // 📝 MODELO DE ANDAMENTO
+    // ========================================
     htmx.onLoad(function(content) {
         const selectModelo = content.querySelector('#andamentos select[name=modelo_andamento]');
         const textareaDescricao = content.querySelector('#andamentos textarea[name=descricao]');
+        
         if (selectModelo && textareaDescricao) {
-            const modelos = { {% for modelo in modelos_andamento %}"{{ modelo.id }}": "{{ modelo.descricao|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %} };
-            selectModelo.addEventListener('change', function() { textareaDescricao.value = modelos[this.value] || ''; });
+            const modelos = {
+                {% for modelo in modelos_andamento %}
+                "{{ modelo.id }}": "{{ modelo.descricao|escapejs }}"{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            };
+            
+            selectModelo.addEventListener('change', function() {
+                textareaDescricao.value = modelos[this.value] || '';
+            });
         }
-
+        
+        // ⏱️ FORMATAÇÃO DE TEMPO
         const tempoInput = content.querySelector('input[name="tempo"]');
         if (tempoInput) {
-            tempoInput.addEventListener('input', function (e) {
+            tempoInput.addEventListener('input', function(e) {
                 let value = e.target.value.replace(/\D/g, '');
-                e.target.value = (value.length > 2 ? value.substring(0, 2) + ':' + value.substring(2, 4) : value).substring(0, 5);
+                if (value.length > 2) {
+                    value = value.substring(0, 2) + ':' + value.substring(2, 4);
+                }
+                e.target.value = value.substring(0, 5);
             });
         }
     });
-
-    // Eventos HTMX
+    
+    // ========================================
+    // 📎 UPLOAD PROGRESS (HTMX)
+    // ========================================
     document.body.addEventListener('htmx:xhr:progress', function(event) {
         const panel = document.getElementById('file-list-panel');
         if (!panel) return;
+        
         const progressBar = panel.querySelector('progress');
         const progressText = panel.querySelector('progress + span');
+        
         if (progressBar && progressText) {
             let percent = Math.round((event.detail.loaded / event.detail.total) * 100);
             progressBar.value = percent;
             progressText.innerText = `${percent}%`;
         }
     });
-
+    
     document.body.addEventListener('htmx:afterSwap', function(event) {
         if (event.detail.target.id === 'file-list-panel') {
             const fileListPreview = document.getElementById('file-list-panel').querySelector('.file-list-preview');
@@ -613,14 +2053,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-// Função global para o onchange do input de arquivo
+
+// 📁 UPDATE FILE LIST
 function updateFileList(input) {
     const parentForm = input.closest('form');
     if (!parentForm) return;
+    
     const fileListPreview = parentForm.querySelector('.file-list-preview');
     if (fileListPreview && input.files.length > 0) {
         let fileNames = Array.from(input.files).map(file => file.name).join(', ');
-        fileListPreview.textContent = fileNames.length > 100 ? `${input.files.length} arquivos selecionados.` : `Selecionado(s): ${fileNames}`;
+        fileListPreview.textContent = fileNames.length > 100 
+            ? `${input.files.length} arquivos selecionados.` 
+                        : `Selecionado(s): ${fileNames}`;
     } else if (fileListPreview) {
         fileListPreview.textContent = '';
     }
