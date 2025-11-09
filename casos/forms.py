@@ -19,6 +19,8 @@ from campos_custom.models import (
 from .models import Caso, Andamento, Timesheet, Acordo, Despesa
 from clientes.models import Cliente
 from produtos.models import Produto
+from datetime import timedelta
+import re
 
 User = get_user_model()
 
@@ -294,22 +296,63 @@ class AndamentoForm(forms.ModelForm):
 
 class TimesheetForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
+        # 1. Remove o argumento 'user' dos kwargs antes de chamar o pai
         user = kwargs.pop('user', None)
+        # 2. Chama o construtor original da classe pai
         super().__init__(*args, **kwargs)
+        # 3. Agora, usa o objeto 'user' para customizar o formulário
         if user:
+            # Define o usuário logado como o valor inicial do campo 'advogado'
             self.fields['advogado'].initial = user
+            # Limita as opções do dropdown para ser apenas o usuário logado
             self.fields['advogado'].queryset = User.objects.filter(id=user.id)
-
     class Meta:
+        # APONTA PARA O MODELO 'Timesheet' IMPORTADO
         model = Timesheet
-        fields = ['data_execucao', 'tempo', 'advogado', 'descricao']
+        # DEFINE OS CAMPOS DO FORMULÁRIO
+        fields = ['data_execucao', 'advogado', 'tempo', 'descricao']
+        # DEFINE OS WIDGETS PARA CADA CAMPO
         widgets = {
             'data_execucao': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'tempo': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.5'}),
             'advogado': forms.Select(attrs={'class': 'form-select'}),
-            'descricao': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'descricao': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+            
+            # AQUI ESTÁ A MUDANÇA PRINCIPAL: USA UM CAMPO DE TEXTO
+            'tempo': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'HH:MM',
+                'pattern': r'\d{1,2}:\d{2}', # Validação básica no HTML5
+                'title': 'Use o formato HH:MM (ex: 01:30 para 1h e 30min)'
+            })
         }
 
+    # MÉTODO DE VALIDAÇÃO PARA CONVERTER 'HH:MM' EM UM VALOR VÁLIDO
+    def clean_tempo_gasto(self):
+        tempo_str = self.cleaned_data.get('tempo')
+        
+        if not tempo_str:
+            # Se o campo não for obrigatório e estiver vazio, não faz nada
+            return None
+
+        # Regex para validar o formato HH:MM (horas e minutos)
+        if not re.match(r'^\d{1,2}:\d{2}$', tempo_str):
+            raise forms.ValidationError("Formato inválido. Use HH:MM (ex: 02:45).")
+            
+        try:
+            horas, minutos = map(int, tempo_str.split(':'))
+            if minutos >= 60:
+                raise forms.ValidationError("Os minutos não podem ser 60 ou mais.")
+            
+            # Assumindo que seu modelo `Timesheet` tem um campo `tempo_gasto`
+            # do tipo `DurationField`, que é o ideal para armazenar durações.
+            return timedelta(hours=horas, minutes=minutos)
+            
+            # --- Alternativa ---
+            # Se seu modelo armazena o tempo em minutos (IntegerField):
+            # return (horas * 60) + minutos
+
+        except (ValueError, TypeError):
+            raise forms.ValidationError("Valores inválidos para horas ou minutos.")
 
 class AcordoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):

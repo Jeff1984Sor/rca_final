@@ -1,14 +1,13 @@
 # workflow/admin.py
 
 from django.contrib import admin
-import nested_admin
 from .models import (
     Workflow, Fase, Acao, Transicao,
     HistoricoFase, InstanciaAcao, TipoPausa
 )
 
 # ==============================================================================
-# TIPO DE PAUSA ADMIN
+# TIPO DE PAUSA ADMIN (Sem alterações)
 # ==============================================================================
 
 @admin.register(TipoPausa)
@@ -30,108 +29,50 @@ class TipoPausaAdmin(admin.ModelAdmin):
 
 
 # ==============================================================================
-# WORKFLOW ADMIN (✅ ATUALIZADO)
+# ADMINS PARA WORKFLOW E SEUS COMPONENTES (✅ ATUALIZADO E SIMPLIFICADO)
 # ==============================================================================
 
-class TransicaoInline(nested_admin.NestedTabularInline):
-    """Nível 3: Transições."""
-    model = Transicao
-    fk_name = 'acao'
+class FaseInline(admin.TabularInline):
+    """Inline para Fases dentro de um Workflow."""
+    model = Fase
     extra = 1
-    verbose_name = "Transição"
-    verbose_name_plural = "➜ Transições (Se.. Então..)"
-    fields = ['fase_destino', 'condicao']
+    ordering = ('ordem',)
+    fields = ('ordem', 'nome', 'eh_fase_final', 'cor_fase')
+
+
+class TransicaoInline(admin.TabularInline):
+    """Inline para Transições dentro de um Workflow."""
+    model = Transicao
+    extra = 1
+    # O Django preenche 'workflow' automaticamente. Mostramos só o que importa.
+    fields = ('fase_origem', 'acao', 'condicao', 'fase_destino')
+    verbose_name_plural = "➜ Transições (Regras de Negócio)"
     
+    # Adiciona campos de busca para facilitar a seleção
+    autocomplete_fields = ['fase_origem', 'acao', 'fase_destino']
+
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == "fase_destino":
-            if hasattr(self, 'parent_obj') and hasattr(self.parent_obj, 'fase'):
-                fase_origem = self.parent_obj.fase
-                if fase_origem and fase_origem.workflow:
-                    kwargs["queryset"] = Fase.objects.filter(
-                        workflow=fase_origem.workflow
-                    ).exclude(pk=fase_origem.pk)
+        """Filtra as Fases para mostrar apenas as do Workflow atual."""
+        # Pega o ID do objeto Workflow que está sendo editado a partir da URL
+        if 'object_id' in request.resolver_match.kwargs:
+            workflow_id = request.resolver_match.kwargs['object_id']
+            if db_field.name in ["fase_origem", "fase_destino"]:
+                kwargs["queryset"] = Fase.objects.filter(workflow_id=workflow_id)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
-class AcaoInline(nested_admin.NestedStackedInline):
-    """Nível 2: Ações."""
-    model = Acao
-    extra = 1
-    inlines = [TransicaoInline]
-    verbose_name_plural = "🎯 Ações desta Fase"
-    classes = ['collapse']
-    
-    fieldsets = (
-        ('📋 Informações Básicas', {
-            'fields': ('titulo', 'descricao', 'tipo')
-        }),
-        ('👤 Responsabilidade', {
-            'fields': (
-                'tipo_responsavel',
-                'responsavel_padrao',
-                'nome_responsavel_terceiro'
-            ),
-            'description': 'Defina quem é responsável: interno (usuário do sistema) ou terceiro (cliente, perito, etc)'
-        }),
-        ('⏸️ Controle de Prazo', {
-            'fields': (
-                'pausar_prazo_enquanto_aguarda',
-                'tipo_pausa_acao'
-            ),
-            'classes': ('collapse',),
-            'description': '✅ Marque para pausar o prazo enquanto aguarda esta ação (útil para terceiros)'
-        }),
-        ('⏰ Prazos', {
-            'fields': ('prazo_dias', 'dias_aguardar'),
-            'classes': ('collapse',)
-        }),
-        ('⚙️ Efeitos Automáticos', {
-            'fields': ('mudar_status_caso_para',),
-            'classes': ('collapse',)
-        }),
-    )
-    
-    autocomplete_fields = ['responsavel_padrao']
-
-
-class FaseInline(nested_admin.NestedStackedInline):
-    """Nível 1: Fases."""
-    model = Fase
-    extra = 1
-    inlines = [AcaoInline]
-    sortable_field_name = "ordem"
-    verbose_name_plural = "📍 Fases do Workflow (arraste para reordenar)"
-    
-    fieldsets = (
-        ('Informações Básicas', {
-            'fields': ('nome', 'ordem', 'eh_fase_final')
-        }),
-        ('⏸️ Controle de Prazo Automático', {
-            'fields': (
-                'pausar_prazo_automaticamente',
-                'tipo_pausa_padrao',
-                'retomar_prazo_ao_sair'
-            ),
-            'classes': ('collapse',),
-            'description': (
-                '✅ Pausar Automaticamente: O prazo para quando o caso ENTRA nesta fase<br>'
-                '✅ Retomar ao Sair: O prazo volta a contar quando o caso SAI desta fase'
-            )
-        }),
-        ('🎨 Visual (Kanban/Dashboard)', {
-            'fields': ('cor_fase', 'icone_fase'),
-            'classes': ('collapse',)
-        }),
-    )
-
-
 @admin.register(Workflow)
-class WorkflowAdmin(nested_admin.NestedModelAdmin):
+class WorkflowAdmin(admin.ModelAdmin):
     """Admin principal para Workflow."""
     list_display = ('nome', 'cliente', 'produto')
     list_filter = ('cliente', 'produto')
     search_fields = ('nome', 'cliente__nome', 'produto__nome')
-    inlines = [FaseInline]
+    
+    # Agora usamos inlines normais, que são mais eficientes
+    inlines = [
+        FaseInline,
+        TransicaoInline
+    ]
     
     fieldsets = (
         ('Configuração Básica', {
@@ -139,17 +80,59 @@ class WorkflowAdmin(nested_admin.NestedModelAdmin):
         }),
     )
 
+# ==============================================================================
+# ADMINS INDIVIDUAIS PARA FASE E AÇÃO (Necessário para autocomplete)
+# ==============================================================================
+
+class AcaoInline(admin.StackedInline):
+    """Inline para Ações dentro de uma Fase."""
+    model = Acao
+    extra = 1
+    classes = ['collapse']
+    
+    fieldsets = (
+        (None, {'fields': ('titulo', 'tipo')}),
+        ('👤 Responsabilidade', {
+            'fields': ('tipo_responsavel', 'responsavel_padrao', 'nome_responsavel_terceiro'),
+            'classes': ('collapse',),
+        }),
+        ('⏸️ Controle de Prazo', {
+            'fields': ('pausar_prazo_enquanto_aguarda', 'tipo_pausa_acao', 'prazo_dias'),
+            'classes': ('collapse',),
+        }),
+        ('⚙️ Outras Configurações', {
+            'fields': ('dias_aguardar', 'mudar_status_caso_para', 'descricao'),
+            'classes': ('collapse',),
+        }),
+    )
+    autocomplete_fields = ['responsavel_padrao']
+
+@admin.register(Fase)
+class FaseAdmin(admin.ModelAdmin):
+    """Admin para edição detalhada de uma Fase."""
+    list_display = ('nome', 'workflow', 'ordem', 'eh_fase_final')
+    list_filter = ('workflow',)
+    search_fields = ('nome', 'workflow__nome')
+    inlines = [AcaoInline]
+
+
+@admin.register(Acao)
+class AcaoAdmin(admin.ModelAdmin):
+    """Admin para edição detalhada de uma Ação."""
+    list_display = ('titulo', 'fase', 'tipo', 'tipo_responsavel')
+    list_filter = ('fase__workflow', 'tipo', 'tipo_responsavel')
+    search_fields = ('titulo', 'fase__nome')
+
 
 # ==============================================================================
-# HISTÓRICO (Apenas visualização - NÃO permite edição)
+# HISTÓRICO (Apenas visualização - Sem alterações)
 # ==============================================================================
 
 @admin.register(HistoricoFase)
 class HistoricoFaseAdmin(admin.ModelAdmin):
-    """Visualização do histórico de fases."""
     list_display = ['caso', 'fase', 'data_entrada', 'data_saida']
-    list_filter = ['fase', 'data_entrada']
-    search_fields = ['caso__titulo']
+    list_filter = ['fase__workflow', 'fase', 'data_entrada']
+    search_fields = ['caso__id']
     readonly_fields = ['caso', 'fase', 'data_entrada', 'data_saida']
     
     def has_add_permission(self, request):
@@ -158,15 +141,7 @@ class HistoricoFaseAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
-
-# ==============================================================================
-# ❌ INSTÂNCIA AÇÃO: NÃO REGISTRA NO ADMIN
-# ==============================================================================
-# InstanciaAcao é gerenciada automaticamente pelo sistema
-# Não precisa aparecer no Admin, é criada via signals/views
-
-# Se você tinha registrado antes, descomente para remover:
-# try:
-#     admin.site.unregister(InstanciaAcao)
-# except admin.sites.NotRegistered:
-#     pass
+# ------------------------------------------------------------------------------
+# ❌ INSTÂNCIA AÇÃO: NÃO REGISTRAR NO ADMIN
+# A gestão deste modelo é automática.
+# ------------------------------------------------------------------------------

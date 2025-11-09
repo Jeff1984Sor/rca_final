@@ -222,7 +222,17 @@ class Acao(models.Model):
 # ==============================================================================
 
 class Transicao(models.Model):
-    """A REGRA que conecta as Fases."""
+    """A REGRA que conecta as Fases DENTRO de um Workflow."""
+    
+    # ✅✅✅ ADICIONE ESTA LINHA ✅✅✅
+    # Esta é a ligação que faltava. Agora cada transição pertence
+    # explicitamente a um workflow.
+    workflow = models.ForeignKey(
+        Workflow, 
+        on_delete=models.CASCADE, 
+        related_name='transicoes'
+    )
+    
     fase_origem = models.ForeignKey(Fase, on_delete=models.CASCADE, related_name='transicoes_saida')
     fase_destino = models.ForeignKey(Fase, on_delete=models.CASCADE, related_name='transicoes_entrada')
     acao = models.ForeignKey(Acao, on_delete=models.CASCADE)
@@ -238,7 +248,8 @@ class Transicao(models.Model):
         verbose_name_plural = "4. Transições entre Fases"
 
     def __str__(self):
-        return f"De '{self.fase_origem.nome}' para '{self.fase_destino.nome}'"
+        # Podemos até melhorar o __str__ agora
+        return f"Workflow '{self.workflow.nome}': De '{self.fase_origem.nome}' para '{self.fase_destino.nome}'"
 
 
 # ==============================================================================
