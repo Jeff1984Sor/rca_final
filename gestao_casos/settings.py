@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     'pastas.apps.PastasConfig',
     'campos_custom.apps.CamposCustomConfig',
     'produtos.apps.ProdutosConfig',
-    'workflow.apps.WorkflowConfig',
+    #'workflow.apps.WorkflowConfig',
+    'workflow',
 
     'django.contrib.admin',
     'django.contrib.auth',

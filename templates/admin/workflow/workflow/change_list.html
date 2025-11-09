@@ -1,0 +1,17 @@
+{# templates/admin/workflow/workflow/change_list.html #}
+
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{# Este bloco adiciona novos botões ao lado do botão "Adicionar" #}
+{% block object-tools-items %}
+  {# ✅ NOSSO NOVO BOTÃO/LINK ✅ #}
+  <li>
+    <a href="{% url 'workflow:lista_workflows' %}" class="addlink">
+      Ver Interface Visual
+    </a>
+  </li>
+
+  {# {{ block.super }} é CRUCIAL! Ele renderiza os botões padrão (como "Adicionar") #}
+  {{ block.super }}
+{% endblock %}

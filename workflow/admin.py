@@ -63,16 +63,13 @@ class TransicaoInline(admin.TabularInline):
 
 @admin.register(Workflow)
 class WorkflowAdmin(admin.ModelAdmin):
-    """Admin principal para Workflow."""
     list_display = ('nome', 'cliente', 'produto')
     list_filter = ('cliente', 'produto')
     search_fields = ('nome', 'cliente__nome', 'produto__nome')
+    inlines = [FaseInline, TransicaoInline]
     
-    # Agora usamos inlines normais, que são mais eficientes
-    inlines = [
-        FaseInline,
-        TransicaoInline
-    ]
+    # ✅✅✅ ADICIONE ESTA LINHA ✅✅✅
+    change_list_template = "admin/workflow/workflow/change_list.html"
     
     fieldsets = (
         ('Configuração Básica', {
