@@ -573,6 +573,10 @@
                 <i class="fa-solid fa-house"></i>
                 Início
             </a>
+            <a href="{% url 'casos:lista_casos' %}">
+                <i class="fa-solid fa-folder-open"></i>
+                Casos
+            </a>
             <a href="{% url 'workflow:lista_todas_acoes' %}">
                 <i class="fa-solid fa-tasks"></i>
                 Tarefas da Equipe
@@ -580,15 +584,8 @@
             <a href="{% url 'workflow:kanban' %}">
                 <i class="fa-solid fa-columns"></i>
                 Visão por Fase
-            </a>
-            <a href="{% url 'casos:lista_casos' %}">
-                <i class="fa-solid fa-folder-open"></i>
-                Casos
-            </a>
-            <a href="{% url 'clientes:lista_clientes' %}">
-                <i class="fa-solid fa-building"></i>
-                Clientes
-            </a>
+            </a>      
+            
             <a href="{% url 'casos:visao_casos_prazo' %}">
                 <i class="fa-solid fa-clock"></i>
                 Visão por Prazo
