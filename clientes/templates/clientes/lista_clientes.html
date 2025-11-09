@@ -1,71 +1,627 @@
 {% extends 'base.html' %}
 
-{% block title %}Gestão de Clientes{% endblock %}
+{% block title %}Gestão de Clientes | Sistema Jurídico{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ==================================================================== */
+/* 🎨 DESIGN SYSTEM - GESTÃO DE CLIENTES */
+/* ==================================================================== */
+:root {
+    --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --primary-solid: #667eea;
+    --success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --success-solid: #10b981;
+    --danger: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    --danger-solid: #ef4444;
+    --warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --warning-solid: #f59e0b;
+    --info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    --info-solid: #0ea5e9;
+    
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --gray-500: #64748b;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1e293b;
+    --gray-900: #0f172a;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    
+    --transition: 250ms ease-in-out;
+}
+
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-attachment: fixed;
+}
+
+.clientes-container {
+    max-width: 1400px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+/* ==================================================================== */
+/* 💎 HERO HEADER */
+/* ==================================================================== */
+.hero-header {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 24px;
+    padding: 32px 40px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+    animation: slideDown 0.5s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: var(--primary);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.hero-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+}
+
+.hero-title {
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: var(--gray-900);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.hero-title i {
+    background: var(--primary);
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* ==================================================================== */
+/* 🔍 FILTROS CARD */
+/* ==================================================================== */
+.filtros-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 32px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    animation: fadeInUp 0.6s ease-out 0.1s both;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.filtros-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 3px solid var(--gray-100);
+}
+
+.filtros-header i {
+    background: var(--info);
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.1rem;
+}
+
+.filtros-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.filtros-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 20px;
+    align-items: end;
+}
+
+.form-group {
+    margin: 0;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--gray-700);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.form-label i {
+    color: var(--primary-solid);
+    font-size: 0.9rem;
+}
+
+.form-control,
+.form-select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--gray-200);
+    border-radius: 12px;
+    font-size: 0.95rem;
+    transition: all var(--transition);
+    background: white;
+}
+
+.form-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 40px;
+}
+
+.form-control:focus,
+.form-select:focus {
+    outline: none;
+    border-color: var(--primary-solid);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.btn-group {
+    display: flex;
+    gap: 12px;
+}
+
+/* ==================================================================== */
+/* 🎯 BOTÕES */
+/* ==================================================================== */
+.btn {
+    padding: 12px 24px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    transition: all var(--transition);
+    box-shadow: var(--shadow-md);
+}
+
+.btn:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-success {
+    background: var(--success);
+    color: white;
+}
+
+.btn-info {
+    background: var(--info);
+    color: white;
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--gray-700);
+    border: 2px solid var(--gray-300);
+}
+
+.btn-secondary:hover {
+    background: var(--gray-50);
+}
+
+.btn-edit {
+    background: var(--warning);
+    color: white;
+}
+
+.btn-danger,
+.action-btn.btn-danger {
+    background: var(--danger);
+    color: white;
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+}
+
+/* ==================================================================== */
+/* 📊 TABELA MODERNA */
+/* ==================================================================== */
+.table-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    overflow: hidden;
+    animation: fadeInUp 0.6s ease-out 0.2s both;
+}
+
+.modern-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.modern-table thead {
+    background: linear-gradient(135deg, var(--gray-800) 0%, var(--gray-700) 100%);
+}
+
+.modern-table thead th {
+    padding: 16px 20px;
+    text-align: left;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    color: white;
+    border: none;
+}
+
+.modern-table tbody tr {
+    border-bottom: 1px solid var(--gray-100);
+    transition: all var(--transition);
+}
+
+.modern-table tbody tr:hover {
+    background: var(--gray-50);
+    transform: scale(1.005);
+}
+
+.modern-table tbody td {
+    padding: 18px 20px;
+    color: var(--gray-800);
+    font-size: 0.95rem;
+}
+
+.modern-table tbody td:first-child {
+    font-weight: 700;
+    color: var(--primary-solid);
+}
+
+td.actions {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.action-btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-left: 6px;
+}
+
+/* ==================================================================== */
+/* 🏷️ BADGES */
+/* ==================================================================== */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.badge-pf {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
+
+.badge-pj {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+/* ==================================================================== */
+/* 📭 EMPTY STATE */
+/* ==================================================================== */
+.empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--gray-500);
+}
+
+.empty-state i {
+    font-size: 5rem;
+    color: var(--gray-300);
+    margin-bottom: 24px;
+    display: block;
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    color: var(--gray-700);
+    margin-bottom: 12px;
+    font-weight: 700;
+}
+
+.empty-state p {
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+/* ==================================================================== */
+/* 📱 RESPONSIVIDADE */
+/* ==================================================================== */
+@media (max-width: 968px) {
+    .filtros-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .btn-group {
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        flex: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .hero-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .hero-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .modern-table {
+        font-size: 0.85rem;
+    }
+    
+    .modern-table thead th,
+    .modern-table tbody td {
+        padding: 12px 10px;
+    }
+}
+
+/* ==================================================================== */
+/* 🎨 SCROLLBAR */
+/* ==================================================================== */
+::-webkit-scrollbar {
+    width: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--gray-100);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 10px;
+    border: 3px solid var(--gray-100);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+}
+
+/* ==================================================================== */
+/* 📊 STATS (OPCIONAL) */
+/* ==================================================================== */
+.stats-badge {
+    background: white;
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    box-shadow: var(--shadow-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stats-badge i {
+    color: var(--primary-solid);
+}
+</style>
+{% endblock %}
 
 {% block content %}
-    <h1 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 24px;">Gestão de Clientes</h1>
-
-    <!-- Card de Filtros -->
-    <div class="card">
+<div class="clientes-container">
+    
+    <!-- 💎 HERO HEADER -->
+    <div class="hero-header">
+        <div class="hero-content">
+            <h1 class="hero-title">
+                <i class="fa-solid fa-building"></i>
+                Gestão de Clientes
+            </h1>
+            <div class="hero-actions">
+                <a href="{% url 'clientes:exportar_excel' %}?filtro_nome={{ filtro_nome }}&filtro_tipo={{ filtro_tipo }}" class="btn btn-info">
+                    <i class="fa-solid fa-file-excel"></i>
+                    Exportar Excel
+                </a>
+                <a href="{% url 'clientes:criar_cliente' %}" class="btn btn-primary">
+                    <i class="fa-solid fa-plus-circle"></i>
+                    Novo Cliente
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 🔍 FILTROS -->
+    <div class="filtros-card">
+        <div class="filtros-header">
+            <i class="fa-solid fa-filter"></i>
+            <h2 class="filtros-title">Filtros de Pesquisa</h2>
+            {% if filtro_nome or filtro_tipo %}
+                <span class="stats-badge" style="margin-left: auto;">
+                    <i class="fa-solid fa-circle-check"></i>
+                    Filtros Ativos
+                </span>
+            {% endif %}
+        </div>
+        
         <form method="GET" action="{% url 'clientes:lista_clientes' %}">
-            <div class="form-row" style="align-items: flex-end;">
+            <div class="filtros-grid">
+                
+                <!-- Nome -->
                 <div class="form-group">
-                    <label for="id_filtro_nome">Filtrar por Nome</label>
-                    <input id="id_filtro_nome" type="text" name="filtro_nome" placeholder="Digite parte do nome..." value="{{ filtro_nome }}">
+                    <label for="id_filtro_nome" class="form-label">
+                        <i class="fa-solid fa-user"></i>
+                        Nome do Cliente
+                    </label>
+                    <input id="id_filtro_nome" 
+                           type="text" 
+                           name="filtro_nome" 
+                           class="form-control"
+                           placeholder="Digite parte do nome..." 
+                           value="{{ filtro_nome }}">
                 </div>
+                
+                <!-- Tipo -->
                 <div class="form-group">
-                    <label for="id_filtro_tipo">Filtrar por Tipo</label>
-                    <select id="id_filtro_tipo" name="filtro_tipo">
+                    <label for="id_filtro_tipo" class="form-label">
+                        <i class="fa-solid fa-id-card"></i>
+                        Tipo de Pessoa
+                    </label>
+                    <select id="id_filtro_tipo" name="filtro_tipo" class="form-select">
                         <option value="">Todos os Tipos</option>
                         <option value="PF" {% if filtro_tipo == 'PF' %}selected{% endif %}>Pessoa Física</option>
                         <option value="PJ" {% if filtro_tipo == 'PJ' %}selected{% endif %}>Pessoa Jurídica</option>
                     </select>
                 </div>
+                
+                <!-- Botões -->
                 <div class="form-group">
-                    <div style="display: flex; gap: 10px;">
-                        <button type="submit" class="btn btn-success">Filtrar</button>
-                        <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-secondary">Limpar</a>
+                    <div class="btn-group">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            Filtrar
+                        </button>
+                        <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-secondary">
+                            <i class="fa-solid fa-eraser"></i>
+                            Limpar
+                        </a>
                     </div>
                 </div>
+                
             </div>
         </form>
     </div>
-
-    <!-- Barra de Ações (Exportar, Novo) -->
-    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 24px;">
-        <a href="{% url 'clientes:exportar_excel' %}?filtro_nome={{ filtro_nome }}&filtro_tipo={{ filtro_tipo }}" class="btn btn-info">Exportar Excel</a>
-        <a href="{% url 'clientes:criar_cliente' %}" class="btn btn-primary">Criar Novo Cliente</a>
-    </div>
-
-    <!-- Card da Tabela -->
-    <div class="data-table-container">
-        <table class="data-table">
+    
+    <!-- 📊 TABELA -->
+    <div class="table-card">
+        <table class="modern-table">
             <thead>
                 <tr>
-                    <th>Nome</th>
-                    <th>Tipo</th>
-                    <th>Cidade/UF</th>
-                    <th>Contato (PJ)</th>
-                    <th style="text-align: right;">Ações</th>
+                    <th><i class="fa-solid fa-user"></i> Nome</th>
+                    <th><i class="fa-solid fa-id-card"></i> Tipo</th>
+                    <th><i class="fa-solid fa-map-marker-alt"></i> Cidade/UF</th>
+                    <th><i class="fa-solid fa-phone"></i> Contato</th>
+                    <th style="text-align: right;"><i class="fa-solid fa-gear"></i> Ações</th>
                 </tr>
             </thead>
             <tbody>
                 {% for cliente in clientes %}
                 <tr>
-                    <td>{{ cliente.nome }}</td>
-                    <td>{{ cliente.get_tipo_display }}</td>
+                    <td><strong>{{ cliente.nome }}</strong></td>
+                    <td>
+                        <span class="badge {% if cliente.tipo == 'PF' %}badge-pf{% else %}badge-pj{% endif %}">
+                            <i class="fa-solid fa-{% if cliente.tipo == 'PF' %}user{% else %}building{% endif %}"></i>
+                            {{ cliente.get_tipo_display }}
+                        </span>
+                    </td>
                     <td>{{ cliente.cidade|default:"-" }}/{{ cliente.uf|default:"-" }}</td>
                     <td>{{ cliente.contato_empresa|default:"-" }}</td>
                     <td class="actions">
-                        <a href="{% url 'clientes:editar_cliente' pk=cliente.pk %}" class="action-btn btn-edit">Editar</a>
-                        <a href="{% url 'clientes:deletar_cliente' pk=cliente.pk %}" class="action-btn btn-danger">Deletar</a>
+                        <a href="{% url 'clientes:editar_cliente' pk=cliente.pk %}" class="btn action-btn btn-edit btn-sm" title="Editar cliente">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                            Editar
+                        </a>
+                        <a href="{% url 'clientes:deletar_cliente' pk=cliente.pk %}" class="btn action-btn btn-danger btn-sm" title="Deletar cliente" onclick="return confirm('⚠️ Tem certeza que deseja deletar este cliente?');">
+                            <i class="fa-solid fa-trash-alt"></i>
+                            Deletar
+                        </a>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
                     <td colspan="5">
                         <div class="empty-state">
-                            <p>Nenhum cliente encontrado.</p>
+                            <i class="fa-solid fa-building-slash"></i>
+                            <h3>Nenhum cliente encontrado</h3>
+                            <p>Tente ajustar os filtros ou crie um novo cliente.</p>
                         </div>
                     </td>
                 </tr>
@@ -73,4 +629,76 @@
             </tbody>
         </table>
     </div>
+    
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ Gestão de Clientes carregada!');
+    
+    // 🎨 ANIMAÇÃO DAS LINHAS
+    const rows = document.querySelectorAll('.modern-table tbody tr');
+    rows.forEach((row, index) => {
+        row.style.opacity = '0';
+        row.style.transform = 'translateX(-20px)';
+        
+        setTimeout(() => {
+            row.style.transition = 'all 0.3s ease-out';
+            row.style.opacity = '1';
+            row.style.transform = 'translateX(0)';
+        }, index * 50);
+    });
+    
+    // 📊 CONTADOR DE CLIENTES
+    const totalClientes = {{ clientes|length }};
+    if (totalClientes > 0) {
+        console.log(`📊 Total de clientes: ${totalClientes}`);
+    }
+    
+    // ⌨️ ATALHOS DE TECLADO
+    document.addEventListener('keydown', function(e) {
+        // N = Novo Cliente
+        if (e.key === 'n' || e.key === 'N') {
+            if (!e.target.matches('input, textarea, select')) {
+                e.preventDefault();
+                window.location.href = "{% url 'clientes:criar_cliente' %}";
+            }
+        }
+        
+        // F = Focus no filtro de nome
+        if (e.key === 'f' || e.key === 'F') {
+            if (!e.target.matches('input, textarea, select')) {
+                e.preventDefault();
+                document.getElementById('id_filtro_nome')?.focus();
+            }
+        }
+        
+        // ESC = Limpar filtros
+        if (e.key === 'Escape') {
+            const hasFiltros = "{{ filtro_nome }}" || "{{ filtro_tipo }}";
+            if (hasFiltros) {
+                window.location.href = "{% url 'clientes:lista_clientes' %}";
+            }
+        }
+    });
+    
+    // 🔍 HIGHLIGHT DO FILTRO ATIVO
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasFiltros = urlParams.has('filtro_nome') || urlParams.has('filtro_tipo');
+    
+    if (hasFiltros) {
+        const filtrosCard = document.querySelector('.filtros-card');
+        if (filtrosCard) {
+            filtrosCard.style.borderLeft = '5px solid var(--success-solid)';
+        }
+    }
+    
+    console.log('💡 Atalhos disponíveis:');
+    console.log('   - N: Novo Cliente');
+    console.log('   - F: Focar no filtro');
+    console.log('   - ESC: Limpar filtros');
+});
+</script>
 {% endblock %}

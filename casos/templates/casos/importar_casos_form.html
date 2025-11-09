@@ -1,62 +1,785 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Importar Casos{% endblock %}
+{% block title %}Importar Casos | Sistema Jurídico{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ==================================================================== */
+/* 🎨 DESIGN SYSTEM - IMPORTAÇÃO DE CASOS */
+/* ==================================================================== */
+:root {
+    --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --primary-solid: #667eea;
+    --success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --success-solid: #10b981;
+    --danger: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    --danger-solid: #ef4444;
+    --warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --warning-solid: #f59e0b;
+    --info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    --info-solid: #0ea5e9;
+    
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --gray-500: #64748b;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1e293b;
+    --gray-900: #0f172a;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    
+    --transition: 250ms ease-in-out;
+}
+
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+}
+
+.importacao-container {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+/* ==================================================================== */
+/* 💎 HERO HEADER */
+/* ==================================================================== */
+.hero-header {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 24px;
+    padding: 32px 40px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+    animation: slideDown 0.5s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: var(--success);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.hero-content {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.hero-icon {
+    background: var(--success);
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.8rem;
+    box-shadow: var(--shadow-lg);
+}
+
+.hero-text h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--gray-900);
+    margin: 0 0 8px;
+}
+
+.hero-text p {
+    font-size: 1rem;
+    color: var(--gray-600);
+    margin: 0;
+}
+
+/* ==================================================================== */
+/* 💡 INFO BOX */
+/* ==================================================================== */
+.info-box {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(56, 239, 125, 0.05) 100%);
+    border: 2px solid var(--success-solid);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-bottom: 32px;
+    display: flex;
+    gap: 14px;
+    animation: fadeInUp 0.6s ease-out 0.1s both;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.info-box-icon {
+    color: var(--success-solid);
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.info-box-content p {
+    margin: 0;
+    color: var(--gray-700);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.info-box-content strong {
+    color: var(--gray-900);
+}
+
+/* ==================================================================== */
+/* 📝 FORM CARD */
+/* ==================================================================== */
+.form-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 40px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    animation: fadeInUp 0.6s ease-out 0.2s both;
+}
+
+.form-section {
+    margin-bottom: 32px;
+}
+
+.section-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0 0 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--gray-100);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-title i {
+    color: var(--success-solid);
+    font-size: 1.1rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 24px;
+}
+
+.form-group {
+    margin: 0;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--gray-700);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-label .required {
+    color: var(--danger-solid);
+    margin-left: 2px;
+}
+
+.form-label i {
+    color: var(--success-solid);
+    font-size: 0.9rem;
+}
+
+.form-select {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 2px solid var(--gray-200);
+    font-size: 1rem;
+    font-weight: 500;
+    background-color: var(--gray-50);
+    transition: all var(--transition);
+    color: var(--gray-900);
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2310b981' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 40px;
+}
+
+.form-select:focus {
+    outline: none;
+    background-color: white;
+    border-color: var(--success-solid);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+
+/* ==================================================================== */
+/* 📤 DRAG & DROP UPLOAD */
+/* ==================================================================== */
+.upload-area {
+    border: 3px dashed var(--gray-300);
+    border-radius: 16px;
+    padding: 48px 32px;
+    text-align: center;
+    background: var(--gray-50);
+    transition: all var(--transition);
+    cursor: pointer;
+    position: relative;
+}
+
+.upload-area:hover {
+    border-color: var(--success-solid);
+    background: rgba(16, 185, 129, 0.05);
+    transform: translateY(-2px);
+}
+
+.upload-area.dragover {
+    border-color: var(--success-solid);
+    background: rgba(16, 185, 129, 0.1);
+    border-style: solid;
+}
+
+.upload-icon {
+    width: 80px;
+    height: 80px;
+    background: var(--success);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    color: white;
+    font-size: 2rem;
+    animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.upload-text h3 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0 0 8px;
+}
+
+.upload-text p {
+    color: var(--gray-600);
+    margin: 0 0 16px;
+    font-size: 0.95rem;
+}
+
+.upload-text .file-types {
+    font-size: 0.85rem;
+    color: var(--gray-500);
+    font-weight: 600;
+}
+
+.file-input {
+    display: none;
+}
+
+.btn-browse {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+    background: white;
+    color: var(--success-solid);
+    border: 2px solid var(--success-solid);
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    margin-top: 8px;
+}
+
+.btn-browse:hover {
+    background: var(--success-solid);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* ==================================================================== */
+/* 📄 FILE PREVIEW */
+/* ==================================================================== */
+.file-preview {
+    display: none;
+    background: white;
+    border: 2px solid var(--success-solid);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 16px;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.file-preview.active {
+    display: flex;
+}
+
+.file-preview-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--success);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.file-preview-info {
+    flex: 1;
+    margin-left: 16px;
+}
+
+.file-preview-name {
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0 0 4px;
+    font-size: 1rem;
+}
+
+.file-preview-size {
+    color: var(--gray-600);
+    font-size: 0.85rem;
+}
+
+.file-preview-remove {
+    background: var(--danger-solid);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition);
+    flex-shrink: 0;
+}
+
+.file-preview-remove:hover {
+    background: var(--danger-solid);
+    transform: scale(1.1);
+}
+
+/* ==================================================================== */
+/* 🎯 SUBMIT BUTTON */
+/* ==================================================================== */
+.submit-section {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 2px solid var(--gray-100);
+}
+
+.btn-submit {
+    width: 100%;
+    padding: 16px;
+    background: var(--success);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-submit:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-xl);
+}
+
+.btn-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-submit.loading {
+    pointer-events: none;
+}
+
+.btn-submit.loading i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ==================================================================== */
+/* 📱 RESPONSIVIDADE */
+/* ==================================================================== */
+@media (max-width: 768px) {
+    .importacao-container {
+        margin: 20px auto;
+    }
+
+    .hero-header {
+        padding: 24px 28px;
+    }
+
+    .hero-content {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .hero-text h1 {
+        font-size: 1.75rem;
+    }
+
+    .form-card {
+        padding: 28px 24px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .upload-area {
+        padding: 32px 20px;
+    }
+
+    .upload-icon {
+        width: 64px;
+        height: 64px;
+        font-size: 1.5rem;
+    }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container mt-5 mb-5">
-    <div class="row justify-content-center">
-        <div class="col-md-9 col-lg-8"> {# Um pouco mais largo para acomodar #}
-
-            {% include 'casos/partials/app_messages.html' %} 
-
-            <div class="card shadow border-0">
-                <div class="card-header bg-success text-white">
-                    <h4 class="mb-0"><i class="fas fa-upload me-2"></i>Importação Massiva de Casos</h4>
-                </div>
-                <div class="card-body p-4">
-                    <p class="card-text text-muted mb-4">
-                        Selecione o Cliente, Produto e suba a planilha Excel (.xlsx). A planilha deve usar o cabeçalho gerado pelo sistema.
-                    </p>
-                    
-                    <form method="post" action="{% url 'casos:importar_casos_view' %}" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        
-                        <div class="row mb-3"> {# Linha para os selects #}
-                            <div class="col-md-6"> {# Coluna Cliente #}
-                                <label for="cliente-select" class="form-label fw-bold">Cliente <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-lg" id="cliente-select" name="cliente" required>
-                                    <option value="" disabled selected>-- Selecione --</option>
-                                    {% for cliente in clientes %}
-                                        <option value="{{ cliente.id }}">{{ cliente.nome }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-6"> {# Coluna Produto #}
-                                <label for="produto-select" class="form-label fw-bold">Produto <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-lg" id="produto-select" name="produto" required>
-                                    <option value="" disabled selected>-- Selecione --</option>
-                                    {% for produto in produtos %}
-                                        <option value="{{ produto.id }}">{{ produto.nome }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="mb-4"> {# Espaçamento antes do botão #}
-                            <label for="arquivo-excel" class="form-label fw-bold">Arquivo Excel (.xlsx) <span class="text-danger">*</span></label>
-                            <input type="file" class="form-control form-control-lg" id="arquivo-excel" name="arquivo_excel" accept=".xlsx" required>
-                        </div>
-
-                        <div class="d-grid gap-2 mt-4"> 
-                            <button type="submit" class="btn btn-success btn-lg">
-                                <i class="fas fa-upload me-2"></i> Iniciar Migração
-                            </button>
-                        </div>
-                    </form>
-                </div>
+<div class="importacao-container">
+    
+    <!-- 💎 HERO HEADER -->
+    <div class="hero-header">
+        <div class="hero-content">
+            <div class="hero-icon">
+                <i class="fa-solid fa-file-import"></i>
+            </div>
+            <div class="hero-text">
+                <h1>Importação Massiva de Casos</h1>
+                <p>Importe múltiplos casos de uma vez usando planilha Excel</p>
             </div>
         </div>
     </div>
+
+    <!-- 📬 MENSAGENS -->
+    {% include 'casos/partials/app_messages.html' %}
+
+    <!-- 💡 INFO BOX -->
+    <div class="info-box">
+        <i class="fa-solid fa-circle-info info-box-icon"></i>
+        <div class="info-box-content">
+            <p><strong>Como usar:</strong> Selecione o cliente e produto, depois faça upload da planilha Excel (.xlsx). A planilha deve seguir o modelo gerado pelo sistema com todos os campos obrigatórios preenchidos.</p>
+        </div>
+    </div>
+
+    <!-- 📝 FORM CARD -->
+    <div class="form-card">
+        
+        <form method="post" action="{% url 'casos:importar_casos_view' %}" enctype="multipart/form-data" id="importForm">
+            {% csrf_token %}
+            
+            <!-- 🏢 SELEÇÃO DE CLIENTE E PRODUTO -->
+            <div class="form-section">
+                <h3 class="section-title">
+                    <i class="fa-solid fa-building"></i>
+                    Configuração Básica
+                </h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="cliente-select" class="form-label">
+                            <i class="fa-solid fa-building"></i>
+                            Cliente
+                            <span class="required">*</span>
+                        </label>
+                        <select class="form-select" id="cliente-select" name="cliente" required>
+                            <option value="" disabled selected>Selecione o cliente</option>
+                            {% for cliente in clientes %}
+                                <option value="{{ cliente.id }}">{{ cliente.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="produto-select" class="form-label">
+                            <i class="fa-solid fa-box"></i>
+                            Produto
+                            <span class="required">*</span>
+                        </label>
+                        <select class="form-select" id="produto-select" name="produto" required>
+                            <option value="" disabled selected>Selecione o produto</option>
+                            {% for produto in produtos %}
+                                <option value="{{ produto.id }}">{{ produto.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 📤 UPLOAD DE ARQUIVO -->
+            <div class="form-section">
+                <h3 class="section-title">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    Upload da Planilha
+                </h3>
+
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">
+                        <i class="fa-solid fa-file-excel"></i>
+                    </div>
+                    <div class="upload-text">
+                        <h3>Arraste o arquivo aqui</h3>
+                        <p>ou clique para selecionar</p>
+                        <label for="arquivo-excel" class="btn-browse">
+                            <i class="fa-solid fa-folder-open"></i>
+                            Escolher Arquivo
+                        </label>
+                        <div class="file-types">Formato aceito: .xlsx</div>
+                    </div>
+                    <input type="file" 
+                           class="file-input" 
+                           id="arquivo-excel" 
+                           name="arquivo_excel" 
+                           accept=".xlsx" 
+                           required>
+                </div>
+
+                <!-- Preview do arquivo -->
+                <div class="file-preview" id="filePreview">
+                    <div class="file-preview-icon">
+                        <i class="fa-solid fa-file-excel"></i>
+                    </div>
+                    <div class="file-preview-info">
+                        <div class="file-preview-name" id="fileName"></div>
+                        <div class="file-preview-size" id="fileSize"></div>
+                    </div>
+                    <button type="button" class="file-preview-remove" id="removeFile" title="Remover arquivo">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 🎯 SUBMIT -->
+            <div class="submit-section">
+                <button type="submit" class="btn-submit" id="submitBtn" disabled>
+                    <i class="fa-solid fa-file-import"></i>
+                    <span>Iniciar Importação</span>
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ Formulário de importação carregado!');
+
+    const form = document.getElementById('importForm');
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('arquivo-excel');
+    const filePreview = document.getElementById('filePreview');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const removeFile = document.getElementById('removeFile');
+    const submitBtn = document.getElementById('submitBtn');
+    const clienteSelect = document.getElementById('cliente-select');
+    const produtoSelect = document.getElementById('produto-select');
+
+    // 📤 DRAG & DROP
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => {
+            uploadArea.classList.add('dragover');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => {
+            uploadArea.classList.remove('dragover');
+        });
+    });
+
+    uploadArea.addEventListener('drop', function(e) {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFile(files[0]);
+        }
+    });
+
+    // 📁 CLICK PARA SELECIONAR
+    uploadArea.addEventListener('click', function(e) {
+        if (e.target.id !== 'arquivo-excel') {
+            fileInput.click();
+        }
+    });
+
+    fileInput.addEventListener('change', function(e) {
+        if (this.files.length > 0) {
+            handleFile(this.files[0]);
+        }
+    });
+
+    // 🔄 PROCESSAR ARQUIVO
+    function handleFile(file) {
+        // Validar extensão
+        if (!file.name.endsWith('.xlsx')) {
+            alert('❌ Apenas arquivos .xlsx são aceitos!');
+            return;
+        }
+
+        // Validar tamanho (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('❌ O arquivo é muito grande! Tamanho máximo: 10MB');
+            return;
+        }
+
+        // Atualizar preview
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        filePreview.classList.add('active');
+        uploadArea.style.display = 'none';
+
+        checkFormValid();
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    // ❌ REMOVER ARQUIVO
+    removeFile.addEventListener('click', function() {
+        fileInput.value = '';
+        filePreview.classList.remove('active');
+        uploadArea.style.display = 'block';
+        checkFormValid();
+    });
+
+    // ✅ VALIDAR FORMULÁRIO
+    function checkFormValid() {
+        const clienteOk = clienteSelect.value !== '';
+        const produtoOk = produtoSelect.value !== '';
+        const arquivoOk = fileInput.files.length > 0;
+
+        submitBtn.disabled = !(clienteOk && produtoOk && arquivoOk);
+    }
+
+    clienteSelect.addEventListener('change', checkFormValid);
+    produtoSelect.addEventListener('change', checkFormValid);
+
+    // 🎯 SUBMIT COM LOADING
+    form.addEventListener('submit', function(e) {
+        if (submitBtn.disabled) {
+            e.preventDefault();
+            return;
+        }
+
+        submitBtn.classList.add('loading');
+        submitBtn.disabled = true;
+
+        const icon = submitBtn.querySelector('i');
+        icon.className = 'fa-solid fa-spinner';
+
+        const span = submitBtn.querySelector('span');
+        span.textContent = 'Importando...';
+    });
+
+    // 🎨 FOCUS ANIMATION
+    const selects = document.querySelectorAll('.form-select');
+    selects.forEach(select => {
+        select.addEventListener('focus', function() {
+            this.closest('.form-group').style.transform = 'scale(1.01)';
+            this.closest('.form-group').style.transition = 'transform 0.2s ease';
+        });
+
+        select.addEventListener('blur', function() {
+            this.closest('.form-group').style.transform = 'scale(1)';
+        });
+    });
+
+    console.log('💡 Dicas:');
+    console.log('   - Arraste o arquivo .xlsx para a área de upload');
+    console.log('   - Ou clique para selecionar manualmente');
+    console.log('   - Tamanho máximo: 10MB');
+});
+</script>
 {% endblock %}

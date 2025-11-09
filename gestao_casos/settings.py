@@ -232,3 +232,5 @@ CELERY_TIMEZONE = TIME_ZONE # Usa o mesmo timezone do Django (America/Sao_Paulo)
 DATE_FORMAT = 'd/m/Y' 
 # Define o formato padrão para campos DateTimeField
 DATETIME_FORMAT = 'd/m/Y H:i'
+
+LOGIN_REDIRECT_URL = '/'

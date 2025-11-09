@@ -1,83 +1,986 @@
 {% extends 'base.html' %}
 
-{% block title %}Gestão de Equipamentos{% endblock %}
+{% block title %}Gestão de Equipamentos | Sistema Jurídico{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ==================================================================== */
+/* 🎨 DESIGN SYSTEM - LISTA DE EQUIPAMENTOS */
+/* ==================================================================== */
+:root {
+    --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --primary-solid: #667eea;
+    --success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --success-solid: #10b981;
+    --danger: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    --danger-solid: #ef4444;
+    --warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --warning-solid: #f59e0b;
+    --info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    --info-solid: #0ea5e9;
+    
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --gray-500: #64748b;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1e293b;
+    --gray-900: #0f172a;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    
+    --transition: 250ms ease-in-out;
+}
+
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+}
+
+.equipamentos-container {
+    max-width: 1400px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+/* ==================================================================== */
+/* 💎 HERO HEADER */
+/* ==================================================================== */
+.hero-header {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 24px;
+    padding: 32px 40px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+    animation: slideDown 0.5s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: var(--primary);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.hero-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+}
+
+.hero-title {
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: var(--gray-900);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.hero-title i {
+    background: var(--primary);
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* ==================================================================== */
+/* 📊 STATS CARDS */
+/* ==================================================================== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
+    animation: fadeInUp 0.6s ease-out 0.1s both;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    padding: 20px 24px;
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-xl);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    color: white;
+}
+
+.stat-card.total .stat-icon { background: var(--info); }
+.stat-card.ativos .stat-icon { background: var(--success); }
+.stat-card.manutencao .stat-icon { background: var(--warning); }
+.stat-card.inativos .stat-icon { background: var(--danger); }
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--gray-900);
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: var(--gray-600);
+    margin-top: 4px;
+}
+
+/* ==================================================================== */
+/* 🔍 FILTROS CARD */
+/* ==================================================================== */
+.filtros-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 32px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    animation: fadeInUp 0.6s ease-out 0.2s both;
+}
+
+.filtros-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 3px solid var(--gray-100);
+}
+
+.filtros-header i {
+    background: var(--info);
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.1rem;
+}
+
+.filtros-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.filtros-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.form-group {
+    margin: 0;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--gray-700);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.form-label i {
+    color: var(--primary-solid);
+    font-size: 0.85rem;
+}
+
+.form-control,
+.form-select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--gray-200);
+    border-radius: 12px;
+    font-size: 0.95rem;
+    transition: all var(--transition);
+    background: white;
+}
+
+.form-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 40px;
+}
+
+.form-control:focus,
+.form-select:focus {
+    outline: none;
+    border-color: var(--primary-solid);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.filtros-actions {
+    display: flex;
+    gap: 12px;
+    padding-top: 8px;
+}
+
+/* ==================================================================== */
+/* 🎯 BOTÕES */
+/* ==================================================================== */
+.btn {
+    padding: 12px 24px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    box-shadow: var(--shadow-md);
+}
+
+.btn:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-success {
+    background: var(--success);
+    color: white;
+}
+
+.btn-info {
+    background: var(--info);
+    color: white;
+}
+
+.btn-warning {
+    background: var(--warning);
+    color: white;
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--gray-700);
+    border: 2px solid var(--gray-300);
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+}
+
+.btn i {
+    font-size: 1rem;
+}
+
+/* ==================================================================== */
+/* 📊 TABELA MODERNA */
+/* ==================================================================== */
+.table-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    overflow: hidden;
+    animation: fadeInUp 0.6s ease-out 0.3s both;
+}
+
+.table-header {
+    background: var(--gray-50);
+    padding: 24px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--gray-200);
+}
+
+.table-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.table-title i {
+    color: var(--primary-solid);
+}
+
+.modern-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.modern-table thead {
+    background: linear-gradient(135deg, var(--gray-800) 0%, var(--gray-700) 100%);
+}
+
+.modern-table thead th {
+    padding: 16px 20px;
+    text-align: left;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    color: white;
+    border: none;
+}
+
+.modern-table tbody tr {
+    border-bottom: 1px solid var(--gray-100);
+    transition: all var(--transition);
+}
+
+.modern-table tbody tr:hover {
+    background: var(--gray-50);
+    transform: scale(1.01);
+    box-shadow: var(--shadow-sm);
+}
+
+.modern-table tbody td {
+    padding: 18px 20px;
+    color: var(--gray-800);
+    font-size: 0.95rem;
+}
+
+.modern-table tbody td:first-child {
+    font-weight: 700;
+    color: var(--primary-solid);
+}
+
+/* ==================================================================== */
+/* 🏷️ BADGES */
+/* ==================================================================== */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-ativo {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+}
+
+.badge-manutencao {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.badge-inativo {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    color: white;
+}
+
+.badge-disponivel {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
+
+.badge i {
+    font-size: 0.7rem;
+}
+
+/* ==================================================================== */
+/* 🎬 ACTIONS COLUMN */
+/* ==================================================================== */
+.actions {
+    text-align: right;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.action-btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    box-shadow: var(--shadow-sm);
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.action-btn.btn-info {
+    background: var(--info);
+    color: white;
+}
+
+.action-btn.btn-edit {
+    background: var(--warning);
+    color: white;
+}
+
+.action-btn i {
+    font-size: 0.9rem;
+}
+
+/* ==================================================================== */
+/* 📭 EMPTY STATE */
+/* ==================================================================== */
+.empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--gray-500);
+}
+
+.empty-state i {
+    font-size: 5rem;
+    color: var(--gray-300);
+    margin-bottom: 24px;
+    display: block;
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    color: var(--gray-700);
+    margin-bottom: 12px;
+    font-weight: 700;
+}
+
+.empty-state p {
+    font-size: 1.1rem;
+    color: var(--gray-500);
+    margin: 0 0 24px;
+}
+
+/* ==================================================================== */
+/* 📱 RESPONSIVIDADE */
+/* ==================================================================== */
+@media (max-width: 1200px) {
+    .filtros-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .hero-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .hero-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .hero-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .filtros-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .filtros-actions {
+        flex-direction: column;
+    }
+    
+    .filtros-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .table-header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+    }
+    
+    .modern-table {
+        font-size: 0.85rem;
+    }
+    
+    .modern-table thead th,
+    .modern-table tbody td {
+        padding: 12px 10px;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+}
+
+/* ==================================================================== */
+/* 🎨 SCROLLBAR */
+/* ==================================================================== */
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--gray-100);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 10px;
+    border: 3px solid var(--gray-100);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+}
+</style>
+{% endblock %}
 
 {% block content %}
-    <h1 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 24px;">Gestão de Equipamentos</h1>
-
-    <!-- CARD DE FILTROS (Estrutura pronta para futura implementação) -->
-    <div class="card">
+<div class="equipamentos-container">
+    
+    <!-- 💎 HERO HEADER -->
+    <div class="hero-header">
+        <div class="hero-content">
+            <h1 class="hero-title">
+                <i class="fa-solid fa-laptop"></i>
+                Gestão de Equipamentos
+            </h1>
+            <div class="hero-actions">
+                <a href="{% url 'equipamentos:equipamento_create' %}" class="btn btn-primary">
+                    <i class="fa-solid fa-plus-circle"></i>
+                    Novo Equipamento
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 📊 STATS CARDS -->
+    <div class="stats-grid">
+        <div class="stat-card total">
+            <div class="stat-icon">
+                <i class="fa-solid fa-boxes-stacked"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value" id="total-equipamentos">-</div>
+                <div class="stat-label">Total de Equipamentos</div>
+            </div>
+        </div>
+        
+        <div class="stat-card ativos">
+            <div class="stat-icon">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value" id="total-ativos">-</div>
+                <div class="stat-label">Ativos</div>
+            </div>
+        </div>
+        
+        <div class="stat-card manutencao">
+            <div class="stat-icon">
+                <i class="fa-solid fa-wrench"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value" id="total-manutencao">-</div>
+                <div class="stat-label">Em Manutenção</div>
+            </div>
+        </div>
+        
+        <div class="stat-card inativos">
+            <div class="stat-icon">
+                <i class="fa-solid fa-circle-xmark"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value" id="total-inativos">-</div>
+                <div class="stat-label">Inativos</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 🔍 FILTROS -->
+    <div class="filtros-card">
+        <div class="filtros-header">
+            <i class="fa-solid fa-filter"></i>
+            <h2 class="filtros-title">Filtros de Pesquisa</h2>
+        </div>
+        
         <form method="GET" action="">
-            <div class="form-row" style="align-items: flex-end;">
+            <div class="filtros-grid">
+                
+                <!-- Nome -->
                 <div class="form-group">
-                    <label for="id_filtro_nome">Nome do Item</label>
-                    <input id="id_filtro_nome" type="text" name="filtro_nome" placeholder="Filtrar por nome...">
+                    <label for="id_filtro_nome" class="form-label">
+                        <i class="fa-solid fa-tag"></i>
+                        Nome do Item
+                    </label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="id_filtro_nome" 
+                           name="filtro_nome" 
+                           placeholder="Buscar por nome...">
                 </div>
+                
+                <!-- Responsável -->
                 <div class="form-group">
-                    <label for="id_filtro_responsavel">Responsável</label>
-                    <select id="id_filtro_responsavel" name="filtro_responsavel">
-                        <option value="">Todos</option>
-                        {# Futuramente, podemos popular com a lista de usuários #}
+                    <label for="id_filtro_responsavel" class="form-label">
+                        <i class="fa-solid fa-user"></i>
+                        Responsável
+                    </label>
+                    <select class="form-select" id="id_filtro_responsavel" name="filtro_responsavel">
+                        <option value="">Todos os Responsáveis</option>
+                        {# Futuramente, popular com usuários #}
                     </select>
                 </div>
+                
+                <!-- Status -->
                 <div class="form-group">
-                    <label for="id_filtro_status">Status</label>
-                    <select id="id_filtro_status" name="filtro_status">
-                        <option value="">Todos</option>
-                        {# Futuramente, podemos popular com a lista de status #}
+                    <label for="id_filtro_status" class="form-label">
+                        <i class="fa-solid fa-flag"></i>
+                        Status
+                    </label>
+                    <select class="form-select" id="id_filtro_status" name="filtro_status">
+                        <option value="">Todos os Status</option>
+                        {# Futuramente, popular com status #}
                     </select>
                 </div>
-                <div class="form-group">
-                    <div style="display: flex; gap: 10px;">
-                        <button type="submit" class="btn btn-success">Filtrar</button>
-                        <a href="{% url 'equipamentos:equipamento_list' %}" class="btn btn-secondary">Limpar</a>
-                    </div>
-                </div>
+                
+            </div>
+            
+            <div class="filtros-actions">
+                <button type="submit" class="btn btn-success">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    Filtrar
+                </button>
+                <a href="{% url 'equipamentos:equipamento_list' %}" class="btn btn-secondary">
+                    <i class="fa-solid fa-eraser"></i>
+                    Limpar Filtros
+                </a>
             </div>
         </form>
     </div>
-
-    <!-- Barra de Ações (Novo Equipamento) -->
-    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 24px;">
-        <a href="{% url 'equipamentos:equipamento_create' %}" class="btn btn-primary">Adicionar Novo Equipamento</a>
+    
+    <!-- 📊 TABELA -->
+    <div class="table-card">
+        <div class="table-header">
+            <h2 class="table-title">
+                <i class="fa-solid fa-list"></i>
+                Lista de Equipamentos
+            </h2>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th><i class="fa-solid fa-tag"></i> Nome do Item</th>
+                        <th><i class="fa-solid fa-user"></i> Responsável</th>
+                        <th><i class="fa-solid fa-flag"></i> Status</th>
+                        <th><i class="fa-solid fa-box"></i> Tipo</th>
+                        <th><i class="fa-solid fa-copyright"></i> Marca</th>
+                        <th style="text-align: right;"><i class="fa-solid fa-gear"></i> Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for equipamento in equipamentos %}
+                    <tr>
+                        <td>
+                            <strong>{{ equipamento.nome_item|truncatechars:40 }}</strong>
+                        </td>
+                        <td>
+                            {% if equipamento.responsavel %}
+                                <i class="fa-solid fa-user-circle"></i>
+                                {{ equipamento.responsavel.get_full_name }}
+                            {% else %}
+                                <span style="color: var(--gray-400);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if equipamento.status %}
+                                <span class="badge badge-{{ equipamento.status.nome|lower }}">
+                                    <i class="fa-solid fa-circle"></i>
+                                    {{ equipamento.status.nome }}
+                                </span>
+                            {% else %}
+                                <span style="color: var(--gray-400);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if equipamento.tipo_item %}
+                                {{ equipamento.tipo_item.nome }}
+                            {% else %}
+                                <span style="color: var(--gray-400);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if equipamento.marca %}
+                                {{ equipamento.marca.nome }}
+                            {% else %}
+                                <span style="color: var(--gray-400);">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions">
+                            <div class="action-buttons">
+                                <a href="{% url 'equipamentos:equipamento_detail' pk=equipamento.pk %}" 
+                                   class="action-btn btn-info" 
+                                   title="Ver detalhes">
+                                    <i class="fa-solid fa-eye"></i>
+                                    Detalhes
+                                </a>
+                                <a href="{% url 'equipamentos:equipamento_update' pk=equipamento.pk %}" 
+                                   class="action-btn btn-edit" 
+                                   title="Editar">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                    Editar
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <i class="fa-solid fa-laptop"></i>
+                                <h3>Nenhum equipamento cadastrado</h3>
+                                <p>Comece adicionando seu primeiro equipamento ao sistema.</p>
+                                <a href="{% url 'equipamentos:equipamento_create' %}" class="btn btn-primary">
+                                    <i class="fa-solid fa-plus-circle"></i>
+                                    Adicionar Equipamento
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
+    
+</div>
+{% endblock %}
 
-    <!-- Card da Tabela de Equipamentos -->
-    <div class="data-table-container">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Nome do Item</th>
-                    <th>Responsável</th>
-                    <th>Status</th>
-                    <th>Tipo</th>
-                    <th>Marca</th>
-                    <th style="text-align: right;">Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for equipamento in equipamentos %}
-                <tr>
-                    <td>{{ equipamento.nome_item|truncatechars:40 }}</td>
-                    <td>{{ equipamento.responsavel.get_full_name|default:"-" }}</td>
-                    <td>{{ equipamento.status.nome|default:"-" }}</td>
-                    <td>{{ equipamento.tipo_item.nome|default:"-" }}</td>
-                    <td>{{ equipamento.marca.nome|default:"-" }}</td>
-                    <td class="actions">
-                        <a href="{% url 'equipamentos:equipamento_detail' pk=equipamento.pk %}" class="action-btn btn-info">Ver Detalhes</a>
-                        <a href="{% url 'equipamentos:equipamento_update' pk=equipamento.pk %}" class="action-btn btn-edit">Editar</a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6">
-                        <div class="empty-state">
-                            <p>Nenhum equipamento cadastrado ainda.</p>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ Gestão de Equipamentos carregada!');
+    
+    // 📊 CALCULAR ESTATÍSTICAS
+    const calcularStats = () => {
+        const rows = document.querySelectorAll('.modern-table tbody tr:not(:has(.empty-state))');
+        let total = 0;
+        let ativos = 0;
+        let manutencao = 0;
+        let inativos = 0;
+        
+        rows.forEach(row => {
+            total++;
+            const badge = row.querySelector('.badge');
+            if (badge) {
+                const status = badge.textContent.trim().toLowerCase();
+                if (status.includes('ativo') && !status.includes('inativo')) {
+                    ativos++;
+                } else if (status.includes('manutenção') || status.includes('manutencao')) {
+                    manutencao++;
+                } else if (status.includes('inativo')) {
+                    inativos++;
+                }
+            }
+        });
+        
+        document.getElementById('total-equipamentos').textContent = total;
+        document.getElementById('total-ativos').textContent = ativos;
+        document.getElementById('total-manutencao').textContent = manutencao;
+        document.getElementById('total-inativos').textContent = inativos;
+    };
+    
+    calcularStats();
+    
+    // 🎨 ANIMAÇÃO DE ENTRADA DAS LINHAS
+    const rows = document.querySelectorAll('.modern-table tbody tr');
+    rows.forEach((row, index) => {
+        row.style.opacity = '0';
+        row.style.transform = 'translateX(-20px)';
+        
+        setTimeout(() => {
+            row.style.transition = 'all 0.3s ease-out';
+            row.style.opacity = '1';
+            row.style.transform = 'translateX(0)';
+        }, index * 50);
+    });
+    
+    // 📊 CONTADOR DE EQUIPAMENTOS
+    const totalEquipamentos = {{ equipamentos|length }};
+    if (totalEquipamentos > 0) {
+        const tableTitle = document.querySelector('.table-title');
+        if (tableTitle) {
+            const counter = document.createElement('span');
+            counter.style.cssText = 'margin-left: auto; font-size: 0.9rem; color: var(--gray-600); font-weight: 600;';
+            counter.innerHTML = `<i class="fa-solid fa-list-ol"></i> ${totalEquipamentos} equipamento${totalEquipamentos > 1 ? 's' : ''}`;
+            
+            const headerDiv = document.querySelector('.table-header');
+            if (headerDiv) {
+                headerDiv.style.display = 'flex';
+                headerDiv.style.alignItems = 'center';
+                headerDiv.appendChild(counter);
+            }
+        }
+    }
+    
+    // ⚡ ATALHOS DE TECLADO
+    document.addEventListener('keydown', function(e) {
+        if (e.target.matches('input, textarea, select')) return;
+        
+        // N = Novo Equipamento
+        if (e.key === 'n' || e.key === 'N') {
+            e.preventDefault();
+            window.location.href = "{% url 'equipamentos:equipamento_create' %}";
+        }
+        
+        // F = Focus no filtro de nome
+        if (e.key === 'f' || e.key === 'F') {
+            e.preventDefault();
+            document.getElementById('id_filtro_nome')?.focus();
+        }
+    });
+    
+    // 🎯 HIGHLIGHT DA LINHA AO PASSAR O MOUSE
+    const tableRows = document.querySelectorAll('.modern-table tbody tr');
+    tableRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            if (!this.querySelector('.empty-state')) {
+                this.style.backgroundColor = 'var(--gray-50)';
+            }
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+    
+    // 🎭 ANIMAÇÃO NO EMPTY STATE
+    const emptyState = document.querySelector('.empty-state');
+    if (emptyState) {
+        emptyState.style.opacity = '0';
+        emptyState.style.transform = 'scale(0.9)';
+        
+        setTimeout(() => {
+            emptyState.style.transition = 'all 0.5s ease-out';
+            emptyState.style.opacity = '1';
+            emptyState.style.transform = 'scale(1)';
+        }, 200);
+    }
+    
+    // 📱 RESPONSIVIDADE - MOBILE TABLE
+    function checkTableWidth() {
+        const table = document.querySelector('.modern-table');
+        const container = document.querySelector('.table-responsive');
+        
+        if (table && container && window.innerWidth < 768) {
+            container.style.overflowX = 'auto';
+            container.style.webkitOverflowScrolling = 'touch';
+        }
+    }
+    
+    checkTableWidth();
+    window.addEventListener('resize', checkTableWidth);
+    
+    console.log('💡 Dicas de uso:');
+    console.log('   - Pressione "N" para adicionar novo equipamento');
+    console.log('   - Pressione "F" para focar no filtro de nome');
+    console.log('   - Use os filtros para encontrar equipamentos específicos');
+});
+</script>
 {% endblock %}

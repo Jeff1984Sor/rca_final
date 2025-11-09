@@ -2,195 +2,1269 @@
 {% load static %}
 {% load custom_tags %}
 
-{% block title %}Criar Novo Caso{% endblock %}
+{% block title %}Criar Novo Caso | {{ cliente.nome }} - {{ produto.nome }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ==================================================================== */
+/* 🎨 DESIGN SYSTEM - CRIAR CASO */
+/* ==================================================================== */
+:root {
+    --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --primary-solid: #667eea;
+    --success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --success-solid: #10b981;
+    --danger: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    --danger-solid: #ef4444;
+    --warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --warning-solid: #f59e0b;
+    
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --gray-500: #64748b;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1e293b;
+    --gray-900: #0f172a;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    
+    --transition: 250ms ease-in-out;
+}
+
+/* ==================================================================== */
+/* 🌈 BACKGROUND GRADIENT */
+/* ==================================================================== */
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+}
+
+/* ==================================================================== */
+/* 💎 CONTAINER PRINCIPAL */
+/* ==================================================================== */
+.create-case-container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+/* ==================================================================== */
+/* 🎴 HERO HEADER */
+/* ==================================================================== */
+.hero-header {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 24px;
+    padding: 32px 40px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+    animation: slideDown 0.5s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.hero-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: var(--primary);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.hero-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--gray-900);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.hero-title i {
+    background: var(--primary);
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.3rem;
+}
+
+.hero-subtitle {
+    color: var(--gray-600);
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--primary);
+    color: white;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* ==================================================================== */
+/* 📦 FORM CARD */
+/* ==================================================================== */
+.form-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    overflow: hidden;
+    animation: fadeInUp 0.6s ease-out 0.1s both;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==================================================================== */
+/* 📋 SECTION HEADERS */
+/* ==================================================================== */
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 0 16px;
+    margin-bottom: 24px;
+    border-bottom: 3px solid var(--gray-100);
+}
+
+.section-header i {
+    background: var(--primary);
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.1rem;
+}
+
+.section-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+/* ==================================================================== */
+/* 🎯 FORM GROUPS */
+/* ==================================================================== */
+.form-group {
+    margin-bottom: 24px;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--gray-700);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.form-label i {
+    color: var(--primary-solid);
+    font-size: 0.9rem;
+}
+
+/* ==================================================================== */
+/* 🎨 INPUTS MODERNOS */
+/* ==================================================================== */
+.form-control,
+input[type="text"],
+input[type="date"],
+input[type="number"],
+input[type="email"],
+input[type="time"],
+select,
+textarea {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid var(--gray-200);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all var(--transition);
+    background: white;
+    font-family: inherit;
+}
+
+textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 45px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--primary-solid);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+    border-color: var(--gray-300);
+}
+
+::placeholder {
+    color: var(--gray-400);
+}
+
+/* ==================================================================== */
+/* 🔢 GRID RESPONSIVO */
+/* ==================================================================== */
+.fields-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+/* ==================================================================== */
+/* 📦 GRUPOS REPETÍVEIS */
+/* ==================================================================== */
+.grupo-repetiveis-section {
+    margin-top: 40px;
+    padding-top: 40px;
+    border-top: 3px dashed var(--gray-200);
+}
+
+.grupo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 20px 24px;
+    background: var(--gray-50);
+    border-radius: 16px;
+    border: 2px solid var(--gray-200);
+}
+
+.grupo-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.grupo-title i {
+    color: var(--primary-solid);
+}
+
+.btn-add-grupo {
+    background: var(--success);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all var(--transition);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-add-grupo:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-add-grupo i {
+    font-size: 1.1rem;
+}
+
+/* ==================================================================== */
+/* 🎴 ITEM DO GRUPO */
+/* ==================================================================== */
+.grupo-item {
+    background: white;
+    border: 2px solid var(--gray-200);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    position: relative;
+    transition: all var(--transition);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.grupo-item:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-solid);
+}
+
+.grupo-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 100%;
+    background: var(--primary);
+    border-radius: 16px 0 0 16px;
+}
+
+.grupo-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--gray-100);
+}
+
+.grupo-item-number {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gray-700);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.grupo-item-number i {
+    color: var(--primary-solid);
+}
+
+.btn-remove-grupo {
+    background: var(--danger);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all var(--transition);
+    font-size: 0.9rem;
+}
+
+.btn-remove-grupo:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-md);
+}
+
+/* ==================================================================== */
+/* 🎯 FOOTER ACTIONS */
+/* ==================================================================== */
+.form-footer {
+    background: var(--gray-50);
+    padding: 28px 40px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    border-top: 2px solid var(--gray-200);
+}
+
+.btn {
+    padding: 14px 32px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    box-shadow: var(--shadow-md);
+}
+
+.btn:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    font-size: 1.1rem;
+    padding: 16px 40px;
+}
+
+.btn-secondary {
+    background: var(--gray-500);
+    color: white;
+}
+
+.btn i {
+    font-size: 1.1rem;
+}
+
+/* ==================================================================== */
+/* ⚠️ MENSAGENS DE ERRO */
+/* ==================================================================== */
+.text-danger {
+    color: var(--danger-solid);
+    font-size: 0.85rem;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+}
+
+.text-danger::before {
+    content: "⚠️";
+}
+
+/* ==================================================================== */
+/* 🔔 ALERTS */
+/* ==================================================================== */
+.alert {
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+    animation: slideDown 0.4s ease-out;
+}
+
+.alert-success {
+    background: rgba(16, 185, 129, 0.1);
+    border: 2px solid var(--success-solid);
+    color: #065f46;
+}
+
+.alert-danger {
+    background: rgba(239, 68, 68, 0.1);
+    border: 2px solid var(--danger-solid);
+    color: #991b1b;
+}
+
+.alert-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border: 2px solid var(--warning-solid);
+    color: #92400e;
+}
+
+.alert i {
+    font-size: 1.3rem;
+}
+
+/* ==================================================================== */
+/* 📱 RESPONSIVIDADE */
+/* ==================================================================== */
+@media (max-width: 768px) {
+    .fields-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .hero-title {
+        font-size: 1.5rem;
+    }
+    
+    .grupo-header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+    }
+    
+    .btn-add-grupo {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .form-footer {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ==================================================================== */
+/* ✨ LOADING SPINNER */
+/* ==================================================================== */
+.spinner {
+    border: 3px solid var(--gray-200);
+    border-top: 3px solid var(--primary-solid);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ==================================================================== */
+/* 🎨 SCROLLBAR */
+/* ==================================================================== */
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--gray-100);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 10px;
+    border: 3px solid var(--gray-100);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+}
+/* ==================================================================== */
+/* ✅ ESTADOS DE VALIDAÇÃO */
+/* ==================================================================== */
+.form-group.focused .form-label {
+    color: var(--primary-solid);
+}
+
+.form-group.focused .form-label i {
+    transform: scale(1.2);
+    transition: transform 0.2s;
+}
+
+input.is-valid,
+select.is-valid,
+textarea.is-valid {
+    border-color: var(--success-solid);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2310b981' viewBox='0 0 16 16'%3E%3Cpath d='M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 45px;
+}
+
+input.is-invalid,
+select.is-invalid,
+textarea.is-invalid {
+    border-color: var(--danger-solid);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23ef4444' viewBox='0 0 16 16'%3E%3Cpath d='M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z'/%3E%3Cpath d='M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 45px;
+}
+
+select.is-valid,
+select.is-invalid {
+    background-position: right 45px center, right 16px center;
+}
+
+/* ==================================================================== */
+/* 🎯 REQUIRED FIELDS INDICATOR */
+/* ==================================================================== */
+input:required,
+select:required,
+textarea:required {
+    border-left: 3px solid var(--warning-solid);
+}
+
+input:required:valid,
+select:required:valid,
+textarea:required:valid {
+    border-left: 3px solid var(--success-solid);
+}
+
+/* ==================================================================== */
+/* 💾 DRAFT INDICATOR */
+/* ==================================================================== */
+.draft-indicator {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--gray-700);
+    font-weight: 600;
+    z-index: 1000;
+    animation: slideInLeft 0.4s ease-out;
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.draft-indicator i {
+    color: var(--success-solid);
+}
+
+/* ==================================================================== */
+/* 🎭 HOVER EFFECTS EXTRAS */
+/* ==================================================================== */
+.form-group:hover .form-label i {
+    color: var(--primary-dark);
+    transform: scale(1.1);
+}
+
+.grupo-item:hover::before {
+    width: 8px;
+    transition: width 0.3s ease;
+}
+
+/* ==================================================================== */
+/* 📱 AJUSTES MOBILE ADICIONAIS */
+/* ==================================================================== */
+@media (max-width: 480px) {
+    .hero-title {
+        font-size: 1.3rem;
+    }
+    
+    .hero-title i {
+        width: 40px;
+        height: 40px;
+        font-size: 1.1rem;
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+    }
+    
+    .btn {
+        padding: 12px 24px;
+        font-size: 0.95rem;
+    }
+    
+    .btn-primary {
+        padding: 14px 28px;
+    }
+}
+
+/* ==================================================================== */
+/* ✨ ANIMAÇÃO DE SUCESSO */
+/* ==================================================================== */
+@keyframes successPulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    50% {
+        box-shadow: 0 0 0 15px rgba(16, 185, 129, 0);
+    }
+}
+
+.btn-primary:active {
+    animation: successPulse 0.6s;
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-  <div class="row justify-content-center">
-    <div class="col-xl-10 col-lg-11 col-md-12">
-
-      {% include 'casos/partials/app_messages.html' %}
-
-      <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header bg-light">
-          <h4 class="mb-0">Criar Novo Caso</h4>
-          <small class="text-muted">{{ cliente.nome }} / {{ produto.nome }}</small>
+<div class="create-case-container">
+    
+    <!-- 💎 HERO HEADER -->
+    <div class="hero-header">
+        <h1 class="hero-title">
+            <i class="fa-solid fa-folder-plus"></i>
+            Criar Novo Caso
+        </h1>
+        <div class="hero-subtitle">
+            <span class="hero-badge">
+                <i class="fa-solid fa-building"></i>
+                {{ cliente.nome }}
+            </span>
+            <span style="color: var(--gray-400);">/</span>
+            <span class="hero-badge">
+                <i class="fa-solid fa-box"></i>
+                {{ produto.nome }}
+            </span>
         </div>
-
-        <form method="post" action="" class="needs-validation" novalidate>
-          {% csrf_token %}
-
-          <div class="card-body p-4">
-            
-            <h5 class="mb-4 border-bottom pb-2">Dados Principais do Caso</h5>
-            <div class="row g-3">
-              
-              <!-- Renderiza os campos fixos do modelo Caso -->
-              {% for field in form.campos_fixos %}
-                <div class="col-md-6">
-                  <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                  {{ field }}
-                  {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
-                </div>
-              {% endfor %}
-
-              <!-- ABORDAGEM FORÇA BRUTA: Procura e renderiza o Valor Apurado -->
-              {% for field in form.campos_personalizados_simples %}
-                {# Vamos assumir que o nome_variavel é 'valor_apurado'. O forms.py cria o nome do campo como 'campo_personalizado_ID'. #}
-                {# A maneira mais segura de identificar é pelo label ou por um atributo que passamos do forms.py #}
-                {# Para simplificar, vamos procurar pelo label (adapte se for diferente) #}
-                {% if "Valor Apurado" in field.label %}
-                  <div class="col-md-6">
-                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
-                  </div>
-                {% endif %}
-              {% endfor %}
-              
-            </div>
-
-            <hr class="my-4">
-
-            <h5 class="mb-4 border-bottom pb-2">Dados Adicionais</h5>
-            <div class="row g-3">
-              <!-- Renderiza os outros campos personalizados que NÃO são o Valor Apurado -->
-              {% for field in form.campos_personalizados_simples %}
-                {% if "Valor Apurado" not in field.label %}
-                  <div class="col-md-6">
-                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
-                  </div>
-                {% endif %}
-              {% endfor %}
-            </div>
-
-            <!-- Grupos repetíveis (SEU CÓDIGO ORIGINAL - SEM MUDANÇAS) -->
-            {% for grupo, formset in grupo_formsets %}
-              <hr class="my-4">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0">{{ grupo.nome_grupo }}</h5>
-                <button type="button" class="btn btn-outline-success btn-sm add-grupo-btn"
-                        data-formset-prefix="{{ formset.prefix }}"
-                        data-grupo-id="{{ grupo.id }}">
-                  <i class="fas fa-plus me-1"></i> Adicionar {{ grupo.nome_grupo|truncatechars:15 }}
-                </button>
-              </div>
-
-              {{ formset.management_form }}
-
-              <div id="formset-container-{{ grupo.id }}">
-                {% for form_grupo in formset %}
-                  <div class="grupo-form p-3 border rounded bg-light mb-3">
-                    {% if formset.can_delete %}
-                      <div class="d-none">{{ form_grupo.DELETE }}</div>
-                    {% endif %}
-                    <div class="d-flex flex-wrap align-items-end">
-                      {% for field in form_grupo.visible_fields %}
-                        <div class="me-3 mb-2" style="flex-grow: 1; min-width: 200px;">
-                          <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                          {{ field }}
-                          {% if field.errors %}
-                            <div class="text-danger small">{{ field.errors }}</div>
-                          {% endif %}
-                        </div>
-                      {% endfor %}
-                      <div class="ms-auto">
-                        <button type="button" class="btn btn-danger delete-grupo-btn">
-                          <i class="fas fa-trash"></i> Remover
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                {% endfor %}
-              </div>
-
-              <div id="empty-form-{{ grupo.id }}" style="display:none;">
-                <div class="grupo-form p-3 border rounded bg-light mb-3">
-                  {% if formset.can_delete %}
-                    <div class="d-none">{{ formset.empty_form.DELETE }}</div>
-                  {% endif %}
-                  <div class="d-flex flex-wrap align-items-end">
-                    {% for field in formset.empty_form.visible_fields %}
-                      <div class="me-3 mb-2" style="flex-grow: 1; min-width: 200px;">
-                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                        {{ field }}
-                      </div>
-                    {% endfor %}
-                    <div class="ms-auto">
-                      <button type="button" class="btn btn-danger delete-grupo-btn">
-                        <i class="fas fa-trash"></i> Remover
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            {% endfor %}
-          </div>
-
-          <div class="card-footer text-end">
-            <a href="{% url 'casos:selecionar_produto_cliente' %}" class="btn btn-secondary">
-              <i class="fas fa-times me-1"></i> Cancelar
-            </a>
-            <button type="submit" class="btn btn-primary btn-lg">
-              <i class="fas fa-save me-2"></i> Criar Caso
-            </button>
-          </div>
-        </form>
-      </div>
-
     </div>
-  </div>
+    
+    <!-- 📬 MENSAGENS -->
+    {% include 'casos/partials/app_messages.html' %}
+    
+    <!-- 📦 FORM CARD -->
+    <div class="form-card">
+        <form method="post" action="" class="needs-validation" novalidate>
+            {% csrf_token %}
+            
+            <div style="padding: 40px;">
+                
+                <!-- ============================================== -->
+                <!-- 📊 SEÇÃO: DADOS PRINCIPAIS -->
+                <!-- ============================================== -->
+                <div class="section-header">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <h2 class="section-title">Dados Principais do Caso</h2>
+                </div>
+                
+                <div class="fields-grid">
+                    <!-- Campos Fixos -->
+                    {% for field in form.campos_fixos %}
+                        <div class="form-group">
+                            <label for="{{ field.id_for_label }}" class="form-label">
+                                <i class="fa-solid fa-tag"></i>
+                                {{ field.label }}
+                            </label>
+                            {{ field }}
+                            {% if field.errors %}
+                                <div class="text-danger">{{ field.errors }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                    
+                    <!-- Valor Apurado (se existir nos personalizados) -->
+                    {% for field in form.campos_personalizados_simples %}
+                        {% if "Valor Apurado" in field.label or "valor_apurado" in field.name|lower %}
+                            <div class="form-group">
+                                <label for="{{ field.id_for_label }}" class="form-label">
+                                    <i class="fa-solid fa-dollar-sign"></i>
+                                    {{ field.label }}
+                                </label>
+                                {{ field }}
+                                {% if field.errors %}
+                                    <div class="text-danger">{{ field.errors }}</div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                
+                <!-- ============================================== -->
+                <!-- 📝 SEÇÃO: DADOS ADICIONAIS -->
+                <!-- ============================================== -->
+                <div class="section-header" style="margin-top: 40px;">
+                    <i class="fa-solid fa-sliders"></i>
+                    <h2 class="section-title">Dados Adicionais</h2>
+                </div>
+                
+                <div class="fields-grid">
+                    <!-- Campos Personalizados (exceto Valor Apurado) -->
+                    {% for field in form.campos_personalizados_simples %}
+                        {% if "Valor Apurado" not in field.label and "valor_apurado" not in field.name|lower %}
+                            <div class="form-group">
+                                <label for="{{ field.id_for_label }}" class="form-label">
+                                    <i class="fa-solid fa-circle-dot"></i>
+                                    {{ field.label }}
+                                </label>
+                                {{ field }}
+                                {% if field.errors %}
+                                    <div class="text-danger">{{ field.errors }}</div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                
+                <!-- ============================================== -->
+                <!-- 🔁 SEÇÃO: GRUPOS REPETÍVEIS -->
+                <!-- ============================================== -->
+                {% if grupo_formsets %}
+                    {% for grupo, formset in grupo_formsets %}
+                        <div class="grupo-repetiveis-section">
+                            <div class="grupo-header">
+                                <h3 class="grupo-title">
+                                    <i class="fa-solid fa-layer-group"></i>
+                                    {{ grupo.nome_grupo }}
+                                </h3>
+                                <button type="button" 
+                                        class="btn-add-grupo add-grupo-btn"
+                                        data-formset-prefix="{{ formset.prefix }}"
+                                        data-grupo-id="{{ grupo.id }}">
+                                    <i class="fa-solid fa-plus-circle"></i>
+                                    Adicionar {{ grupo.nome_grupo|truncatechars:20 }}
+                                </button>
+                            </div>
+                            
+                            {{ formset.management_form }}
+                            
+                            <div id="formset-container-{{ grupo.id }}">
+                                {% for form_grupo in formset %}
+                                    <div class="grupo-item grupo-form">
+                                        {% if formset.can_delete %}
+                                            <div style="display: none;">{{ form_grupo.DELETE }}</div>
+                                        {% endif %}
+                                        
+                                        <div class="grupo-item-header">
+                                            <div class="grupo-item-number">
+                                                <i class="fa-solid fa-hashtag"></i>
+                                                Item {{ forloop.counter }}
+                                            </div>
+                                            <button type="button" class="btn-remove-grupo delete-grupo-btn">
+                                                <i class="fa-solid fa-trash-alt"></i>
+                                                Remover
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="fields-grid">
+                                            {% for field in form_grupo.visible_fields %}
+                                                <div class="form-group">
+                                                    <label for="{{ field.id_for_label }}" class="form-label">
+                                                        <i class="fa-solid fa-circle-dot"></i>
+                                                        {{ field.label }}
+                                                    </label>
+                                                    {{ field }}
+                                                    {% if field.errors %}
+                                                        <div class="text-danger">{{ field.errors }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <!-- Template para novos itens -->
+                            <div id="empty-form-{{ grupo.id }}" style="display:none;">
+                                <div class="grupo-item grupo-form">
+                                    {% if formset.can_delete %}
+                                        <div style="display: none;">{{ formset.empty_form.DELETE }}</div>
+                                    {% endif %}
+                                    
+                                    <div class="grupo-item-header">
+                                        <div class="grupo-item-number">
+                                            <i class="fa-solid fa-hashtag"></i>
+                                            Novo Item
+                                        </div>
+                                        <button type="button" class="btn-remove-grupo delete-grupo-btn">
+                                            <i class="fa-solid fa-trash-alt"></i>
+                                            Remover
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="fields-grid">
+                                        {% for field in formset.empty_form.visible_fields %}
+                                            <div class="form-group">
+                                                <label for="{{ field.id_for_label }}" class="form-label">
+                                                    <i class="fa-solid fa-circle-dot"></i>
+                                                    {{ field.label }}
+                                                </label>
+                                                {{ field }}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                
+            </div>
+            
+            <!-- ============================================== -->
+            <!-- 🎯 FOOTER ACTIONS -->
+            <!-- ============================================== -->
+            <div class="form-footer">
+                <a href="{% url 'casos:selecionar_produto_cliente' %}" class="btn btn-secondary">
+                    <i class="fa-solid fa-times-circle"></i>
+                    Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-save"></i>
+                    Criar Caso
+                </button>
+            </div>
+            
+        </form>
+    </div>
+    
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// SEU JAVASCRIPT ORIGINAL - SEM NENHUMA MUDANÇA
 document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('.add-grupo-btn').forEach(function(btn) {
-    btn.addEventListener('click', function(e) {
-      e.preventDefault();
-      var prefix = this.dataset.formsetPrefix;
-      var grupoId = this.dataset.grupoId;
-      var container = document.getElementById('formset-container-' + grupoId);
-      var totalFormsInput = document.getElementById('id_' + prefix + '-TOTAL_FORMS');
-      var currentFormCount = parseInt(totalFormsInput.value, 10);
-
-      var emptyFormHtml = document.getElementById('empty-form-' + grupoId)?.innerHTML;
-      if (!emptyFormHtml) return;
-
-      var newFormHtml = emptyFormHtml.replace(/__prefix__/g, currentFormCount);
-      var tempWrapper = document.createElement('div');
-      tempWrapper.innerHTML = newFormHtml;
-      var newFormElement = tempWrapper.firstElementChild;
-
-      container.appendChild(newFormElement);
-      totalFormsInput.value = currentFormCount + 1;
+    
+    // ========================================
+    // ➕ ADICIONAR GRUPO
+    // ========================================
+    document.querySelectorAll('.add-grupo-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const prefix = this.dataset.formsetPrefix;
+            const grupoId = this.dataset.grupoId;
+            const container = document.getElementById('formset-container-' + grupoId);
+            const totalFormsInput = document.getElementById('id_' + prefix + '-TOTAL_FORMS');
+            const currentFormCount = parseInt(totalFormsInput.value, 10);
+            
+            const emptyFormHtml = document.getElementById('empty-form-' + grupoId)?.innerHTML;
+            if (!emptyFormHtml) {
+                console.error('Empty form template not found for grupo:', grupoId);
+                return;
+            }
+            
+            // Substitui __prefix__ pelo número atual
+            const newFormHtml = emptyFormHtml.replace(/__prefix__/g, currentFormCount);
+            
+            // Cria elemento temporário para parsear HTML
+            const tempWrapper = document.createElement('div');
+            tempWrapper.innerHTML = newFormHtml;
+            const newFormElement = tempWrapper.firstElementChild;
+            
+            // Adiciona ao container com animação
+            container.appendChild(newFormElement);
+            
+            // Anima a entrada
+            newFormElement.style.opacity = '0';
+            newFormElement.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                newFormElement.style.transition = 'all 0.3s ease-out';
+                newFormElement.style.opacity = '1';
+                newFormElement.style.transform = 'translateY(0)';
+            }, 10);
+            
+            // Atualiza contador de forms
+            totalFormsInput.value = currentFormCount + 1;
+            
+            // Scroll suave até o novo item
+            setTimeout(() => {
+                newFormElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 350);
+        });
     });
-  });
-
-  document.body.addEventListener('click', function(event) {
-    var btn = event.target.closest('.delete-grupo-btn');
-    if (!btn) return;
-
-    event.preventDefault();
-    var formWrapper = btn.closest('.grupo-form');
-    if (!formWrapper) return;
-
-    var deleteInput = formWrapper.querySelector('input[name$="-DELETE"]');
-    if (deleteInput) {
-      if (deleteInput.type === 'hidden') {
-        deleteInput.value = 'on';
-      } else {
-        deleteInput.checked = true;
-      }
-      formWrapper.style.display = 'none';
-    } else {
-      formWrapper.remove();
+    
+    // ========================================
+    // 🗑️ REMOVER GRUPO
+    // ========================================
+    document.body.addEventListener('click', function(event) {
+        const btn = event.target.closest('.delete-grupo-btn');
+        if (!btn) return;
+        
+        event.preventDefault();
+        
+        const formWrapper = btn.closest('.grupo-form');
+        if (!formWrapper) return;
+        
+        // Confirmação visual com animação
+        if (!confirm('⚠️ Tem certeza que deseja remover este item?')) {
+            return;
+        }
+        
+        const deleteInput = formWrapper.querySelector('input[name$="-DELETE"]');
+        
+        if (deleteInput) {
+            // Se o form já existe no backend, marca como DELETE
+            if (deleteInput.type === 'hidden') {
+                deleteInput.value = 'on';
+            } else {
+                deleteInput.checked = true;
+            }
+            
+            // Anima saída
+            formWrapper.style.transition = 'all 0.3s ease-out';
+            formWrapper.style.opacity = '0';
+            formWrapper.style.transform = 'translateX(-20px)';
+            
+            setTimeout(() => {
+                formWrapper.style.display = 'none';
+            }, 300);
+        } else {
+            // Se é um form novo (não salvo), remove diretamente
+            formWrapper.style.transition = 'all 0.3s ease-out';
+            formWrapper.style.opacity = '0';
+            formWrapper.style.transform = 'translateX(-20px)';
+            
+            setTimeout(() => {
+                formWrapper.remove();
+            }, 300);
+        }
+    });
+    
+    // ========================================
+    // ✅ VALIDAÇÃO DE FORMULÁRIO
+    // ========================================
+    const forms = document.querySelectorAll('.needs-validation');
+    
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                // Scroll até primeiro erro
+                const firstError = form.querySelector(':invalid');
+                if (firstError) {
+                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstError.focus();
+                }
+            }
+            
+            form.classList.add('was-validated');
+        }, false);
+    });
+    
+    // ========================================
+    // 🎨 EFEITOS VISUAIS
+    // ========================================
+    
+// Adiciona classes quando inputs ganham foco
+    const inputs = document.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            this.closest('.form-group')?.classList.add('focused');
+        });
+        
+        input.addEventListener('blur', function() {
+            this.closest('.form-group')?.classList.remove('focused');
+        });
+    });
+    
+    // ========================================
+    // 💾 AUTO-SAVE (Opcional - salva no localStorage)
+    // ========================================
+    const STORAGE_KEY = 'criar_caso_draft_{{ cliente.id }}_{{ produto.id }}';
+    
+    // Carrega draft ao carregar página
+    function loadDraft() {
+        try {
+            const draft = localStorage.getItem(STORAGE_KEY);
+            if (draft) {
+                const data = JSON.parse(draft);
+                console.log('Draft encontrado:', data);
+                // Você pode implementar a restauração aqui se quiser
+            }
+        } catch (e) {
+            console.error('Erro ao carregar draft:', e);
+        }
     }
-  });
+    
+    // Salva draft periodicamente
+    function saveDraft() {
+        try {
+            const form = document.querySelector('form');
+            const formData = new FormData(form);
+            const data = {};
+            
+            for (let [key, value] of formData.entries()) {
+                data[key] = value;
+            }
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            console.log('Draft salvo');
+        } catch (e) {
+            console.error('Erro ao salvar draft:', e);
+        }
+    }
+    
+    // Auto-save a cada 30 segundos
+    // setInterval(saveDraft, 30000);
+    
+    // Limpa draft ao submeter com sucesso
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function() {
+            // localStorage.removeItem(STORAGE_KEY);
+        });
+    }
+    
+    // ========================================
+    // 🎭 ANIMAÇÕES DE ENTRADA
+    // ========================================
+    
+    // Anima cards ao carregar
+    const animateOnLoad = () => {
+        const cards = document.querySelectorAll('.form-group, .grupo-item');
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                card.style.transition = 'all 0.4s ease-out';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 30);
+        });
+    };
+    
+    // Executa animação
+    setTimeout(animateOnLoad, 100);
+    
+    // ========================================
+    // 📊 CONTADOR DE CARACTERES (opcional)
+    // ========================================
+    const textareas = document.querySelectorAll('textarea');
+    textareas.forEach(textarea => {
+        const maxLength = textarea.getAttribute('maxlength');
+        if (maxLength) {
+            const counter = document.createElement('small');
+            counter.className = 'char-counter';
+            counter.style.cssText = 'display: block; text-align: right; color: var(--gray-500); margin-top: 4px; font-size: 0.85rem;';
+            
+            const updateCounter = () => {
+                const current = textarea.value.length;
+                counter.textContent = `${current} / ${maxLength}`;
+                
+                if (current > maxLength * 0.9) {
+                    counter.style.color = 'var(--warning-solid)';
+                }
+                if (current >= maxLength) {
+                    counter.style.color = 'var(--danger-solid)';
+                    counter.style.fontWeight = '700';
+                }
+            };
+            
+            textarea.parentNode.insertBefore(counter, textarea.nextSibling);
+            textarea.addEventListener('input', updateCounter);
+            updateCounter();
+        }
+    });
+    
+    // ========================================
+    // 🔍 VALIDAÇÃO EM TEMPO REAL
+    // ========================================
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.checkValidity()) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            } else {
+                this.classList.remove('is-valid');
+                this.classList.add('is-valid');
+            }
+        });
+    });
+    
+    // ========================================
+    // 🎯 ATALHOS DE TECLADO
+    // ========================================
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+S ou Cmd+S = Submit
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            const submitBtn = document.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.click();
+            }
+        }
+        
+        // ESC = Cancelar
+        if (e.key === 'Escape') {
+            const cancelBtn = document.querySelector('.btn-secondary');
+            if (cancelBtn && confirm('⚠️ Deseja realmente cancelar? Todas as alterações serão perdidas.')) {
+                cancelBtn.click();
+            }
+        }
+    });
+    
+    // ========================================
+    // 💡 TOOLTIPS (Se usar Bootstrap)
+    // ========================================
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+    
+    // ========================================
+    // 🎨 FEEDBACK VISUAL NO SUBMIT
+    // ========================================
+    const submitBtn = document.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.addEventListener('click', function(e) {
+            if (form.checkValidity()) {
+                this.disabled = true;
+                this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+                
+                // Restaura após 5s se não der redirect
+                setTimeout(() => {
+                    this.disabled = false;
+                    this.innerHTML = originalText;
+                }, 5000);
+            }
+        });
+    }
+    
+    console.log('✅ Form de Criar Caso carregado com sucesso!');
 });
 </script>
 {% endblock %}

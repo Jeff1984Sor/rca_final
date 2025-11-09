@@ -1,49 +1,776 @@
 {% extends 'base.html' %}
 
-{% block title %}Detalhes: {{ equipamento.nome_item }}{% endblock %}
+{% block title %}{{ equipamento.nome_item }} | Sistema Jurídico{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ==================================================================== */
+/* 🎨 DESIGN SYSTEM - DETALHES EQUIPAMENTO */
+/* ==================================================================== */
+:root {
+    --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --primary-solid: #667eea;
+    --success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --success-solid: #10b981;
+    --danger: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    --danger-solid: #ef4444;
+    --warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --warning-solid: #f59e0b;
+    --info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    --info-solid: #0ea5e9;
+    
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --gray-500: #64748b;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1e293b;
+    --gray-900: #0f172a;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    
+    --transition: 250ms ease-in-out;
+}
+
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+}
+
+.detalhes-container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+/* ==================================================================== */
+/* 💎 HERO HEADER */
+/* ==================================================================== */
+.hero-header {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 24px;
+    padding: 32px 40px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+    animation: slideDown 0.5s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: var(--primary);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.hero-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+}
+
+.hero-left {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.hero-icon {
+    background: var(--primary);
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2.5rem;
+    box-shadow: var(--shadow-lg);
+    flex-shrink: 0;
+}
+
+.hero-text {
+    flex: 1;
+}
+
+.hero-label {
+    font-size: 0.85rem;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.hero-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--gray-900);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 12px;
+}
+
+/* ==================================================================== */
+/* 🏷️ STATUS BADGE */
+/* ==================================================================== */
+.status-badge-large {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    border-radius: 14px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 12px;
+}
+
+.status-badge-large.ativo {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(17, 153, 142, 0.3);
+}
+
+.status-badge-large.manutencao {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(240, 147, 251, 0.3);
+}
+
+.status-badge-large.inativo {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
+}
+
+.status-badge-large i {
+    font-size: 1.1rem;
+}
+
+/* ==================================================================== */
+/* 📊 INFO CARDS GRID */
+/* ==================================================================== */
+.info-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+    animation: fadeInUp 0.6s ease-out 0.1s both;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.info-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: all var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.info-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 100%;
+    transition: width var(--transition);
+}
+
+.info-card.identificacao::before { background: var(--info-solid); }
+.info-card.responsabilidade::before { background: var(--success-solid); }
+.info-card.aquisicao::before { background: var(--warning-solid); }
+
+.info-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-xl);
+}
+
+.info-card:hover::before {
+    width: 100%;
+    opacity: 0.05;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--gray-100);
+}
+
+.card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    color: white;
+}
+
+.info-card.identificacao .card-icon { background: var(--info); }
+.info-card.responsabilidade .card-icon { background: var(--success); }
+.info-card.aquisicao .card-icon { background: var(--warning); }
+
+.card-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.info-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.info-label i {
+    font-size: 0.75rem;
+    color: var(--gray-400);
+}
+
+.info-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    word-break: break-word;
+}
+
+.info-value.empty {
+    color: var(--gray-400);
+    font-style: italic;
+}
+
+/* ==================================================================== */
+/* 💰 VALOR DESTAQUE */
+/* ==================================================================== */
+.valor-destaque {
+    font-size: 1.5rem !important;
+    font-weight: 800 !important;
+    color: var(--success-solid) !important;
+}
+
+/* ==================================================================== */
+/* 🎯 BOTÕES */
+/* ==================================================================== */
+.btn {
+    padding: 12px 24px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    box-shadow: var(--shadow-md);
+}
+
+.btn:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-edit {
+    background: var(--warning);
+    color: white;
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--gray-700);
+    border: 2px solid var(--gray-300);
+}
+
+.btn i {
+    font-size: 1rem;
+}
+
+/* ==================================================================== */
+/* 📋 OBSERVAÇÕES CARD (se houver) */
+/* ==================================================================== */
+.observacoes-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    animation: fadeInUp 0.6s ease-out 0.2s both;
+}
+
+.observacoes-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.observacoes-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--gray-700);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.1rem;
+}
+
+.observacoes-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.observacoes-content {
+    padding: 20px;
+    background: var(--gray-50);
+    border-radius: 12px;
+    border-left: 4px solid var(--gray-400);
+    color: var(--gray-700);
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+/* ==================================================================== */
+/* 📱 RESPONSIVIDADE */
+/* ==================================================================== */
+@media (max-width: 1024px) {
+    .info-cards-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .detalhes-container {
+        margin: 20px auto;
+    }
+
+    .hero-header {
+        padding: 24px 28px;
+    }
+
+    .hero-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .hero-left {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .hero-icon {
+        width: 64px;
+        height: 64px;
+        font-size: 2rem;
+    }
+
+    .hero-title {
+        font-size: 1.5rem;
+    }
+
+    .hero-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .hero-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .info-cards-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==================================================================== */
+/* ✨ ANIMAÇÕES EXTRAS */
+/* ==================================================================== */
+.pulse-icon {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-        <h1 style="font-size: 2.25rem; font-weight: 700;">Detalhes do Equipamento</h1>
-        <div style="display: flex; gap: 10px;">
-            <a href="{% url 'equipamentos:equipamento_update' pk=equipamento.pk %}" class="btn btn-edit">Editar</a>
-            <a href="{% url 'equipamentos:equipamento_list' %}" class="btn btn-secondary">Voltar para a Lista</a>
+<div class="detalhes-container">
+    
+    <!-- 💎 HERO HEADER -->
+    <div class="hero-header">
+        <div class="hero-content">
+            <div class="hero-left">
+                <div class="hero-icon pulse-icon">
+                    <i class="fa-solid fa-laptop"></i>
+                </div>
+                <div class="hero-text">
+                    <div class="hero-label">Equipamento</div>
+                    <h1 class="hero-title">{{ equipamento.nome_item }}</h1>
+                    {% if equipamento.status %}
+                    <div class="status-badge-large {{ equipamento.status.nome|lower }}">
+                        <i class="fa-solid fa-circle"></i>
+                        {{ equipamento.status.nome }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="hero-actions">
+                <a href="{% url 'equipamentos:equipamento_update' pk=equipamento.pk %}" class="btn btn-edit">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                    Editar
+                </a>
+                <a href="{% url 'equipamentos:equipamento_list' %}" class="btn btn-secondary">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Voltar
+                </a>
+            </div>
         </div>
     </div>
 
-    <div class="card">
-        <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">{{ equipamento.nome_item }}</h2>
+    <!-- 📊 INFO CARDS GRID -->
+    <div class="info-cards-grid">
         
-        <div class="details-grid">
-            <!-- Grupo de Identificação -->
-            <div class="details-group">
-                <h3>Identificação do Item</h3>
-                <p><strong>Tipo:</strong> {{ equipamento.tipo_item.nome|default:"-" }}</p>
-                <p><strong>Categoria:</strong> {{ equipamento.categoria_item.nome|default:"-" }}</p>
-                <p><strong>Marca:</strong> {{ equipamento.marca.nome|default:"-" }}</p>
-                <p><strong>Modelo:</strong> {{ equipamento.modelo|default:"-" }}</p>
-                <p><strong>Etiqueta de Serviço Dell (S/N):</strong> {{ equipamento.etiqueta_servico_dell|default:"-" }}</p>
-                <p><strong>Hostname (Nome na Rede):</strong> {{ equipamento.hostname|default:"-" }}</p>
+        <!-- 🆔 IDENTIFICAÇÃO -->
+        <div class="info-card identificacao">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fa-solid fa-id-card"></i>
+                </div>
+                <h3 class="card-title">Identificação</h3>
             </div>
-
-            <!-- Grupo de Atribuição -->
-            <div class="details-group">
-                <h3>Uso e Responsabilidade</h3>
-                <p><strong>Status:</strong> {{ equipamento.status.nome|default:"-" }}</p>
-                <p><strong>Responsável:</strong> {{ equipamento.responsavel.get_full_name|default:"-" }}</p>
-                <p><strong>Email do Responsável:</strong> {{ equipamento.responsavel.email|default:"-" }}</p>
-                <p><strong>Telefone do Usuário:</strong> {{ equipamento.telefone_usuario|default:"-" }}</p>
-                <p><strong>AnyDesk:</strong> {{ equipamento.anydesk|default:"-" }}</p>
-            </div>
-
-            <!-- Grupo de Aquisição -->
-            <div class="details-group">
-                <h3>Detalhes da Aquisição</h3>
-                <p><strong>Data da Compra:</strong> {{ equipamento.data_compra|date:"d/m/Y"|default:"-" }}</p>
-                <p><strong>Loja da Compra:</strong> {{ equipamento.loja_compra|default:"-" }}</p>
-                <p><strong>Valor Pago:</strong> R$ {{ equipamento.valor_pago|default:"-" }}</p>
-                <p><strong>Pago por:</strong> {{ equipamento.get_pago_por_display|default:"-" }}</p>
+            <div class="card-body">
+                <div class="info-row">
+                    <div class="info-label">
+                        <i class="fa-solid fa-tag"></i>
+                        Tipo
+                    </div>
+                    <div class="info-value {% if not equipamento.tipo_item %}empty{% endif %}">
+                        {{ equipamento.tipo_item.nome|default:"Não informado" }}
+                    </div>
+                </div>
+                
+                <div class="info-row">
+                    <div class="info-label">
+                        <i class="fa-solid fa-layer-group"></i>
+                        Categoria
+                    </div>
+                    <div class="info-value {% if not equipamento.categoria_item %}empty{% endif %}">
+                        {{ equipamento.categoria_item.nome|default:"Não informado" }}
+                    </div>
+                </div>
+                
+                <div class="info-row">
+                    <div class="info-label">
+                        <i class="fa-solid fa-copyright"></i>
+                        Marca
+                    </div>
+                    <div class="info-value {% if not equipamento.marca %}empty{% endif %}">
+                        {{ equipamento.marca.nome|default:"Não informado" }}
+                    </div>
+                </div>
+                
+                <div class="info-row">
+                    <div class="info-label">
+                        <i class="fa-solid fa-microchip"></i>
+                        Modelo
+                    </div>
+                    <div class="info-value {% if not equipamento.modelo %}empty{% endif %}">
+                        {{ equipamento.modelo|default:"Não informado" }}
+                    </div>
+                </div>
+                
+                <div class="info-row">
+                    <div class="info-label">
+                        <i class="fa-solid fa-barcode"></i>
+                        Service Tag (S/N)
+                    </div>
+                    <div class="info-value {% if not equipamento.etiqueta_servico_dell %}empty{% endif %}">
+                        {{ equipamento.etiqueta_servico_dell|default:"Não informado" }}
+                    </div>
+                </div>
+                
+                <div class="info-row">
+                    <div class="info-label">
+                        <i class="fa-solid fa-network-wired"></i>
+                        Hostname
+                    </div>
+                    <div class="info-value {% if not equipamento.hostname %}empty{% endif %}">
+                        {{ equipamento.hostname|default:"Não informado" }}
+                    </div>
+                </div>
             </div>
         </div>
+
+        <!-- 👤 RESPONSABILIDADE -->
+        <div class="info-card responsabilidade">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fa-solid fa-user-gear"></i>
+                </div>
+                <h3 class="card-title">Responsabilidade</h3>
+            </div>
+            <div class="card-body">
+                <div class="info-row">
+                    <div class="info-label">
+                        <i class="fa-solid fa-user"></i>
+                        Responsável
+                    </div>
+                    <div class="info-value {% if not equipamento.responsavel %}empty{% endif %}">
+                        {{ equipamento.responsavel.get_full_name|default:"Não atribuído" }}
+                    </div>
+                </div>
+                
+                <div class="info-row">
+                    <div class="info-label">
+                        <i class="fa-solid fa-envelope"></i>
+                        E-mail
+                    </div>
+                    <div class="info-value {% if not equipamento.responsavel.email %}empty{% endif %}">
+                        {{ equipamento.responsavel.email|default:"Não informado" }}
+                    </div>
+                </div>
+                
+                <div class="info-row">
+                    <div class="info-label">
+                        <i class="fa-solid fa-phone"></i>
+                        Telefone
+                    </div>
+                    <div class="info-value {% if not equipamento.telefone_usuario %}empty{% endif %}">
+                        {{ equipamento.telefone_usuario|default:"Não informado" }}
+                    </div>
+                </div>
+                
+                <div class="info-row">
+                    <div class="info-label">
+                        <i class="fa-solid fa-desktop"></i>
+                        AnyDesk
+                    </div>
+                    <div class="info-value {% if not equipamento.anydesk %}empty{% endif %}">
+                        {{ equipamento.anydesk|default:"Não configurado" }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 💰 AQUISIÇÃO -->
+        <div class="info-card aquisicao">
+            <div class="card-header">
+                <div class="card-icon">
+                    <i class="fa-solid fa-shopping-cart"></i>
+                </div>
+                <h3 class="card-title">Aquisição</h3>
+            </div>
+            <div class="card-body">
+                <div class="info-row">
+                    <div class="info-label">
+                        <i class="fa-solid fa-calendar"></i>
+                        Data da Compra
+                    </div>
+                    <div class="info-value {% if not equipamento.data_compra %}empty{% endif %}">
+                        {{ equipamento.data_compra|date:"d/m/Y"|default:"Não informado" }}
+                    </div>
+                </div>
+                
+                <div class="info-row">
+                    <div class="info-label">
+                        <i class="fa-solid fa-store"></i>
+                        Loja
+                    </div>
+                    <div class="info-value {% if not equipamento.loja_compra %}empty{% endif %}">
+                        {{ equipamento.loja_compra|default:"Não informado" }}
+                    </div>
+                </div>
+                
+                <div class="info-row">
+                    <div class="info-label">
+                        <i class="fa-solid fa-dollar-sign"></i>
+                        Valor Pago
+                    </div>
+                    <div class="info-value valor-destaque {% if not equipamento.valor_pago %}empty{% endif %}">
+                        {% if equipamento.valor_pago %}
+                            R$ {{ equipamento.valor_pago|floatformat:2 }}
+                        {% else %}
+                            Não informado
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="info-row">
+                    <div class="info-label">
+                        <i class="fa-solid fa-wallet"></i>
+                        Pago Por
+                    </div>
+                    <div class="info-value {% if not equipamento.pago_por %}empty{% endif %}">
+                        {{ equipamento.get_pago_por_display|default:"Não informado" }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
+
+    <!-- 📝 OBSERVAÇÕES (se houver) -->
+    {% if equipamento.observacoes %}
+    <div class="observacoes-card">
+        <div class="observacoes-header">
+            <div class="observacoes-icon">
+                <i class="fa-solid fa-note-sticky"></i>
+            </div>
+            <h3 class="observacoes-title">Observações</h3>
+        </div>
+        <div class="observacoes-content">
+            {{ equipamento.observacoes }}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ Detalhes do equipamento carregados!');
+
+    // 🎨 ANIMAÇÃO DOS CARDS
+    const cards = document.querySelectorAll('.info-card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.4s ease-out';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+
+    // 📋 COPIAR VALORES AO CLICAR
+    const infoValues = document.querySelectorAll('.info-value:not(.empty)');
+    infoValues.forEach(value => {
+        value.style.cursor = 'pointer';
+        value.title = 'Clique para copiar';
+        
+        value.addEventListener('click', function() {
+            const text = this.textContent.trim();
+            navigator.clipboard.writeText(text).then(() => {
+                // Feedback visual
+                const original = this.textContent;
+                this.style.color = 'var(--success-solid)';
+                this.innerHTML = '<i class="fa-solid fa-check"></i> Copiado!';
+                
+                setTimeout(() => {
+                    this.textContent = original;
+                    this.style.color = '';
+                }, 1500);
+            }).catch(err => {
+                console.error('Erro ao copiar:', err);
+            });
+        });
+    });
+
+    // ⌨️ ATALHOS DE TECLADO
+    document.addEventListener('keydown', function(e) {
+        // E = Editar
+        if (e.key === 'e' || e.key === 'E') {
+            if (!e.target.matches('input, textarea, select')) {
+                window.location.href = "{% url 'equipamentos:equipamento_update' pk=equipamento.pk %}";
+            }
+        }
+        
+        // ESC = Voltar
+        if (e.key === 'Escape') {
+            window.location.href = "{% url 'equipamentos:equipamento_list' %}";
+        }
+    });
+
+    console.log('💡 Dicas:');
+    console.log('   - Clique em qualquer valor para copiar');
+    console.log('   - Pressione "E" para editar');
+    console.log('   - Pressione ESC para voltar');
+});
+</script>
 {% endblock %}
