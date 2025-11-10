@@ -44,5 +44,7 @@ urlpatterns = [
     path('exportar/<int:cliente_id>/<int:produto_id>/', views.exportar_casos_dinamico, name='exportar_casos_dinamico'),
     path('importar/', views.importar_casos_view, name='importar_casos_view'),
     path('visao-prazos/', views.visao_casos_prazo, name='visao_casos_prazo'),
+    path('caso/<int:pk>/editar-info-basicas/', views.editar_info_basicas, name='editar_info_basicas'),
+    path('caso/<int:pk>/editar-dados-adicionais/', views.editar_dados_adicionais, name='editar_dados_adicionais'),
 
 ]

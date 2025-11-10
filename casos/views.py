@@ -1570,6 +1570,42 @@ def importar_casos_view(request):
 
     logger.warning(f"Método {request.method} inesperado")
     return redirect('casos:importar_casos_view')
+@login_required
+@require_POST
+def editar_info_basicas(request, pk):
+    """
+    Edita informações básicas do caso via HTMX
+    """
+    caso = get_object_or_404(Caso, pk=pk)
+    
+    caso.status = request.POST.get('status')
+    caso.data_entrada = request.POST.get('data_entrada')
+    caso.valor_apurado = request.POST.get('valor_apurado')
+    caso.advogado_responsavel_id = request.POST.get('advogado_responsavel')
+    caso.save()
+    
+    # Retorna o card atualizado
+    context = {'caso': caso}
+    return render(request, 'casos/partials/card_info_basicas.html', context)
+
+
+@login_required
+@require_POST
+def editar_dados_adicionais(request, pk):
+    """
+    Edita dados adicionais do caso via HTMX
+    """
+    caso = get_object_or_404(Caso, pk=pk)
+    
+    # Atualiza campos
+    caso.sinistro_todo = request.POST.get('sinistro_todo')
+    caso.acao = request.POST.get('acao')
+    # ... outros campos ...
+    caso.save()
+    
+    # Retorna o card atualizado
+    context = {'caso': caso}
+    return render(request, 'casos/partials/card_dados_adicionais.html', context)
 
 @login_required
 def visao_casos_prazo(request):
