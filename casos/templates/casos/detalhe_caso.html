@@ -393,6 +393,215 @@ body {
 }
 
 /* ==================================================================== */
+/* ✏️ CARD COM BOTÃO EDITAR */
+/* ==================================================================== */
+.card-header-with-edit {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 3px solid var(--gray-100);
+}
+
+.card-title-icon {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+}
+
+.btn-edit-card {
+    padding: 10px 20px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all var(--transition-base);
+    background: var(--warning);
+    color: white;
+    box-shadow: var(--shadow-md);
+}
+
+.btn-edit-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-edit-card i {
+    font-size: 1rem;
+}
+
+/* ==================================================================== */
+/* 📦 MODAL DE EDIÇÃO */
+/* ==================================================================== */
+.edit-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: modalFadeIn 0.3s ease-out;
+    padding: 20px;
+}
+
+.edit-modal-overlay.active {
+    display: flex;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.edit-modal-content {
+    background: white;
+    border-radius: 24px;
+    padding: 32px;
+    max-width: 800px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-xl);
+    animation: modalSlideUp 0.3s ease-out;
+}
+
+@keyframes modalSlideUp {
+    from { opacity: 0; transform: translateY(50px) scale(0.9); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.edit-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--gray-100);
+}
+
+.edit-modal-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+}
+
+.edit-modal-title i {
+    color: var(--warning-solid);
+}
+
+.btn-close-modal {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: none;
+    background: var(--gray-100);
+    cursor: pointer;
+    font-size: 1.4rem;
+    transition: all var(--transition-base);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray-600);
+}
+
+.btn-close-modal:hover {
+    background: var(--danger-solid);
+    color: white;
+    transform: rotate(90deg);
+}
+
+.edit-modal-form .form-group {
+    margin-bottom: 20px;
+}
+
+.edit-modal-form label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--gray-700);
+    font-size: 0.95rem;
+}
+
+.edit-modal-form input,
+.edit-modal-form select,
+.edit-modal-form textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--gray-200);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all var(--transition-base);
+    font-family: inherit;
+}
+
+.edit-modal-form textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.edit-modal-form input:focus,
+.edit-modal-form select:focus,
+.edit-modal-form textarea:focus {
+    outline: none;
+    border-color: var(--primary-solid);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.edit-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 2px solid var(--gray-100);
+}
+
+.btn-modal {
+    padding: 12px 28px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all var(--transition-base);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-modal:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-modal-cancel {
+    background: white;
+    color: var(--gray-700);
+    border: 2px solid var(--gray-300);
+}
+
+.btn-modal-save {
+    background: var(--success);
+    color: white;
+}
+
+/* ==================================================================== */
 /* 📊 GRID DE DETALHES */
 /* ==================================================================== */
 .details-grid {
@@ -1184,6 +1393,16 @@ input[type="file"] {
     .details-grid {
         grid-template-columns: 1fr;
     }
+    
+    .edit-modal-content {
+        padding: 24px 20px;
+    }
+    
+    .card-header-with-edit {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
 }
 
 /* ==================================================================== */
@@ -1326,11 +1545,19 @@ input[type="file"] {
 
 <!-- 📋 ABA: DETALHES -->
 <div id="detalhes" class="tab-content">
-    <div class="card">
-        <h2 class="card-title">
-            <i class="fa-solid fa-circle-info"></i>
-            Informações do Caso
-        </h2>
+    <div class="card" id="card-info-basicas">
+        <div class="card-header-with-edit">
+            <h2 class="card-title-icon">
+                <i class="fa-solid fa-circle-info"></i>
+                Informações do Caso
+            </h2>
+            <button type="button" 
+                    class="btn-edit-card" 
+                    onclick="openEditModal('info-basicas')">
+                <i class="fa-solid fa-pen"></i>
+                Editar
+            </button>
+        </div>
         
         <div class="details-grid">
             <div class="detail-card">
@@ -1385,11 +1612,19 @@ input[type="file"] {
     
     <!-- Campos Personalizados -->
     {% if valores_personalizados %}
-    <div class="card">
-        <h2 class="card-title">
-            <i class="fa-solid fa-sliders"></i>
-            Dados Adicionais
-        </h2>
+    <div class="card" id="card-dados-adicionais">
+        <div class="card-header-with-edit">
+            <h2 class="card-title-icon">
+                <i class="fa-solid fa-sliders"></i>
+                Dados Adicionais
+            </h2>
+            <button type="button" 
+                    class="btn-edit-card" 
+                    onclick="openEditModal('dados-adicionais')">
+                <i class="fa-solid fa-pen"></i>
+                Editar
+            </button>
+        </div>
         
         <div class="details-grid">
             {% for valor in valores_personalizados %}
@@ -1964,6 +2199,134 @@ input[type="file"] {
     </div>
 </div>
 
+<!-- ========================================
+     MODAL: EDITAR INFORMAÇÕES BÁSICAS
+     ======================================== -->
+<div id="modal-info-basicas" class="edit-modal-overlay" onclick="closeModalOnOverlay(event, 'info-basicas')">
+    <div class="edit-modal-content" onclick="event.stopPropagation()">
+        <div class="edit-modal-header">
+            <h2 class="edit-modal-title">
+                <i class="fa-solid fa-pen"></i>
+                Editar Informações do Caso
+            </h2>
+            <button type="button" class="btn-close-modal" onclick="closeEditModal('info-basicas')">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+        
+        <form class="edit-modal-form" method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="edit_modal" value="info-basicas">
+            
+            <div class="form-group">
+                <label>
+                    <i class="fa-solid fa-flag"></i>
+                    Status
+                </label>
+                <select name="status" required>
+                    <option value="ATIVO" {% if caso.status == 'ATIVO' %}selected{% endif %}>Ativo</option>
+                    <option value="ENCERRADO" {% if caso.status == 'ENCERRADO' %}selected{% endif %}>Encerrado</option>
+                    <option value="SUSPENSO" {% if caso.status == 'SUSPENSO' %}selected{% endif %}>Suspenso</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <i class="fa-solid fa-calendar"></i>
+                    Data de Entrada
+                </label>
+                <input type="date" name="data_entrada" value="{{ caso.data_entrada|date:'Y-m-d' }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <i class="fa-solid fa-money-bill-wave"></i>
+                    Valor Apurado
+                </label>
+                <input type="text" 
+                       name="valor_apurado" 
+                       value="{{ caso.valor_apurado|default:'' }}" 
+                       placeholder="10000.00">
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <i class="fa-solid fa-user-tie"></i>
+                    Advogado Responsável
+                </label>
+                <select name="advogado_responsavel">
+                    <option value="">Nenhum</option>
+                    {% comment %} Você precisa passar advogados no contexto {% endcomment %}
+                </select>
+            </div>
+            
+            <div class="edit-modal-footer">
+                <button type="button" class="btn-modal btn-modal-cancel" onclick="closeEditModal('info-basicas')">
+                    <i class="fa-solid fa-times"></i>
+                    Cancelar
+                </button>
+                <button type="submit" class="btn-modal btn-modal-save">
+                    <i class="fa-solid fa-check"></i>
+                    Salvar Alterações
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================
+     MODAL: EDITAR DADOS ADICIONAIS
+     ======================================== -->
+<div id="modal-dados-adicionais" class="edit-modal-overlay" onclick="closeModalOnOverlay(event, 'dados-adicionais')">
+    <div class="edit-modal-content" onclick="event.stopPropagation()">
+        <div class="edit-modal-header">
+            <h2 class="edit-modal-title">
+                <i class="fa-solid fa-pen"></i>
+                Editar Dados Adicionais
+            </h2>
+            <button type="button" class="btn-close-modal" onclick="closeEditModal('dados-adicionais')">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+        
+        <form class="edit-modal-form" method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="edit_modal" value="dados-adicionais">
+            
+            {% for valor in valores_personalizados %}
+                {% if not valor.instancia_grupo|default_if_none:'' and not valor.instancia_grupo_id|default_if_none:'' %}
+                    <div class="form-group">
+                        <label>
+                            <i class="fa-solid fa-tag"></i>
+                            {{ valor.campo.nome_campo }}
+                        </label>
+                        {% if valor.campo.tipo_campo == 'DATA' %}
+                            <input type="date" name="campo_{{ valor.campo.id }}" value="{{ valor.valor|date:'Y-m-d' }}">
+                        {% elif valor.campo.tipo_campo == 'MOEDA' %}
+                            <input type="text" name="campo_{{ valor.campo.id }}" value="{{ valor.valor }}" placeholder="0.00">
+                        {% elif valor.campo.tipo_campo == 'TEXTO_LONGO' %}
+                            <textarea name="campo_{{ valor.campo.id }}">{{ valor.valor }}</textarea>
+                        {% else %}
+                            <input type="text" name="campo_{{ valor.campo.id }}" value="{{ valor.valor }}">
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+            
+            <div class="edit-modal-footer">
+                <button type="button" class="btn-modal btn-modal-cancel" onclick="closeEditModal('dados-adicionais')">
+                    <i class="fa-solid fa-times"></i>
+                    Cancelar
+                </button>
+                <button type="submit" class="btn-modal btn-modal-save">
+                    <i class="fa-solid fa-check"></i>
+                    Salvar Alterações
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -2054,7 +2417,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// ========================================
 // 📁 UPDATE FILE LIST
+// ========================================
 function updateFileList(input) {
     const parentForm = input.closest('form');
     if (!parentForm) return;
@@ -2064,10 +2429,111 @@ function updateFileList(input) {
         let fileNames = Array.from(input.files).map(file => file.name).join(', ');
         fileListPreview.textContent = fileNames.length > 100 
             ? `${input.files.length} arquivos selecionados.` 
-                        : `Selecionado(s): ${fileNames}`;
+            : `Selecionado(s): ${fileNames}`;
     } else if (fileListPreview) {
         fileListPreview.textContent = '';
     }
 }
+
+// ========================================
+// 🎨 FUNÇÕES DE MODAL
+// ========================================
+function openEditModal(modalId) {
+    const modal = document.getElementById(`modal-${modalId}`);
+    if (modal) {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeEditModal(modalId) {
+    const modal = document.getElementById(`modal-${modalId}`);
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+}
+
+function closeModalOnOverlay(event, modalId) {
+    if (event.target.classList.contains('edit-modal-overlay')) {
+        closeEditModal(modalId);
+    }
+}
+
+// ESC fecha modal
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const activeModal = document.querySelector('.edit-modal-overlay.active');
+        if (activeModal) {
+            const modalId = activeModal.id.replace('modal-', '');
+            closeEditModal(modalId);
+        }
+    }
+});
+
+// ========================================
+// 🎉 TOAST DE SUCESSO
+// ========================================
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    const colors = {
+        success: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+        error: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+        info: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+    };
+    
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${colors[type]};
+        color: white;
+        padding: 16px 24px;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        z-index: 10001;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        animation: slideInRight 0.3s ease-out;
+    `;
+    toast.innerHTML = `
+        <i class="fa-solid fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}" style="font-size: 1.2rem;"></i>
+        <span>${message}</span>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Animações do toast
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInRight {
+        from { transform: translateX(400px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOutRight {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(400px); opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
+
+// Mostra toast se houver mensagem de sucesso
+{% if messages %}
+    {% for message in messages %}
+        showToast('{{ message|escapejs }}', '{{ message.tags }}');
+    {% endfor %}
+{% endif %}
+
+console.log('✅ Detalhe do Caso carregado com sistema de edição por card!');
+console.log('💡 Atalhos disponíveis:');
+console.log('   - ESC: Fechar modal');
+console.log('   - Clique no botão Editar de cada card para editar rapidamente');
 </script>
 {% endblock %}
