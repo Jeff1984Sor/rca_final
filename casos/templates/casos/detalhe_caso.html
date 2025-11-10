@@ -1643,6 +1643,16 @@ input[type="file"] {
                                 {% endif %}
                             {% elif valor.campo.tipo_campo == 'MOEDA' %}
                                 {{ valor.valor|currency }}
+                            {% elif valor.campo.tipo_campo == 'BOOLEANO' %}
+                                {% if valor.valor == 'True' or valor.valor == '1' or valor.valor == 'true' %}
+                                    <span style="color: #10b981; font-weight: 700;">
+                                        <i class="fa-solid fa-check-circle"></i> Sim
+                                    </span>
+                                {% else %}
+                                    <span style="color: #ef4444; font-weight: 700;">
+                                        <i class="fa-solid fa-times-circle"></i> Não
+                                    </span>
+                                {% endif %}
                             {% else %}
                                 {{ valor.valor|default:"-" }}
                             {% endif %}
@@ -2306,6 +2316,19 @@ input[type="file"] {
                             <input type="text" name="campo_{{ valor.campo.id }}" value="{{ valor.valor }}" placeholder="0.00">
                         {% elif valor.campo.tipo_campo == 'TEXTO_LONGO' %}
                             <textarea name="campo_{{ valor.campo.id }}">{{ valor.valor }}</textarea>
+                        {% elif valor.campo.tipo_campo == 'BOOLEANO' %}
+                    <!-- ✅ CHECKBOX PARA BOOLEANO -->
+                            <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--gray-50); border-radius: 8px;">
+                                <input type="checkbox" 
+                                    id="campo_{{ valor.campo.id }}" 
+                                    name="campo_{{ valor.campo.id }}" 
+                                    value="True"
+                                    {% if valor.valor == 'True' or valor.valor == '1' or valor.valor == 'true' %}checked{% endif %}
+                                    style="width: 20px; height: 20px; cursor: pointer;">
+                                <label for="campo_{{ valor.campo.id }}" style="cursor: pointer; margin: 0;">
+                                    Marcar como Sim
+                                </label>
+                            </div>                
                         {% else %}
                             <input type="text" name="campo_{{ valor.campo.id }}" value="{{ valor.valor }}">
                         {% endif %}

@@ -574,6 +574,19 @@ body {
                             <input type="text" class="form-control" x-model="acao.titulo" placeholder="Título da ação">
                             <button class="btn-icon btn-delete btn-sm" @click="deletarAcao(idx)"><i class="fa-solid fa-trash"></i></button>
                         </div>
+                        
+                        <div class="form-group" style="margin-bottom: 16px;">
+                                    <label>
+                                        <i class="fa-solid fa-file-lines"></i> 
+                                        Descrição Detalhada da Tarefa
+                                    </label>
+                                    <textarea 
+                                        class="form-control" 
+                                        x-model="acao.descricao" 
+                                        placeholder="Descreva em detalhes o que deve ser feito nesta ação...&#10;&#10;Exemplo:&#10;1. Acessar o sistema XYZ&#10;2. Protocolar documento&#10;3. Anexar comprovante no SharePoint"
+                                        rows="5"
+                                        style="resize: vertical; font-family: inherit; line-height: 1.6;"></textarea>
+                        </div>
                         <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr;">
                             <div class="form-group"><label>Tipo</label><select class="form-select" x-model="acao.tipo"><option value="SIMPLES">Simples</option><option value="DECISAO_SN">Decisão S/N</option><option value="AGUARDAR_DIAS">Aguardar Dias</option></select></div>
                             <div class="form-group"><label>Prazo (dias)</label><input type="number" class="form-control" x-model.number="acao.prazo_dias" min="0"></div>

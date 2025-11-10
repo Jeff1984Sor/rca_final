@@ -29,7 +29,7 @@ class TipoPausaAdmin(admin.ModelAdmin):
 
 
 # ==============================================================================
-# ADMINS PARA WORKFLOW E SEUS COMPONENTES (✅ ATUALIZADO E SIMPLIFICADO)
+# ADMINS PARA WORKFLOW E SEUS COMPONENTES (✅ ATUALIZADO)
 # ==============================================================================
 
 class FaseInline(admin.TabularInline):
@@ -44,16 +44,13 @@ class TransicaoInline(admin.TabularInline):
     """Inline para Transições dentro de um Workflow."""
     model = Transicao
     extra = 1
-    # O Django preenche 'workflow' automaticamente. Mostramos só o que importa.
     fields = ('fase_origem', 'acao', 'condicao', 'fase_destino')
     verbose_name_plural = "➜ Transições (Regras de Negócio)"
     
-    # Adiciona campos de busca para facilitar a seleção
     autocomplete_fields = ['fase_origem', 'acao', 'fase_destino']
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         """Filtra as Fases para mostrar apenas as do Workflow atual."""
-        # Pega o ID do objeto Workflow que está sendo editado a partir da URL
         if 'object_id' in request.resolver_match.kwargs:
             workflow_id = request.resolver_match.kwargs['object_id']
             if db_field.name in ["fase_origem", "fase_destino"]:
@@ -67,8 +64,6 @@ class WorkflowAdmin(admin.ModelAdmin):
     list_filter = ('cliente', 'produto')
     search_fields = ('nome', 'cliente__nome', 'produto__nome')
     inlines = [FaseInline, TransicaoInline]
-    
-    # ✅✅✅ ADICIONE ESTA LINHA ✅✅✅
     change_list_template = "admin/workflow/workflow/change_list.html"
     
     fieldsets = (
@@ -77,8 +72,9 @@ class WorkflowAdmin(admin.ModelAdmin):
         }),
     )
 
+
 # ==============================================================================
-# ADMINS INDIVIDUAIS PARA FASE E AÇÃO (Necessário para autocomplete)
+# ADMINS INDIVIDUAIS PARA FASE E AÇÃO (✅ ATUALIZADO COM DESCRIÇÃO)
 # ==============================================================================
 
 class AcaoInline(admin.StackedInline):
@@ -88,7 +84,9 @@ class AcaoInline(admin.StackedInline):
     classes = ['collapse']
     
     fieldsets = (
-        (None, {'fields': ('titulo', 'tipo')}),
+        ('📋 Informações Básicas', {
+            'fields': ('titulo', 'tipo', 'descricao'),  # ✅ ADICIONADO 'descricao'
+        }),
         ('👤 Responsabilidade', {
             'fields': ('tipo_responsavel', 'responsavel_padrao', 'nome_responsavel_terceiro'),
             'classes': ('collapse',),
@@ -98,11 +96,12 @@ class AcaoInline(admin.StackedInline):
             'classes': ('collapse',),
         }),
         ('⚙️ Outras Configurações', {
-            'fields': ('dias_aguardar', 'mudar_status_caso_para', 'descricao'),
+            'fields': ('dias_aguardar', 'mudar_status_caso_para'),
             'classes': ('collapse',),
         }),
     )
     autocomplete_fields = ['responsavel_padrao']
+
 
 @admin.register(Fase)
 class FaseAdmin(admin.ModelAdmin):
@@ -111,14 +110,37 @@ class FaseAdmin(admin.ModelAdmin):
     list_filter = ('workflow',)
     search_fields = ('nome', 'workflow__nome')
     inlines = [AcaoInline]
+    
+    fieldsets = (
+        ('Informações da Fase', {
+            'fields': ('workflow', 'nome', 'ordem', 'eh_fase_final', 'cor_fase')
+        }),
+    )
 
 
 @admin.register(Acao)
 class AcaoAdmin(admin.ModelAdmin):
     """Admin para edição detalhada de uma Ação."""
-    list_display = ('titulo', 'fase', 'tipo', 'tipo_responsavel')
+    list_display = ('titulo', 'fase', 'tipo', 'tipo_responsavel')  # ✅ Mantido como estava
     list_filter = ('fase__workflow', 'tipo', 'tipo_responsavel')
-    search_fields = ('titulo', 'fase__nome')
+    search_fields = ('titulo', 'descricao', 'fase__nome')  # ✅ ADICIONADO 'descricao' na busca
+    
+    fieldsets = (
+        ('📋 Informações Básicas', {
+            'fields': ('fase', 'titulo', 'tipo', 'descricao'),  # ✅ ADICIONADO 'descricao'
+        }),
+        ('👤 Responsabilidade', {
+            'fields': ('tipo_responsavel', 'responsavel_padrao', 'nome_responsavel_terceiro'),
+        }),
+        ('⏸️ Controle de Prazo', {
+            'fields': ('pausar_prazo_enquanto_aguarda', 'tipo_pausa_acao', 'prazo_dias'),
+        }),
+        ('⚙️ Outras Configurações', {
+            'fields': ('dias_aguardar', 'mudar_status_caso_para'),
+        }),
+    )
+    
+    autocomplete_fields = ['responsavel_padrao']
 
 
 # ==============================================================================
@@ -138,7 +160,3 @@ class HistoricoFaseAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
-# ------------------------------------------------------------------------------
-# ❌ INSTÂNCIA AÇÃO: NÃO REGISTRAR NO ADMIN
-# A gestão deste modelo é automática.
-# ------------------------------------------------------------------------------

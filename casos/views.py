@@ -68,6 +68,8 @@ from .forms import (
 from .serializers import CasoSerializer
 from integrations.sharepoint import SharePoint
 
+from campos_custom.models import CampoPersonalizado, GrupoCampos, InstanciaGrupoValor
+
 # ==============================================================================
 # CONFIGURAÇÕES
 # ==============================================================================
@@ -356,6 +358,8 @@ def detalhe_caso(request, pk):
     """Exibe detalhes completos de um caso."""
     caso = get_object_or_404(Caso, pk=pk)
     caso.refresh_from_db()
+    
+    from campos_custom.models import CampoPersonalizado, GrupoCampos, InstanciaGrupoValor
 
     # Forms padrão
     form_andamento = AndamentoForm()
@@ -363,9 +367,186 @@ def detalhe_caso(request, pk):
     form_acordo = AcordoForm(user=request.user)
     form_despesa = DespesaForm(user=request.user)
 
-    # Processamento POST
+    # ========================================
+    # 🎨 PROCESSAMENTO DOS MODALS DE EDIÇÃO
+    # ========================================
     if request.method == 'POST':
-        if 'submit_andamento' in request.POST:
+        edit_modal = request.POST.get('edit_modal')
+        
+        # MODAL: Informações Básicas
+        if edit_modal == 'info-basicas':
+            try:
+                caso.status = request.POST.get('status', caso.status)
+                
+                data_entrada = request.POST.get('data_entrada')
+                if data_entrada:
+                    caso.data_entrada = data_entrada
+                
+                valor_apurado = request.POST.get('valor_apurado', '').strip()
+                if valor_apurado:
+                    valor_apurado = valor_apurado.replace('R$', '').replace('.', '').replace(',', '.').strip()
+                    caso.valor_apurado = Decimal(valor_apurado)
+                
+                advogado_id = request.POST.get('advogado_responsavel')
+                if advogado_id:
+                    caso.advogado_responsavel_id = advogado_id
+                else:
+                    caso.advogado_responsavel = None
+                
+                caso.save()
+                
+                FluxoInterno.objects.create(
+                    caso=caso,
+                    tipo_evento='EDICAO',
+                    descricao='Informações básicas do caso foram atualizadas.',
+                    autor=request.user
+                )
+                
+                messages.success(request, '✅ Informações básicas atualizadas com sucesso!')
+                return redirect('casos:detalhe_caso', pk=caso.pk)
+            except Exception as e:
+                messages.error(request, f'❌ Erro ao atualizar: {str(e)}')
+                return redirect('casos:detalhe_caso', pk=caso.pk)
+        
+        # MODAL: Dados Adicionais (Campos Personalizados Simples)
+        elif edit_modal == 'dados-adicionais':
+            try:
+                campos_atualizados = 0
+                
+                for key, value in request.POST.items():
+                    if key.startswith('campo_'):
+                        campo_id = key.replace('campo_', '')
+                        try:
+                            valor_obj = ValorCampoPersonalizado.objects.get(
+                                caso=caso,
+                                campo_id=campo_id,
+                                instancia_grupo__isnull=True
+                            )
+                            valor_obj.valor = value
+                            valor_obj.save()
+                            campos_atualizados += 1
+                        except ValorCampoPersonalizado.DoesNotExist:
+                            try:
+                                campo = CampoPersonalizado.objects.get(id=campo_id)
+                                ValorCampoPersonalizado.objects.create(
+                                    caso=caso,
+                                    campo=campo,
+                                    valor=value
+                                )
+                                campos_atualizados += 1
+                            except:
+                                pass
+                
+                # ✅ PROCESSAR CHECKBOXES NÃO MARCADOS (campos booleanos que são False)
+                estrutura = EstruturaDeCampos.objects.filter(
+                    cliente=caso.cliente,
+                    produto=caso.produto
+                ).prefetch_related('campos').first()
+                
+                if estrutura:
+                    campos_booleanos = estrutura.campos.filter(tipo_campo='BOOLEANO')
+                    
+                    for campo_bool in campos_booleanos:
+                        campo_key = f'campo_{campo_bool.id}'
+                        if campo_key not in request.POST:
+                            # Checkbox não veio no POST = estava desmarcado
+                            try:
+                                valor_obj = ValorCampoPersonalizado.objects.get(
+                                    caso=caso,
+                                    campo=campo_bool,
+                                    instancia_grupo__isnull=True
+                                )
+                                valor_obj.valor = 'False'
+                                valor_obj.save()
+                            except ValorCampoPersonalizado.DoesNotExist:
+                                ValorCampoPersonalizado.objects.create(
+                                    caso=caso,
+                                    campo=campo_bool,
+                                    valor='False'
+                                )
+                
+                FluxoInterno.objects.create(
+                    caso=caso,
+                    tipo_evento='EDICAO',
+                    descricao=f'Dados adicionais atualizados ({campos_atualizados} campo(s)).',
+                    autor=request.user
+                )
+                
+                messages.success(request, f'✅ {campos_atualizados} campo(s) atualizado(s) com sucesso!')
+                return redirect('casos:detalhe_caso', pk=caso.pk)
+            except Exception as e:
+                messages.error(request, f'❌ Erro ao atualizar: {str(e)}')
+                return redirect('casos:detalhe_caso', pk=caso.pk)
+        
+        # MODAL: Grupos Repetíveis
+        elif edit_modal and edit_modal.startswith('grupo-'):
+            try:
+                instancia_grupo_id = request.POST.get('instancia_grupo_id')
+                
+                if not instancia_grupo_id:
+                    messages.error(request, '❌ ID do grupo não encontrado.')
+                    return redirect('casos:detalhe_caso', pk=caso.pk)
+                
+                instancia = InstanciaGrupoValor.objects.get(id=instancia_grupo_id, caso=caso)
+                campos_atualizados = 0
+                
+                for key, value in request.POST.items():
+                    if key.startswith('campo_grupo_'):
+                        campo_id = key.replace('campo_grupo_', '')
+                        try:
+                            valor_obj = ValorCampoPersonalizado.objects.get(
+                                caso=caso,
+                                campo_id=campo_id,
+                                instancia_grupo_id=instancia_grupo_id
+                            )
+                            valor_obj.valor = value
+                            valor_obj.save()
+                            campos_atualizados += 1
+                        except ValorCampoPersonalizado.DoesNotExist:
+                            pass
+                
+                # ✅ PROCESSAR CHECKBOXES NÃO MARCADOS DOS GRUPOS
+                campos_do_grupo = instancia.grupo.campos.filter(tipo_campo='BOOLEANO')
+                
+                for campo_bool in campos_do_grupo:
+                    campo_key = f'campo_grupo_{campo_bool.id}'
+                    if campo_key not in request.POST:
+                        try:
+                            valor_obj = ValorCampoPersonalizado.objects.get(
+                                caso=caso,
+                                campo=campo_bool,
+                                instancia_grupo_id=instancia_grupo_id
+                            )
+                            valor_obj.valor = 'False'
+                            valor_obj.save()
+                        except ValorCampoPersonalizado.DoesNotExist:
+                            ValorCampoPersonalizado.objects.create(
+                                caso=caso,
+                                campo=campo_bool,
+                                instancia_grupo=instancia,
+                                valor='False'
+                            )
+                
+                FluxoInterno.objects.create(
+                    caso=caso,
+                    tipo_evento='EDICAO',
+                    descricao=f'Grupo "{instancia.grupo.nome_grupo}" atualizado ({campos_atualizados} campo(s)).',
+                    autor=request.user
+                )
+                
+                messages.success(request, f'✅ Grupo atualizado com sucesso!')
+                return redirect('casos:detalhe_caso', pk=caso.pk)
+            except InstanciaGrupoValor.DoesNotExist:
+                messages.error(request, '❌ Grupo não encontrado.')
+                return redirect('casos:detalhe_caso', pk=caso.pk)
+            except Exception as e:
+                messages.error(request, f'❌ Erro ao atualizar grupo: {str(e)}')
+                return redirect('casos:detalhe_caso', pk=caso.pk)
+        
+        # ========================================
+        # 📝 FORMS NORMAIS (ANDAMENTO, TIMESHEET, ETC)
+        # ========================================
+        elif 'submit_andamento' in request.POST:
             form_andamento = AndamentoForm(request.POST)
             if form_andamento.is_valid():
                 novo_andamento = form_andamento.save(commit=False)
@@ -435,6 +616,10 @@ def detalhe_caso(request, pk):
                 )
                 return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})}?aba=despesas")
 
+    # ========================================
+    # 📊 PREPARAÇÃO DO CONTEXTO (GET)
+    # ========================================
+    
     # Busca estrutura e valores
     estrutura = EstruturaDeCampos.objects.filter(
         cliente=caso.cliente,
@@ -543,7 +728,6 @@ def detalhe_caso(request, pk):
     }
 
     return render(request, 'casos/detalhe_caso.html', context)
-
 
 # ==============================================================================
 # EDITAR CASO (✅ CORRIGIDO)

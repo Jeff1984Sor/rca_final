@@ -45,6 +45,7 @@ class CampoPersonalizado(models.Model):
         ('LISTA_UNICA', 'Lista de Opções (Escolha Única)'),
         ('LISTA_MULTIPLA', 'Lista de Opções (Escolha Múltipla)'), 
         ('DATA', 'Data'),
+        ('BOOLEANO', 'Sim/Não (Checkbox)'),
     ]
     tipo_campo = models.CharField(max_length=20, choices=TIPO_CAMPO_CHOICES, verbose_name="Tipo do Campo")
     
