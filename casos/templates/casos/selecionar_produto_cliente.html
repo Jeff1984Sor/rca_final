@@ -1,69 +1,631 @@
-<!-- casos/templates/casos/selecionar_produto_cliente.html -->
 {% extends 'base.html' %}
 
-{% block title %}Novo Caso - Passo 1: Seleção{% endblock %}
+{% block title %}Novo Caso - Seleção | Sistema Jurídico{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* Estilos específicos para este formulário */
-    .selection-container {
-        display: flex; /* A mágica acontece aqui! */
-        gap: 30px; /* Cria um espaço entre os campos */
-        align-items: flex-end; /* Alinha os itens na base */
-        margin-bottom: 20px;
+/* ==================================================================== */
+/* 🎨 DESIGN SYSTEM - SELEÇÃO CLIENTE/PRODUTO */
+/* ==================================================================== */
+:root {
+    --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --primary-solid: #667eea;
+    --success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --success-solid: #10b981;
+    
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --gray-500: #64748b;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1e293b;
+    --gray-900: #0f172a;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    
+    --transition: 250ms ease-in-out;
+}
+
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-attachment: fixed;
+}
+
+.selection-page {
+    max-width: 900px;
+    margin: 60px auto;
+    padding: 0 20px;
+}
+
+/* ==================================================================== */
+/* 💎 HERO HEADER */
+/* ==================================================================== */
+.hero-header {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 24px;
+    padding: 48px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+    animation: slideDown 0.5s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: var(--primary);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.hero-icon {
+    background: var(--primary);
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2.5rem;
+    margin: 0 auto 20px;
+    box-shadow: var(--shadow-lg);
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.hero-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--gray-900);
+    margin: 0 0 12px;
+}
+
+.hero-subtitle {
+    font-size: 1.2rem;
+    color: var(--gray-600);
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* ==================================================================== */
+/* 📋 STEPPER */
+/* ==================================================================== */
+.stepper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 40px;
+    animation: fadeInUp 0.6s ease-out 0.1s both;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.stepper-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.stepper-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid var(--gray-300);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--gray-500);
+    transition: all var(--transition);
+}
+
+.stepper-item.active .stepper-circle {
+    background: var(--primary);
+    border-color: var(--primary-solid);
+    color: white;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
     }
-    .selection-group {
-        display: flex;
-        flex-direction: column; /* Coloca o label em cima do select */
+    50% {
+        box-shadow: 0 0 0 8px rgba(102, 126, 234, 0.1);
     }
-    .selection-group label {
-        font-weight: bold;
-        display: block;
-        margin-bottom: 5px;
+}
+
+.stepper-text {
+    font-weight: 600;
+    color: var(--gray-500);
+}
+
+.stepper-item.active .stepper-text {
+    color: var(--primary-solid);
+}
+
+.stepper-arrow {
+    color: var(--gray-300);
+    font-size: 1.5rem;
+}
+
+/* ==================================================================== */
+/* 📦 FORM CARD */
+/* ==================================================================== */
+.form-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 40px;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    animation: fadeInUp 0.6s ease-out 0.2s both;
+}
+
+.selection-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.selection-group {
+    position: relative;
+}
+
+.selection-label {
+    display: block;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--gray-700);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.selection-label i {
+    color: var(--primary-solid);
+    font-size: 1.1rem;
+}
+
+.selection-select {
+    width: 100%;
+    padding: 16px 20px;
+    padding-right: 50px;
+    border: 2px solid var(--gray-200);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all var(--transition);
+    background: white;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23667eea' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+}
+
+.selection-select:hover {
+    border-color: var(--gray-300);
+}
+
+.selection-select:focus {
+    outline: none;
+    border-color: var(--primary-solid);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.selection-select option {
+    padding: 12px;
+}
+
+.selection-select:valid {
+    border-color: var(--success-solid);
+}
+
+.selection-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--primary-solid);
+    font-size: 1.3rem;
+    pointer-events: none;
+}
+
+/* ==================================================================== */
+/* 🎯 BOTÕES */
+/* ==================================================================== */
+.btn-container {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    padding-top: 24px;
+    border-top: 2px solid var(--gray-100);
+}
+
+.btn {
+    padding: 16px 48px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    transition: all var(--transition);
+    box-shadow: var(--shadow-md);
+}
+
+.btn:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: var(--success);
+    color: white;
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--gray-700);
+    border: 2px solid var(--gray-300);
+}
+
+.btn i {
+    font-size: 1.2rem;
+}
+
+/* ==================================================================== */
+/* ✨ PREVIEW SELECIONADO */
+/* ==================================================================== */
+.selection-preview {
+    background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+    border-radius: 16px;
+    padding: 24px;
+    margin-top: 32px;
+    display: none;
+    border-left: 5px solid var(--primary-solid);
+}
+
+.selection-preview.active {
+    display: block;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.preview-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--gray-700);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.preview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.preview-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.preview-label {
+    font-size: 0.85rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.preview-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+/* ==================================================================== */
+/* 📱 RESPONSIVIDADE */
+/* ==================================================================== */
+@media (max-width: 768px) {
+    .selection-page {
+        margin: 20px auto;
     }
-    .selection-group select {
-        width: 350px; /* Largura dos campos */
-        padding: 8px;
-        font-size: 16px;
+    
+    .hero-header {
+        padding: 32px 24px;
     }
-    .submit-button {
-        padding: 10px 20px;
-        font-size: 16px;
-        cursor: pointer;
+    
+    .hero-title {
+        font-size: 2rem;
     }
+    
+    .stepper {
+        flex-direction: column;
+    }
+    
+    .stepper-arrow {
+        transform: rotate(90deg);
+    }
+    
+    .form-card {
+        padding: 28px 24px;
+    }
+    
+    .selection-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .preview-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .btn-container {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
 </style>
 {% endblock %}
 
-
 {% block content %}
-    <h1>Abrir Novo Caso</h1>
-    <p style="font-size: 1.1em;">Por favor, selecione o cliente e o produto para iniciar o cadastro do caso.</p>
+<div class="selection-page">
     
-    <form method="post">
-        {% csrf_token %}
-        
-        <div class="selection-container">
-            <div class="selection-group">
-                <label for="cliente">Cliente:</label>
-                <select name="cliente" id="cliente" required>
-                    <option value="">Selecione um cliente...</option>
-                    {% for cliente in clientes %}
-                        <option value="{{ cliente.id }}">{{ cliente.nome }}</option>
-                    {% endfor %}
-                </select>
+    <!-- 💎 HERO HEADER -->
+    <div class="hero-header">
+        <div class="hero-icon">
+            <i class="fa-solid fa-file-circle-plus"></i>
+        </div>
+        <h1 class="hero-title">Criar Novo Caso</h1>
+        <p class="hero-subtitle">Selecione o cliente e o produto para iniciar</p>
+    </div>
+    
+    <!-- 📋 STEPPER -->
+    <div class="stepper">
+        <div class="stepper-item active">
+            <div class="stepper-circle">1</div>
+            <span class="stepper-text">Seleção</span>
+        </div>
+        <i class="fa-solid fa-arrow-right stepper-arrow"></i>
+        <div class="stepper-item">
+            <div class="stepper-circle">2</div>
+            <span class="stepper-text">Dados</span>
+        </div>
+        <i class="fa-solid fa-arrow-right stepper-arrow"></i>
+        <div class="stepper-item">
+            <div class="stepper-circle">3</div>
+            <span class="stepper-text">Finalizar</span>
+        </div>
+    </div>
+    
+    <!-- 📦 FORM CARD -->
+    <div class="form-card">
+        <form method="post" id="selectionForm">
+            {% csrf_token %}
+            
+            <div class="selection-grid">
+                
+                <!-- Cliente -->
+                <div class="selection-group">
+                    <label for="cliente" class="selection-label">
+                        <i class="fa-solid fa-building"></i>
+                        Cliente
+                    </label>
+                    <select name="cliente" 
+                            id="cliente" 
+                            class="selection-select" 
+                            required>
+                        <option value="">Selecione um cliente...</option>
+                        {% for cliente in clientes %}
+                            <option value="{{ cliente.id }}">{{ cliente.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Produto -->
+                <div class="selection-group">
+                    <label for="produto" class="selection-label">
+                        <i class="fa-solid fa-box"></i>
+                        Produto
+                    </label>
+                    <select name="produto" 
+                            id="produto" 
+                            class="selection-select" 
+                            required>
+                        <option value="">Selecione um produto...</option>
+                        {% for produto in produtos %}
+                            <option value="{{ produto.id }}">{{ produto.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
             </div>
             
-            <div class="selection-group">
-                <label for="produto">Produto:</label>
-                <select name="produto" id="produto" required>
-                    <option value="">Selecione um produto...</option>
-                    {% for produto in produtos %}
-                        <option value="{{ produto.id }}">{{ produto.nome }}</option>
-                    {% endfor %}
-                </select>
+            <!-- ✨ PREVIEW -->
+            <div class="selection-preview" id="preview">
+                <div class="preview-title">
+                    <i class="fa-solid fa-circle-check"></i>
+                    Seleção Confirmada
+                </div>
+                <div class="preview-grid">
+                    <div class="preview-item">
+                        <span class="preview-label">Cliente</span>
+                        <span class="preview-value" id="previewCliente">-</span>
+                    </div>
+                    <div class="preview-item">
+                        <span class="preview-label">Produto</span>
+                        <span class="preview-value" id="previewProduto">-</span>
+                    </div>
+                </div>
             </div>
-        </div>
+            
+            <!-- 🎯 BOTÕES -->
+            <div class="btn-container">
+                <a href="{% url 'casos:lista_casos' %}" class="btn btn-secondary">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                    <span>Continuar</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+            
+        </form>
+    </div>
+    
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const clienteSelect = document.getElementById('cliente');
+    const produtoSelect = document.getElementById('produto');
+    const submitBtn = document.getElementById('submitBtn');
+    const preview = document.getElementById('preview');
+    const previewCliente = document.getElementById('previewCliente');
+    const previewProduto = document.getElementById('previewProduto');
+    
+    // 🎨 VALIDAÇÃO E PREVIEW
+    function updatePreview() {
+        const clienteText = clienteSelect.options[clienteSelect.selectedIndex]?.text;
+        const produtoText = produtoSelect.options[produtoSelect.selectedIndex]?.text;
         
-        <button type="submit" class="submit-button">Continuar</button>
-    </form>
+        const clienteSelected = clienteSelect.value !== '';
+        const produtoSelected = produtoSelect.value !== '';
+        
+        // Atualiza preview
+        if (clienteSelected && produtoSelected) {
+            previewCliente.textContent = clienteText;
+            previewProduto.textContent = produtoText;
+            preview.classList.add('active');
+            submitBtn.disabled = false;
+        } else {
+            preview.classList.remove('active');
+            submitBtn.disabled = true;
+        }
+        
+        // Feedback visual nos selects
+        if (clienteSelected) {
+            clienteSelect.style.borderColor = 'var(--success-solid)';
+        } else {
+            clienteSelect.style.borderColor = 'var(--gray-200)';
+        }
+        
+        if (produtoSelected) {
+            produtoSelect.style.borderColor = 'var(--success-solid)';
+        } else {
+            produtoSelect.style.borderColor = 'var(--gray-200)';
+        }
+    }
+    
+    clienteSelect.addEventListener('change', updatePreview);
+    produtoSelect.addEventListener('change', updatePreview);
+    
+    // ⌨️ ATALHOS DE TECLADO
+    document.addEventListener('keydown', function(e) {
+        // ESC = Cancelar
+        if (e.key === 'Escape') {
+            if (confirm('⚠️ Deseja cancelar a criação do caso?')) {
+                window.location.href = "{% url 'casos:lista_casos' %}";
+            }
+        }
+        
+        // Enter = Submit (se válido)
+        if (e.key === 'Enter' && !submitBtn.disabled) {
+            e.preventDefault();
+            document.getElementById('selectionForm').submit();
+        }
+    });
+    
+    // 🎯 ANIMAÇÃO NO SUBMIT
+    const form = document.getElementById('selectionForm');
+    form.addEventListener('submit', function(e) {
+        if (!form.checkValidity()) {
+            e.preventDefault();
+            alert('⚠️ Por favor, selecione o cliente e o produto!');
+            return;
+        }
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Carregando...';
+    });
+    
+    // 🎨 ANIMAÇÃO DE FOCUS
+    [clienteSelect, produtoSelect].forEach(select => {
+        select.addEventListener('focus', function() {
+            this.parentElement.style.transform = 'scale(1.02)';
+            this.parentElement.style.transition = 'transform 0.2s ease-out';
+        });
+        
+        select.addEventListener('blur', function() {
+            this.parentElement.style.transform = 'scale(1)';
+        });
+    });
+    
+    console.log('✅ Seleção de Cliente/Produto carregada!');
+    console.log('💡 Atalhos disponíveis:');
+    console.log('   - ESC: Cancelar');
+    console.log('   - Enter: Continuar (se válido)');
+});
+</script>
 {% endblock %}
