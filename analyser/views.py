@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 import json
 from django.http import JsonResponse
+import traceback
 
 from casos.models import Caso
 from .models import ModeloAnalise, ResultadoAnalise
@@ -182,133 +183,6 @@ def ajax_buscar_campos(request):
 
 
 @login_required
-def selecionar_arquivos(request, caso_id):
-    """Tela para selecionar arquivos e modelo antes de iniciar análise."""
-    
-    caso = get_object_or_404(Caso, pk=caso_id)
-    
-    # 🔍 DEBUG
-    print(f"🔍 DEBUG: Caso #{caso_id} - Cliente: {caso.cliente.nome}, Produto: {caso.produto.nome}")
-    
-    # ✅ BUSCAR MODELOS PARA ESTE CLIENTE + PRODUTO (ANTES DO POST!)
-    modelos = ModeloAnalise.objects.filter(
-        cliente=caso.cliente,
-        produto=caso.produto,
-        ativo=True
-    ).order_by('-data_criacao')
-    
-    print(f"🔍 DEBUG: Modelos encontrados: {modelos.count()}")
-    for modelo in modelos:
-        print(f"  - {modelo.nome}")
-    
-    # ========== POST: PROCESSAR ANÁLISE ==========
-    if request.method == 'POST':
-        print("=" * 80)
-        print("🚀 INICIANDO PROCESSAMENTO DA ANÁLISE")
-        print("=" * 80)
-        
-        modelo_id = request.POST.get('modelo_id')
-        arquivos_selecionados_json = request.POST.get('arquivos_selecionados', '[]')
-        
-        print(f"📋 Modelo ID: {modelo_id}")
-        print(f"📁 Arquivos JSON: {arquivos_selecionados_json}")
-        
-        try:
-            arquivos_selecionados = json.loads(arquivos_selecionados_json)
-            print(f"✅ Arquivos parseados: {len(arquivos_selecionados)} arquivo(s)")
-            
-            # Busca o modelo
-            modelo = get_object_or_404(ModeloAnalise, pk=modelo_id)
-            print(f"✅ Modelo encontrado: {modelo.nome}")
-            
-            # Cria o resultado da análise
-            resultado = ResultadoAnalise.objects.create(
-                caso=caso,
-                modelo_usado=modelo,
-                status='PROCESSANDO',
-                arquivos_analisados=arquivos_selecionados,
-                criado_por=request.user
-            )
-            print(f"✅ ResultadoAnalise criado: ID={resultado.id}")
-            
-            # Instancia o service
-            service = AnalyserService(
-                caso=caso,
-                modelo_analise=modelo,
-                arquivos_selecionados=arquivos_selecionados,
-                usuario=request.user
-            )
-            
-            print(f"🤖 Chamando service.executar_analise()")
-            
-            # Executa a análise
-            resultado_final = service.executar_analise()
-            
-            print(f"✅ Análise concluída! Status: {resultado_final.status}")
-            print("=" * 80)
-            
-            messages.success(request, '✅ Análise concluída com sucesso!')
-            return redirect('analyser:resultado', resultado_id=resultado_final.id)
-            
-        except Exception as e:
-            print(f"❌ ERRO AO PROCESSAR: {e}")
-            print(f"❌ Tipo do erro: {type(e)}")
-            traceback.print_exc()
-            print("=" * 80)
-            messages.error(request, f'❌ Erro ao processar análise: {str(e)}')
-            # NÃO retorna aqui - deixa renderizar o form com o erro
-    
-    # ========== GET/POST COM ERRO: PREPARAR CONTEXT ==========
-    
-    # Buscar arquivos do SharePoint (ou mock)
-    arquivos = []
-    try:
-        if caso.sharepoint_folder_id:
-            from integrations.sharepoint import SharePoint
-            
-            sp = SharePoint()
-            arquivos_sp = sp.listar_conteudo_pasta(caso.sharepoint_folder_id)
-            
-            # Converte para formato esperado
-            for item in arquivos_sp:
-                arquivos.append({
-                    'nome': item.get('name'),
-                    'id': item.get('id'),
-                    'tipo': 'pasta' if 'folder' in item else 'arquivo',
-                    'tamanho': item.get('size', 0),
-                })
-        else:
-            # Mock para testes
-            arquivos = [
-                {'nome': 'Contrato.pdf', 'id': '1', 'tipo': 'arquivo'},
-                {'nome': 'Procuração.pdf', 'id': '2', 'tipo': 'arquivo'},
-                {'nome': 'Laudo_Pericial.docx', 'id': '3', 'tipo': 'arquivo'},
-            ]
-    except Exception as e:
-        print(f"❌ Erro ao buscar arquivos: {e}")
-        # Se der erro, usa mock
-        arquivos = [
-            {'nome': 'Contrato.pdf', 'id': '1', 'tipo': 'arquivo'},
-            {'nome': 'Procuração.pdf', 'id': '2', 'tipo': 'arquivo'},
-            {'nome': 'Laudo_Pericial.docx', 'id': '3', 'tipo': 'arquivo'},
-        ]
-    
-    # Buscar análises anteriores
-    analises_anteriores = ResultadoAnalise.objects.filter(
-        caso=caso
-    ).order_by('-data_criacao')[:5]
-    
-    context = {
-        'caso': caso,
-        'modelos': modelos,  # ✅ Agora está disponível!
-        'arquivos': arquivos,
-        'analises_anteriores': analises_anteriores,
-    }
-    
-    return render(request, 'analyser/selecionar_arquivos.html', context)
-
-
-@login_required
 def resultado_analise(request, resultado_id):
     """Exibe resultado."""
     
@@ -455,4 +329,89 @@ def iniciar_analise(request, caso_id):
     )
 
     messages.success(request, f"Análise com o modelo '{modelo.nome}' foi iniciada! O resultado aparecerá no histórico em breve.")
+    return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
+
+@login_required
+def selecionar_arquivos(request, caso_id):
+    """
+    Tela para selecionar arquivos e modelo. 
+    Esta view APENAS exibe a página. O processamento é feito em 'iniciar_analise'.
+    """
+    caso = get_object_or_404(Caso, pk=caso_id)
+    
+    # Busca modelos disponíveis para o cliente/produto do caso
+    modelos = ModeloAnalise.objects.filter(
+        cliente=caso.cliente,
+        produto=caso.produto,
+        ativo=True
+    ).order_by('nome')
+    
+    # Busca as 5 últimas análises para mostrar no histórico
+    analises_anteriores = ResultadoAnalise.objects.filter(caso=caso).order_by('-data_criacao')[:5]
+    
+    context = {
+        'caso': caso,
+        'modelos': modelos,
+        'tem_modelos': modelos.exists(),  # ✅ VARIÁVEL ESSENCIAL PARA O TEMPLATE
+        'analises_anteriores': analises_anteriores,
+    }
+    
+    return render(request, 'analyser/selecionar_arquivos.html', context)
+
+
+@login_required
+def iniciar_analise(request, caso_id):
+    """
+    Processa o formulário de seleção e INICIA a tarefa de análise.
+    Esta view é chamada pelo 'action' do formulário.
+    """
+    if request.method != 'POST':
+        # Se alguém tentar acessar esta URL via GET, redireciona
+        return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
+
+    caso = get_object_or_404(Caso, pk=caso_id)
+    modelo_id = request.POST.get('modelo_id')
+    # O nome do campo foi corrigido no template para 'arquivos_selecionados_ids'
+    arquivos_json_str = request.POST.get('arquivos_selecionados_ids') 
+
+    if not modelo_id or not arquivos_json_str:
+        messages.error(request, "Você precisa selecionar um modelo e pelo menos um arquivo.")
+        return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
+
+    try:
+        modelo = get_object_or_404(ModeloAnalise, pk=modelo_id)
+        # O valor do input agora é um JSON, então precisamos fazer o parse
+        arquivos_info = json.loads(arquivos_json_str)
+        
+        if not isinstance(arquivos_info, list) or len(arquivos_info) == 0:
+            raise ValueError("Nenhum arquivo válido foi selecionado.")
+
+        # --- LÓGICA DE EXECUÇÃO ---
+        # Idealmente, aqui você chamaria uma tarefa Celery em background.
+        # Por enquanto, vamos chamar o serviço diretamente.
+        
+        service = AnalyserService(
+            caso=caso,
+            modelo_analise=modelo,
+            arquivos_selecionados=arquivos_info,
+            usuario=request.user
+        )
+        resultado = service.executar_analise() # Supondo que o nome do método é esse
+        
+        if resultado.status == 'CONCLUIDO':
+            messages.success(request, f"Análise com o modelo '{modelo.nome}' foi concluída com sucesso!")
+            return redirect('analyser:resultado_analise', resultado_id=resultado.id)
+        else:
+            messages.error(request, f"A análise falhou: {resultado.mensagem_erro}")
+            return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
+
+    except (json.JSONDecodeError, ValueError) as e:
+        messages.error(request, f"Erro nos dados enviados: {e}")
+    except ModeloAnalise.DoesNotExist:
+        messages.error(request, "O modelo de análise selecionado não é válido.")
+    except Exception as e:
+        messages.error(request, f"Ocorreu um erro inesperado ao iniciar a análise: {e}")
+        # Logar o erro completo para depuração
+        traceback.print_exc()
+
     return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
