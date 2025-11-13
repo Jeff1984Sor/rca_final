@@ -5,7 +5,6 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 import json
-import 
 from django.http import JsonResponse
 
 from casos.models import Caso
