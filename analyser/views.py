@@ -404,3 +404,55 @@ def carregar_arquivos_sharepoint(request, caso_id):
         
     context = {'arquivos': arquivos_formatados}
     return render(request, 'analyser/partials/arvore_arquivos.html', context)
+
+@login_required
+def iniciar_analise(request, caso_id):
+    """Processa o formulário de seleção e inicia a tarefa de análise."""
+    if request.method != 'POST':
+        return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
+
+    caso = get_object_or_404(Caso, pk=caso_id)
+    modelo_id = request.POST.get('modelo_id')
+    # O nome do campo hidden foi corrigido para 'arquivos_selecionados_ids'
+    arquivos_ids_str = request.POST.get('arquivos_selecionados_ids') 
+
+    if not modelo_id or not arquivos_ids_str:
+        messages.error(request, "Você precisa selecionar um modelo e pelo menos um arquivo.")
+        return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
+
+    modelo = get_object_or_404(ModeloAnalise, pk=modelo_id)
+    arquivos_ids = arquivos_ids_str.split(',')
+    
+    # Busca os nomes dos arquivos para exibir na mensagem
+    # (Esta parte é opcional, mas melhora a experiência)
+    try:
+        from integrations.sharepoint import SharePoint
+        sp = SharePoint()
+        arquivos_info = []
+        for item_id in arquivos_ids:
+            # Você precisará de um método para buscar detalhes de um item por ID
+            item_details = sp.get_item_details(item_id) 
+            arquivos_info.append({
+                'id': item_id,
+                'nome': item_details.get('name', 'Arquivo Desconhecido'),
+                'tipo': item_details.get('mimeType', 'application/octet-stream')
+            })
+    except Exception as e:
+        # Se falhar, usa uma lista mais simples
+        arquivos_info = [{'id': aid} for aid in arquivos_ids]
+
+    # TODO: Disparar tarefa Celery aqui
+    # from .tasks import executar_analise_ia
+    # executar_analise_ia.delay(caso.id, modelo.id, arquivos_info, request.user.id)
+
+    # Cria um registro de ResultadoAnalise para o histórico
+    ResultadoAnalise.objects.create(
+        caso=caso,
+        modelo_usado=modelo,
+        status='PROCESSANDO',
+        arquivos_analisados=arquivos_info,
+        criado_por=request.user
+    )
+
+    messages.success(request, f"Análise com o modelo '{modelo.nome}' foi iniciada! O resultado aparecerá no histórico em breve.")
+    return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
