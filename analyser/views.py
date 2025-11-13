@@ -7,11 +7,13 @@ from django.http import JsonResponse, HttpResponse
 import json
 from django.http import JsonResponse
 import traceback
-
+import logging
 from casos.models import Caso
 from .models import ModeloAnalise, ResultadoAnalise
 from .services import AnalyserService
 from campos_custom.models import CampoPersonalizado
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def listar_modelos(request):
@@ -282,84 +284,73 @@ def carregar_arquivos_sharepoint(request, caso_id):
 @login_required
 def iniciar_analise(request, caso_id):
     """Processa o formulário de seleção e INICIA a tarefa de análise."""
-
-    # ✅ LOG 1: Confirma que a view foi chamada
-    print("\n" + "="*80)
-    print(f"🚀 [VIEW: iniciar_analise] - A requisição POST foi recebida para o Caso ID: {caso_id}")
-    print(f"-> Usuário: {request.user.username}")
-    print("="*80)
+    
+    # ✅ LOG 1: Usando logger.info em vez de print
+    logger.info("\n" + "="*80)
+    logger.info(f"🚀 [VIEW: iniciar_analise] - A requisição POST foi recebida para o Caso ID: {caso_id}")
+    logger.info(f"-> Usuário: {request.user.username}")
+    logger.info("="*80)
     
     if request.method != 'POST':
-        print(">>> AVISO: Requisição não era POST. Redirecionando.")
+        logger.warning(">>> AVISO: Requisição não era POST. Redirecionando.")
         return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
 
     caso = get_object_or_404(Caso, pk=caso_id)
     modelo_id = request.POST.get('modelo_id')
-    arquivos_ids_str = request.POST.get('arquivos_selecionados_ids') 
+    arquivos_json_str = request.POST.get('arquivos_selecionados_ids') 
 
-    # ✅ LOG 2: Verifica os dados recebidos do formulário
-    print(f"📋 Dados recebidos do formulário:")
-    print(f"  - Modelo ID: {modelo_id}")
-    print(f"  - String de IDs de arquivos: '{arquivos_ids_str}'")
+    # ✅ LOG 2
+    logger.info(f"📋 Dados recebidos do formulário:")
+    logger.info(f"  - Modelo ID: {modelo_id}")
+    logger.info(f"  - String JSON de arquivos: '{arquivos_json_str}'")
 
-    if not modelo_id or not arquivos_ids_str:
-        print(">>> ERRO DE VALIDAÇÃO: Modelo ou arquivos não selecionados.")
+    if not modelo_id or not arquivos_json_str:
+        logger.error(">>> ERRO DE VALIDAÇÃO: Modelo ou arquivos não selecionados.")
         messages.error(request, "Você precisa selecionar um modelo e pelo menos um arquivo.")
         return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
 
     try:
         modelo = get_object_or_404(ModeloAnalise, pk=modelo_id)
-        arquivos_ids = arquivos_ids_str.split(',')
+        # O valor do input agora é um JSON, então precisamos fazer o parse
+        arquivos_info = json.loads(arquivos_json_str)
         
-        # ✅ LOG 3: Confirma que os dados foram processados
-        print(f"✅ Modelo encontrado: '{modelo.nome}' (ID: {modelo.id})")
-        print(f"✅ IDs de arquivos processados: {arquivos_ids}")
+        # ✅ LOG 3
+        logger.info(f"✅ Modelo encontrado: '{modelo.nome}' (ID: {modelo.id})")
+        logger.info(f"✅ Informações de arquivos parseadas: {arquivos_info}")
         
-        # Aqui, precisamos buscar os detalhes dos arquivos (nome, etc.)
-        # para passar ao service.
-        from integrations.sharepoint import SharePoint
-        sp = SharePoint()
-        arquivos_info = []
-        for item_id in arquivos_ids:
-            if item_id: # Garante que não processemos IDs vazios
-                details = sp.get_item_details(item_id)
-                arquivos_info.append({
-                    'id': item_id,
-                    'nome': details.get('name', 'Nome Desconhecido'),
-                    'tipo': details.get('mimeType', 'application/octet-stream')
-                })
-        print(f"✅ Informações de {len(arquivos_info)} arquivos obtidas do SharePoint.")
+        if not isinstance(arquivos_info, list) or len(arquivos_info) == 0:
+            raise ValueError("Nenhum arquivo válido foi selecionado após o parse do JSON.")
 
         # --- LÓGICA DE EXECUÇÃO ---
-        print("\n" + "-"*30 + " CHAMANDO O SERVICE " + "-"*30)
+        logger.info("\n" + "-"*30 + " CHAMANDO O SERVICE " + "-"*30)
         
-        # ✅ LOG 4: Confirma a chamada do service
         service = AnalyserService(
             caso=caso,
             modelo_analise=modelo,
             arquivos_selecionados=arquivos_info,
             usuario=request.user
         )
-        # O método executar_analise já tem seus próprios logs internos
-        resultado = service.executar_analise() 
+        resultado = service.executar_analise()
         
-        print("-" * 30 + " RETORNO DO SERVICE " + "-" * 30 + "\n")
+        logger.info("-" * 30 + " RETORNO DO SERVICE " + "-" * 30 + "\n")
 
         if resultado.status == 'CONCLUIDO':
-            print(f"✅ SUCESSO: Análise concluída. Redirecionando para a página de resultado ID: {resultado.id}")
+            logger.info(f"✅ SUCESSO: Análise concluída. Redirecionando para a página de resultado ID: {resultado.id}")
             messages.success(request, f"Análise com o modelo '{modelo.nome}' foi concluída com sucesso!")
             return redirect('analyser:resultado_analise', resultado_id=resultado.id)
         else:
-            print(f"❌ FALHA: A análise terminou com status '{resultado.status}'. Mensagem: {resultado.mensagem_erro}")
+            logger.error(f"❌ FALHA: A análise terminou com status '{resultado.status}'. Mensagem: {resultado.mensagem_erro}")
             messages.error(request, f"A análise falhou: {resultado.mensagem_erro}")
             return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
 
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.error(f"Erro nos dados enviados: {e}")
+        messages.error(request, f"Erro nos dados enviados: {e}")
+    except ModeloAnalise.DoesNotExist:
+        logger.error("Modelo de análise não encontrado com o ID fornecido.")
+        messages.error(request, "O modelo de análise selecionado não é válido.")
     except Exception as e:
-        print("\n" + "!!!!!!!!!!!!!! ERRO INESPERADO NA VIEW !!!!!!!!!!!!!!")
-        print(f"TIPO DE ERRO: {type(e)}")
-        print(f"MENSAGEM: {e}")
-        traceback.print_exc()
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+        logger.error(f"!!!!!!!!!!!!!! ERRO INESPERADO NA VIEW !!!!!!!!!!!!!!", exc_info=True)
         messages.error(request, f"Ocorreu um erro inesperado ao iniciar a análise: {e}")
 
     return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
