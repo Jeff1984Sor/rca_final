@@ -284,7 +284,7 @@ def carregar_arquivos_sharepoint(request, caso_id):
 @login_required
 def iniciar_analise(request, caso_id):
     """Processa o formulário de seleção e INICIA a tarefa de análise."""
-    
+    raise Exception("!!!!!!!!! ESTOU DENTRO DA VIEW INICIAR_ANÁLISE !!!!!!!!!")
     # ✅ LOG 1: Usando logger.info em vez de print
     logger.info("\n" + "="*80)
     logger.info(f"🚀 [VIEW: iniciar_analise] - A requisição POST foi recebida para o Caso ID: {caso_id}")
