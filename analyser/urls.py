@@ -19,4 +19,6 @@ urlpatterns = [
     path('analisar/<int:caso_id>/', views.selecionar_arquivos, name='selecionar_arquivos'),
     path('resultado/<int:resultado_id>/', views.resultado_analise, name='resultado'),
     path('aplicar/<int:resultado_id>/', views.aplicar_ao_caso, name='aplicar_ao_caso'),
+
+    path('analisar/<int:caso_id>/iniciar/', views.iniciar_analise, name='iniciar_analise'),
 ]
