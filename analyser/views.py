@@ -281,54 +281,87 @@ def carregar_arquivos_sharepoint(request, caso_id):
 
 @login_required
 def iniciar_analise(request, caso_id):
-    """Processa o formulário de seleção e inicia a tarefa de análise."""
+    """Processa o formulário de seleção e INICIA a tarefa de análise."""
+
+    # ✅ LOG 1: Confirma que a view foi chamada
+    print("\n" + "="*80)
+    print(f"🚀 [VIEW: iniciar_analise] - A requisição POST foi recebida para o Caso ID: {caso_id}")
+    print(f"-> Usuário: {request.user.username}")
+    print("="*80)
+    
     if request.method != 'POST':
+        print(">>> AVISO: Requisição não era POST. Redirecionando.")
         return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
 
     caso = get_object_or_404(Caso, pk=caso_id)
     modelo_id = request.POST.get('modelo_id')
-    # O nome do campo hidden foi corrigido para 'arquivos_selecionados_ids'
     arquivos_ids_str = request.POST.get('arquivos_selecionados_ids') 
 
+    # ✅ LOG 2: Verifica os dados recebidos do formulário
+    print(f"📋 Dados recebidos do formulário:")
+    print(f"  - Modelo ID: {modelo_id}")
+    print(f"  - String de IDs de arquivos: '{arquivos_ids_str}'")
+
     if not modelo_id or not arquivos_ids_str:
+        print(">>> ERRO DE VALIDAÇÃO: Modelo ou arquivos não selecionados.")
         messages.error(request, "Você precisa selecionar um modelo e pelo menos um arquivo.")
         return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
 
-    modelo = get_object_or_404(ModeloAnalise, pk=modelo_id)
-    arquivos_ids = arquivos_ids_str.split(',')
-    
-    # Busca os nomes dos arquivos para exibir na mensagem
-    # (Esta parte é opcional, mas melhora a experiência)
     try:
+        modelo = get_object_or_404(ModeloAnalise, pk=modelo_id)
+        arquivos_ids = arquivos_ids_str.split(',')
+        
+        # ✅ LOG 3: Confirma que os dados foram processados
+        print(f"✅ Modelo encontrado: '{modelo.nome}' (ID: {modelo.id})")
+        print(f"✅ IDs de arquivos processados: {arquivos_ids}")
+        
+        # Aqui, precisamos buscar os detalhes dos arquivos (nome, etc.)
+        # para passar ao service.
         from integrations.sharepoint import SharePoint
         sp = SharePoint()
         arquivos_info = []
         for item_id in arquivos_ids:
-            # Você precisará de um método para buscar detalhes de um item por ID
-            item_details = sp.get_item_details(item_id) 
-            arquivos_info.append({
-                'id': item_id,
-                'nome': item_details.get('name', 'Arquivo Desconhecido'),
-                'tipo': item_details.get('mimeType', 'application/octet-stream')
-            })
+            if item_id: # Garante que não processemos IDs vazios
+                details = sp.get_item_details(item_id)
+                arquivos_info.append({
+                    'id': item_id,
+                    'nome': details.get('name', 'Nome Desconhecido'),
+                    'tipo': details.get('mimeType', 'application/octet-stream')
+                })
+        print(f"✅ Informações de {len(arquivos_info)} arquivos obtidas do SharePoint.")
+
+        # --- LÓGICA DE EXECUÇÃO ---
+        print("\n" + "-"*30 + " CHAMANDO O SERVICE " + "-"*30)
+        
+        # ✅ LOG 4: Confirma a chamada do service
+        service = AnalyserService(
+            caso=caso,
+            modelo_analise=modelo,
+            arquivos_selecionados=arquivos_info,
+            usuario=request.user
+        )
+        # O método executar_analise já tem seus próprios logs internos
+        resultado = service.executar_analise() 
+        
+        print("-" * 30 + " RETORNO DO SERVICE " + "-" * 30 + "\n")
+
+        if resultado.status == 'CONCLUIDO':
+            print(f"✅ SUCESSO: Análise concluída. Redirecionando para a página de resultado ID: {resultado.id}")
+            messages.success(request, f"Análise com o modelo '{modelo.nome}' foi concluída com sucesso!")
+            return redirect('analyser:resultado_analise', resultado_id=resultado.id)
+        else:
+            print(f"❌ FALHA: A análise terminou com status '{resultado.status}'. Mensagem: {resultado.mensagem_erro}")
+            messages.error(request, f"A análise falhou: {resultado.mensagem_erro}")
+            return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
+
     except Exception as e:
-        # Se falhar, usa uma lista mais simples
-        arquivos_info = [{'id': aid} for aid in arquivos_ids]
+        print("\n" + "!!!!!!!!!!!!!! ERRO INESPERADO NA VIEW !!!!!!!!!!!!!!")
+        print(f"TIPO DE ERRO: {type(e)}")
+        print(f"MENSAGEM: {e}")
+        traceback.print_exc()
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+        messages.error(request, f"Ocorreu um erro inesperado ao iniciar a análise: {e}")
 
-    # TODO: Disparar tarefa Celery aqui
-    # from .tasks import executar_analise_ia
-    # executar_analise_ia.delay(caso.id, modelo.id, arquivos_info, request.user.id)
-
-    # Cria um registro de ResultadoAnalise para o histórico
-    ResultadoAnalise.objects.create(
-        caso=caso,
-        modelo_usado=modelo,
-        status='PROCESSANDO',
-        arquivos_analisados=arquivos_info,
-        criado_por=request.user
-    )
-
-    messages.success(request, f"Análise com o modelo '{modelo.nome}' foi iniciada! O resultado aparecerá no histórico em breve.")
     return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
 
 @login_required
