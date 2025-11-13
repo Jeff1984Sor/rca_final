@@ -21,4 +21,5 @@ urlpatterns = [
     path('aplicar/<int:resultado_id>/', views.aplicar_ao_caso, name='aplicar_ao_caso'),
 
     path('analisar/<int:caso_id>/iniciar/', views.iniciar_analise, name='iniciar_analise'),
+    path('caso/<int:caso_id>/carregar-arquivos/', views.carregar_arquivos_sharepoint, name='carregar_arquivos'),
 ]
