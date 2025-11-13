@@ -829,13 +829,28 @@ textarea:required:valid {
                     {% for field in form.campos_personalizados_simples %}
                         {% if "Valor Apurado" not in field.label and "valor_apurado" not in field.name|lower %}
                             <div class="form-group">
-                                <label for="{{ field.id_for_label }}" class="form-label">
-                                    <i class="fa-solid fa-circle-dot"></i>
-                                    {{ field.label }}
-                                </label>
-                                {{ field }}
-                                {% if field.errors %}
-                                    <div class="text-danger">{{ field.errors }}</div>
+                                {% if field.field.widget.input_type == 'checkbox' %}
+                                    {# ✅ CAMPO BOOLEANO (CHECKBOX) #}
+                                    <div style="display: flex; align-items: center; gap: 12px; padding: 14px; background: var(--gray-50); border-radius: 12px; border: 2px solid var(--gray-200); transition: all var(--transition);">
+                                        {{ field }}
+                                        <label for="{{ field.id_for_label }}" style="cursor: pointer; margin: 0; font-weight: 600; color: var(--gray-700); user-select: none;">
+                                            <i class="fa-solid fa-circle-dot" style="color: var(--primary-solid);"></i>
+                                            {{ field.label }}
+                                        </label>
+                                    </div>
+                                    {% if field.errors %}
+                                        <div class="text-danger">{{ field.errors }}</div>
+                                    {% endif %}
+                                {% else %}
+                                    {# ✅ CAMPOS NORMAIS #}
+                                    <label for="{{ field.id_for_label }}" class="form-label">
+                                        <i class="fa-solid fa-circle-dot"></i>
+                                        {{ field.label }}
+                                    </label>
+                                    {{ field }}
+                                    {% if field.errors %}
+                                        <div class="text-danger">{{ field.errors }}</div>
+                                    {% endif %}
                                 {% endif %}
                             </div>
                         {% endif %}
@@ -885,13 +900,28 @@ textarea:required:valid {
                                         <div class="fields-grid">
                                             {% for field in form_grupo.visible_fields %}
                                                 <div class="form-group">
-                                                    <label for="{{ field.id_for_label }}" class="form-label">
-                                                        <i class="fa-solid fa-circle-dot"></i>
-                                                        {{ field.label }}
-                                                    </label>
-                                                    {{ field }}
-                                                    {% if field.errors %}
-                                                        <div class="text-danger">{{ field.errors }}</div>
+                                                    {% if field.field.widget.input_type == 'checkbox' %}
+                                                        {# ✅ CAMPO BOOLEANO NO GRUPO #}
+                                                        <div style="display: flex; align-items: center; gap: 12px; padding: 14px; background: var(--gray-50); border-radius: 12px; border: 2px solid var(--gray-200);">
+                                                            {{ field }}
+                                                            <label for="{{ field.id_for_label }}" style="cursor: pointer; margin: 0; font-weight: 600; color: var(--gray-700);">
+                                                                <i class="fa-solid fa-circle-dot" style="color: var(--primary-solid);"></i>
+                                                                {{ field.label }}
+                                                            </label>
+                                                        </div>
+                                                        {% if field.errors %}
+                                                            <div class="text-danger">{{ field.errors }}</div>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        {# ✅ CAMPOS NORMAIS #}
+                                                        <label for="{{ field.id_for_label }}" class="form-label">
+                                                            <i class="fa-solid fa-circle-dot"></i>
+                                                            {{ field.label }}
+                                                        </label>
+                                                        {{ field }}
+                                                        {% if field.errors %}
+                                                            <div class="text-danger">{{ field.errors }}</div>
+                                                        {% endif %}
                                                     {% endif %}
                                                 </div>
                                             {% endfor %}
@@ -921,11 +951,23 @@ textarea:required:valid {
                                     <div class="fields-grid">
                                         {% for field in formset.empty_form.visible_fields %}
                                             <div class="form-group">
-                                                <label for="{{ field.id_for_label }}" class="form-label">
-                                                    <i class="fa-solid fa-circle-dot"></i>
-                                                    {{ field.label }}
-                                                </label>
-                                                {{ field }}
+                                                {% if field.field.widget.input_type == 'checkbox' %}
+                                                    {# ✅ CAMPO BOOLEANO NO EMPTY FORM #}
+                                                    <div style="display: flex; align-items: center; gap: 12px; padding: 14px; background: var(--gray-50); border-radius: 12px; border: 2px solid var(--gray-200);">
+                                                        {{ field }}
+                                                        <label for="{{ field.id_for_label }}" style="cursor: pointer; margin: 0; font-weight: 600; color: var(--gray-700);">
+                                                            <i class="fa-solid fa-circle-dot" style="color: var(--primary-solid);"></i>
+                                                            {{ field.label }}
+                                                        </label>
+                                                    </div>
+                                                {% else %}
+                                                    {# ✅ CAMPOS NORMAIS #}
+                                                    <label for="{{ field.id_for_label }}" class="form-label">
+                                                        <i class="fa-solid fa-circle-dot"></i>
+                                                        {{ field.label }}
+                                                    </label>
+                                                    {{ field }}
+                                                {% endif %}
                                             </div>
                                         {% endfor %}
                                     </div>

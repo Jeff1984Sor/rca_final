@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import dj_database_url
 from environs import Env  # Usaremos environs para gerenciar tudo
+from dotenv import load_dotenv
 
 # ==============================================================================
 # 1. CONFIGURAÇÃO BÁSICA E VARIÁVEIS DE AMBIENTE
@@ -9,6 +10,7 @@ from environs import Env  # Usaremos environs para gerenciar tudo
 
 # Define o diretório base do projeto (RCA_Final/)
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # Instancia o leitor de variáveis de ambiente e lê o arquivo .env
 env = Env()
@@ -48,6 +50,7 @@ INSTALLED_APPS = [
     'produtos.apps.ProdutosConfig',
     #'workflow.apps.WorkflowConfig',
     'workflow',
+    'analyser',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -55,6 +58,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
 
 ]
 
@@ -235,3 +239,8 @@ DATE_FORMAT = 'd/m/Y'
 DATETIME_FORMAT = 'd/m/Y H:i'
 
 LOGIN_REDIRECT_URL = '/'
+
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')  # ✅ Usa os.getenv()
+GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-pro')
+GEMINI_TEMPERATURE = float(os.getenv('GEMINI_TEMPERATURE', '0.1'))
+GEMINI_MAX_TOKENS = int(os.getenv('GEMINI_MAX_TOKENS', '4096'))

@@ -1,0 +1,740 @@
+{# analyser/templates/analyser/selecionar_arquivos.html #}
+{% extends 'base.html' %}
+
+{% block title %}Analisar Caso #{{ caso.id }} | Analyser{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --primary-solid: #667eea;
+    --success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --success-solid: #10b981;
+    --warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-900: #0f172a;
+    
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-attachment: fixed;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+/* HERO HEADER */
+.hero-header {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 32px 40px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-xl);
+}
+
+.hero-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--gray-900);
+    margin: 0 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.hero-icon {
+    background: var(--primary);
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.3rem;
+}
+
+.caso-info {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+
+.info-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--gray-100);
+    border-radius: 10px;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.info-badge i {
+    color: var(--primary-solid);
+}
+
+/* MAIN CARD */
+.main-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    box-shadow: var(--shadow-xl);
+    overflow: hidden;
+    margin-bottom: 32px;
+}
+
+.card-section {
+    padding: 40px;
+    border-bottom: 3px solid var(--gray-100);
+}
+
+.card-section:last-child {
+    border-bottom: none;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--gray-100);
+}
+
+.section-header i {
+    background: var(--primary);
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.section-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+/* FORM */
+.form-group {
+    margin-bottom: 24px;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--gray-700);
+    margin-bottom: 8px;
+}
+
+.form-control,
+select {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid var(--gray-200);
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s;
+    font-family: inherit;
+}
+
+select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 40px;
+}
+
+.form-control:focus,
+select:focus {
+    outline: none;
+    border-color: var(--primary-solid);
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+/* TREE DE PASTAS */
+.folder-tree {
+    background: var(--gray-50);
+    border: 2px solid var(--gray-200);
+    border-radius: 16px;
+    padding: 20px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.folder-item {
+    padding: 12px;
+    margin: 4px 0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.folder-item:hover {
+    background: white;
+    box-shadow: var(--shadow-lg);
+}
+
+.folder-item i {
+    font-size: 1.2rem;
+    color: #f59e0b;
+}
+
+.folder-name {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.file-item {
+    padding: 10px 10px 10px 30px;
+    margin: 4px 0;
+    border-radius: 8px;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.file-item:hover {
+    background: rgba(102, 126, 234, 0.05);
+}
+
+.file-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.file-icon {
+    font-size: 1rem;
+}
+
+.file-name {
+    color: var(--gray-700);
+    flex: 1;
+}
+
+/* ARQUIVOS SELECIONADOS */
+.selected-files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.selected-file-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--success);
+    color: white;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.selected-file-tag i {
+    cursor: pointer;
+}
+
+.selected-file-tag i:hover {
+    transform: scale(1.2);
+}
+
+/* ALERT */
+.alert {
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+}
+
+.alert-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border: 2px solid #f59e0b;
+    color: #92400e;
+}
+
+.alert-info {
+    background: rgba(79, 172, 254, 0.1);
+    border: 2px solid #4facfe;
+    color: #0369a1;
+}
+
+.alert i {
+    font-size: 1.3rem;
+}
+
+/* FOOTER */
+.form-footer {
+    background: var(--gray-50);
+    padding: 28px 40px;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.btn {
+    padding: 14px 32px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    box-shadow: var(--shadow-lg);
+}
+
+.btn:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-xl);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-secondary {
+    background: var(--gray-600);
+    color: white;
+}
+
+/* HISTÓRICO */
+.historico-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.historico-item {
+    background: white;
+    border: 2px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.3s;
+}
+
+.historico-item:hover {
+    border-color: var(--primary-solid);
+    box-shadow: var(--shadow-lg);
+}
+
+.historico-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.historico-data {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.badge {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.badge-success {
+    background: var(--success);
+    color: white;
+}
+
+.badge-error {
+    background: #ef4444;
+    color: white;
+}
+
+.badge-processing {
+    background: #f59e0b;
+    color: white;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--gray-600);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    color: var(--gray-200);
+    margin-bottom: 12px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    
+    <!-- HERO HEADER -->
+    <div class="hero-header">
+        <h1 class="hero-title">
+            <div class="hero-icon">
+                <i class="fa-solid fa-robot"></i>
+            </div>
+            <span>Analisar Caso com IA</span>
+        </h1>
+        
+        <div class="caso-info">
+            <div class="info-badge">
+                <i class="fa-solid fa-hashtag"></i>
+                Caso #{{ caso.id }}
+            </div>
+            <div class="info-badge">
+                <i class="fa-solid fa-building"></i>
+                {{ caso.cliente.nome }}
+            </div>
+            <div class="info-badge">
+                <i class="fa-solid fa-box"></i>
+                {{ caso.produto.nome }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- FORM -->
+    <form method="POST" action="" id="form-analise">
+        {% csrf_token %}
+        
+        <div class="main-card">
+            
+            <!-- SEÇÃO 1: MODELO -->
+            <div class="card-section">
+                <div class="section-header">
+                    <i class="fa-solid fa-robot"></i>
+                    <h2 class="section-title">Selecione o Modelo de Análise</h2>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fa-solid fa-lightbulb"></i>
+                    <span>O modelo contém as instruções de como a IA deve extrair cada campo dos documentos.</span>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fa-solid fa-brain"></i>
+                        Modelo de Análise
+                    </label>
+                    <select name="modelo_id" id="select-modelo" class="form-control" required>
+                        <option value="">Selecione um modelo...</option>
+                        {% for modelo in modelos %}
+                            <option value="{{ modelo.id }}">{{ modelo.nome }}</option>
+                        {% empty %}
+                            <option value="" disabled>Nenhum modelo disponível para este cliente/produto</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                {% if not modelos %}
+                <div class="alert alert-warning">
+                    <i class="fa-solid fa-exclamation-triangle"></i>
+                    <span>Nenhum modelo encontrado para <strong>{{ caso.cliente.nome }}</strong> + <strong>{{ caso.produto.nome }}</strong>. 
+                    <a href="{% url 'analyser:criar_modelo' %}" style="color: inherit; text-decoration: underline; font-weight: 700;">Criar modelo agora</a></span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- SEÇÃO 2: ARQUIVOS -->
+            {% if modelos %}
+            <div class="card-section">
+                <div class="section-header">
+                    <i class="fa-solid fa-folder-open"></i>
+                    <h2 class="section-title">Selecione os Arquivos</h2>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fa-solid fa-info-circle"></i>
+                    <span>Selecione um ou mais arquivos do SharePoint que serão analisados pela IA.</span>
+                </div>
+                
+                <div id="folder-tree" class="folder-tree">
+                    <div class="empty-state">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                        <p>Carregando arquivos do SharePoint...</p>
+                    </div>
+                </div>
+                
+                <div id="selected-files-container" style="display: none;">
+                    <h3 style="font-size: 1rem; font-weight: 700; margin: 20px 0 12px; color: var(--gray-700);">
+                        <i class="fa-solid fa-check-circle" style="color: var(--success-solid);"></i>
+                        Arquivos Selecionados (<span id="count-selected">0</span>)
+                    </h3>
+                    <div id="selected-files" class="selected-files"></div>
+                </div>
+                
+                <input type="hidden" name="arquivos_selecionados" id="arquivos_selecionados" value="[]">
+            </div>
+            
+            <!-- FOOTER -->
+            <div class="form-footer">
+                <a href="{% url 'casos:detalhe_caso' pk=caso.id %}" class="btn btn-secondary">
+                    <i class="fa-solid fa-times"></i>
+                    Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary" id="btn-submit" disabled>
+                    <i class="fa-solid fa-magic"></i>
+                    Iniciar Análise
+                </button>
+            </div>
+            {% endif %}
+            
+        </div>
+    </form>
+    
+    <!-- HISTÓRICO -->
+    {% if analises_anteriores %}
+    <div class="main-card">
+        <div class="card-section">
+            <div class="section-header">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <h2 class="section-title">Análises Anteriores</h2>
+            </div>
+            
+            <div class="historico-list">
+                {% for analise in analises_anteriores %}
+                    <div class="historico-item">
+                        <div class="historico-header">
+                            <div class="historico-data">
+                                <i class="fa-solid fa-calendar"></i>
+                                {{ analise.data_criacao|date:"d/m/Y H:i" }}
+                            </div>
+                            <span class="badge {% if analise.status == 'CONCLUIDO' %}badge-success{% elif analise.status == 'ERRO' %}badge-error{% else %}badge-processing{% endif %}">
+                                {{ analise.get_status_display }}
+                            </span>
+                        </div>
+                        <div style="font-size: 0.9rem; color: var(--gray-600);">
+                            Modelo: {{ analise.modelo_usado.nome }}
+                            • {{ analise.arquivos_analisados|length }} arquivo(s)
+                        </div>
+                        {% if analise.status == 'CONCLUIDO' %}
+                            <a href="{% url 'analyser:resultado' resultado_id=analise.id %}" 
+                               style="color: var(--primary-solid); text-decoration: none; font-weight: 600; font-size: 0.9rem; margin-top: 8px; display: inline-block;">
+                                Ver Resultado →
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    const casoId = {{ caso.id }};
+    const folderTree = document.getElementById('folder-tree');
+    const selectedFilesContainer = document.getElementById('selected-files-container');
+    const selectedFilesDiv = document.getElementById('selected-files');
+    const countSelected = document.getElementById('count-selected');
+    const inputArquivos = document.getElementById('arquivos_selecionados');
+    const btnSubmit = document.getElementById('btn-submit');
+    
+    let arquivosSelecionados = [];
+    
+    // Carrega árvore de arquivos do SharePoint
+    carregarArquivos();
+    
+    function carregarArquivos() {
+        // TODO: Fazer requisição AJAX para buscar arquivos do SharePoint
+        // Por enquanto, simulando dados
+        setTimeout(() => {
+            const mockData = {
+                pastas: [
+                    {
+                        nome: 'Documentos',
+                        arquivos: [
+                            { id: 'doc1', nome: 'Contrato.pdf', tipo: 'application/pdf' },
+                            { id: 'doc2', nome: 'Procuração.pdf', tipo: 'application/pdf' }
+                        ]
+                    },
+                    {
+                        nome: 'Perícias',
+                        arquivos: [
+                            { id: 'doc3', nome: 'Laudo_Pericial.docx', tipo: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
+                            { id: 'doc4', nome: 'Fotos_Local.pdf', tipo: 'application/pdf' }
+                        ]
+                    }
+                ]
+            };
+            
+            renderizarArquivos(mockData);
+        }, 1000);
+    }
+    
+    function renderizarArquivos(data) {
+        let html = '';
+        
+        data.pastas.forEach(pasta => {
+            html += `
+                <div class="folder-item" onclick="toggleFolder(this)">
+                    <i class="fa-solid fa-folder"></i>
+                    <span class="folder-name">${pasta.nome}</span>
+                    <i class="fa-solid fa-chevron-down" style="margin-left: auto; font-size: 0.8rem;"></i>
+                </div>
+                <div class="folder-content" style="display: none;">
+            `;
+            
+            pasta.arquivos.forEach(arquivo => {
+                const icon = getIconByType(arquivo.tipo);
+                html += `
+                    <div class="file-item">
+                        <input type="checkbox" 
+                               class="file-checkbox" 
+                               data-file-id="${arquivo.id}"
+                               data-file-name="${arquivo.nome}"
+                               data-file-tipo="${arquivo.tipo}"
+                               data-folder="${pasta.nome}"
+                               onchange="toggleFile(this)">
+                        <i class="${icon} file-icon" style="color: ${getColorByType(arquivo.tipo)};"></i>
+                        <span class="file-name">${arquivo.nome}</span>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+        });
+        
+        folderTree.innerHTML = html;
+    }
+    
+    window.toggleFolder = function(element) {
+        const content = element.nextElementSibling;
+        const chevron = element.querySelector('.fa-chevron-down');
+        
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            chevron.style.transform = 'rotate(180deg)';
+        } else {
+            content.style.display = 'none';
+            chevron.style.transform = 'rotate(0deg)';
+        }
+    };
+    
+    window.toggleFile = function(checkbox) {
+        const fileData = {
+            id: checkbox.dataset.fileId,
+            nome: checkbox.dataset.fileName,
+            tipo: checkbox.dataset.fileTipo,
+            pasta: checkbox.dataset.folder
+        };
+        
+        if (checkbox.checked) {
+            arquivosSelecionados.push(fileData);
+        } else {
+            arquivosSelecionados = arquivosSelecionados.filter(f => f.id !== fileData.id);
+        }
+        
+        atualizarArquivosSelecionados();
+    };
+    
+    function atualizarArquivosSelecionados() {
+        if (arquivosSelecionados.length > 0) {
+            selectedFilesContainer.style.display = 'block';
+            btnSubmit.disabled = false;
+            
+            let html = '';
+            arquivosSelecionados.forEach(arquivo => {
+                html += `
+                    <div class="selected-file-tag">
+                        <i class="fa-solid fa-file-pdf"></i>
+                        <span>${arquivo.nome}</span>
+                        <i class="fa-solid fa-times" onclick="removerArquivo('${arquivo.id}')"></i>
+                    </div>
+                `;
+            });
+            
+            selectedFilesDiv.innerHTML = html;
+            countSelected.textContent = arquivosSelecionados.length;
+            inputArquivos.value = JSON.stringify(arquivosSelecionados);
+        } else {
+            selectedFilesContainer.style.display = 'none';
+            btnSubmit.disabled = true;
+            inputArquivos.value = '[]';
+        }
+    }
+    
+    window.removerArquivo = function(fileId) {
+        const checkbox = document.querySelector(`[data-file-id="${fileId}"]`);
+        if (checkbox) checkbox.checked = false;
+        
+        arquivosSelecionados = arquivosSelecionados.filter(f => f.id !== fileId);
+        atualizarArquivosSelecionados();
+    };
+    
+    function getIconByType(tipo) {
+        if (tipo.includes('pdf')) return 'fa-solid fa-file-pdf';
+        if (tipo.includes('word')) return 'fa-solid fa-file-word';
+        if (tipo.includes('excel')) return 'fa-solid fa-file-excel';
+        if (tipo.includes('image')) return 'fa-solid fa-file-image';
+        return 'fa-solid fa-file';
+    }
+    
+    function getColorByType(tipo) {
+        if (tipo.includes('pdf')) return '#ef4444';
+        if (tipo.includes('word')) return '#2563eb';
+        if (tipo.includes('excel')) return '#10b981';
+        if (tipo.includes('image')) return '#8b5cf6';
+        return '#64748b';
+    }
+    
+    // Validação do form
+    const form = document.getElementById('form-analise');
+    form.addEventListener('submit', function(e) {
+        if (arquivosSelecionados.length === 0) {
+            e.preventDefault();
+            alert('⚠️ Selecione pelo menos um arquivo!');
+            return false;
+        }
+        
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Analisando...';
+    });
+    
+    console.log('✅ Seletor de arquivos carregado!');
+});
+</script>
+{% endblock %}

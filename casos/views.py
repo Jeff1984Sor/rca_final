@@ -621,6 +621,7 @@ def detalhe_caso(request, pk):
     # ========================================
     
     # Busca estrutura e valores
+    analises = caso.analises.all().order_by('-data_criacao')[:10]
     estrutura = EstruturaDeCampos.objects.filter(
         cliente=caso.cliente,
         produto=caso.produto
@@ -724,6 +725,7 @@ def detalhe_caso(request, pk):
         'itens': itens_anexos,
         'folder_id': caso.sharepoint_folder_id,
         'root_folder_id': caso.sharepoint_folder_id,
+        'analises': analises,
         'folder_name': folder_name,
     }
 

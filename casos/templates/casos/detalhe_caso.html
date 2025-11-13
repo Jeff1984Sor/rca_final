@@ -6,6 +6,163 @@
 
 {% block extra_css %}
 <style>
+
+/* ====================================
+   ABA ANALYSER
+   ==================================== */
+
+.analyser-intro {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 32px;
+    border-radius: 16px;
+    text-align: center;
+    color: white;
+    margin-bottom: 32px;
+}
+
+.analyser-intro p {
+    color: white !important;
+}
+
+.btn-lg {
+    padding: 16px 40px;
+    font-size: 1.1rem;
+}
+
+/* Lista de Análises */
+.analises-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.analise-card {
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s;
+}
+
+.analise-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    transform: translateY(-2px);
+}
+
+.analise-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.analise-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.analise-date,
+.analise-modelo {
+    font-size: 0.9rem;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.analise-date {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.analise-status {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-concluido {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+}
+
+.status-erro {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    color: white;
+}
+
+.status-processando {
+    background: #f59e0b;
+    color: white;
+}
+
+.analise-details {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.analise-stat {
+    font-size: 0.9rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.analise-stat.success {
+    color: #10b981;
+    font-weight: 700;
+}
+
+.analise-footer {
+    padding-top: 16px;
+    border-top: 2px solid #e2e8f0;
+}
+
+.btn-sm {
+    padding: 8px 20px;
+    font-size: 0.9rem;
+}
+
+.btn-view {
+    background: #667eea;
+    color: white;
+}
+
+.btn-view:hover {
+    background: #5568d3;
+}
+
+/* Empty State */
+.empty-analises {
+    text-align: center;
+    padding: 60px 20px;
+    color: #94a3b8;
+}
+
+.empty-analises i {
+    font-size: 4rem;
+    color: #cbd5e1;
+    margin-bottom: 16px;
+}
+
+.empty-analises h4 {
+    color: #475569;
+    margin-bottom: 8px;
+}
+
+.empty-analises p {
+    color: #94a3b8;
+}
 /* ==================================================================== */
 /* 🎨 DESIGN SYSTEM - VARIÁVEIS GLOBAIS */
 /* ==================================================================== */
@@ -1541,6 +1698,10 @@ input[type="file"] {
         <i class="fa-solid fa-paperclip"></i>
         Anexos
     </button>
+    <button class="tab-btn" data-tab="analyser">
+        <i class="fa-solid fa-robot"></i>
+        Analyser IA
+    </button>
 </div>
 
 <!-- 📋 ABA: DETALHES -->
@@ -2207,8 +2368,104 @@ input[type="file"] {
             </div>
         {% endif %}
     </div>
-</div>
 
+
+</div>
+<div id="analyser" class="tab-content">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="fa-solid fa-robot"></i>
+                Análise Inteligente de Documentos
+            </h2>
+        </div>
+        <div class="card-body">
+            
+            <div class="analyser-intro">
+                <p style="font-size: 1.1rem; color: #475569; margin-bottom: 24px;">
+                    🤖 Use o <strong>Analyser IA</strong> para extrair automaticamente informações dos documentos do caso usando Inteligência Artificial.
+                </p>
+                
+                <a href="{% url 'analyser:selecionar_arquivos' caso_id=caso.id %}" class="btn btn-primary btn-lg">
+                    <i class="fa-solid fa-magic"></i>
+                    Iniciar Nova Análise
+                </a>
+            </div>
+            
+            <hr style="margin: 32px 0; border: none; border-top: 2px solid #e2e8f0;">
+            
+            <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 20px; color: #0f172a;">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                Análises Anteriores
+            </h3>
+            
+            {% if caso.analises.all %}
+                <div class="analises-list">
+                    {% for analise in caso.analises.all %}
+                        <div class="analise-card">
+                            <div class="analise-header">
+                                <div class="analise-info">
+                                    <div class="analise-date">
+                                        <i class="fa-solid fa-calendar"></i>
+                                        {{ analise.data_criacao|date:"d/m/Y H:i" }}
+                                    </div>
+                                    <div class="analise-modelo">
+                                        <i class="fa-solid fa-robot"></i>
+                                        {{ analise.modelo_usado.nome }}
+                                    </div>
+                                </div>
+                                <span class="analise-status status-{{ analise.status|lower }}">
+                                    {% if analise.status == 'CONCLUIDO' %}
+                                        <i class="fa-solid fa-check-circle"></i> Concluído
+                                    {% elif analise.status == 'ERRO' %}
+                                        <i class="fa-solid fa-times-circle"></i> Erro
+                                    {% else %}
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Processando
+                                    {% endif %}
+                                </span>
+                            </div>
+                            
+                            <div class="analise-details">
+                                <div class="analise-stat">
+                                    <i class="fa-solid fa-file"></i>
+                                    {{ analise.arquivos_analisados|length }} arquivo(s)
+                                </div>
+                                {% if analise.status == 'CONCLUIDO' %}
+                                    <div class="analise-stat">
+                                        <i class="fa-solid fa-database"></i>
+                                        {{ analise.dados_extraidos|length }} campo(s) extraídos
+                                    </div>
+                                    {% if analise.aplicado_ao_caso %}
+                                        <div class="analise-stat success">
+                                            <i class="fa-solid fa-check-double"></i>
+                                            Aplicado ao caso
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            
+                            {% if analise.status == 'CONCLUIDO' %}
+                                <div class="analise-footer">
+                                    <a href="{% url 'analyser:resultado' resultado_id=analise.id %}" class="btn btn-sm btn-view">
+                                        <i class="fa-solid fa-eye"></i>
+                                        Ver Resultado
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-analises">
+                    <i class="fa-solid fa-inbox"></i>
+                    <h4>Nenhuma análise realizada ainda</h4>
+                    <p>Clique em "Iniciar Nova Análise" para começar.</p>
+                </div>
+            {% endif %}
+            
+        </div>
+    </div>
+</div>
 <!-- ========================================
      MODAL: EDITAR INFORMAÇÕES BÁSICAS
      ======================================== -->
@@ -2351,27 +2608,35 @@ input[type="file"] {
 </div>
 
 {% endblock %}
-
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // ========================================
-    // 🎯 SISTEMA DE TABS
+    // 🎯 SISTEMA DE TABS (CORRIGIDO)
     // ========================================
     const tabButtons = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
     
     function activateTab(tabId) {
+        // Remove active de todos
         tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabContents.forEach(content => content.classList.remove('active'));
+        tabContents.forEach(content => {
+            content.classList.remove('active');
+            content.style.display = 'none';
+        });
         
+        // Ativa o selecionado
         const activeBtn = document.querySelector(`[data-tab="${tabId}"]`);
         const activeContent = document.getElementById(tabId);
         
         if (activeBtn) activeBtn.classList.add('active');
-        if (activeContent) activeContent.classList.add('active');
+        if (activeContent) {
+            activeContent.classList.add('active');
+            activeContent.style.display = 'block';
+        }
     }
     
+    // Adiciona eventos de clique
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
             activateTab(button.dataset.tab);
@@ -2386,58 +2651,34 @@ document.addEventListener('DOMContentLoaded', function() {
     // ========================================
     // 📝 MODELO DE ANDAMENTO
     // ========================================
-    htmx.onLoad(function(content) {
-        const selectModelo = content.querySelector('#andamentos select[name=modelo_andamento]');
-        const textareaDescricao = content.querySelector('#andamentos textarea[name=descricao]');
-        
-        if (selectModelo && textareaDescricao) {
-            const modelos = {
-                {% for modelo in modelos_andamento %}
-                "{{ modelo.id }}": "{{ modelo.descricao|escapejs }}"{% if not forloop.last %},{% endif %}
-                {% endfor %}
-            };
-            
-            selectModelo.addEventListener('change', function() {
-                textareaDescricao.value = modelos[this.value] || '';
-            });
-        }
-        
-        // ⏱️ FORMATAÇÃO DE TEMPO
-        const tempoInput = content.querySelector('input[name="tempo"]');
-        if (tempoInput) {
-            tempoInput.addEventListener('input', function(e) {
-                let value = e.target.value.replace(/\D/g, '');
-                if (value.length > 2) {
-                    value = value.substring(0, 2) + ':' + value.substring(2, 4);
-                }
-                e.target.value = value.substring(0, 5);
-            });
-        }
-    });
+    const selectModelo = document.querySelector('#andamentos select[name=modelo_andamento]');
+    const textareaDescricao = document.querySelector('#andamentos textarea[name=descricao]');
     
-    // ========================================
-    // 📎 UPLOAD PROGRESS (HTMX)
-    // ========================================
-    document.body.addEventListener('htmx:xhr:progress', function(event) {
-        const panel = document.getElementById('file-list-panel');
-        if (!panel) return;
+    if (selectModelo && textareaDescricao) {
+        const modelos = {
+            {% for modelo in modelos_andamento %}
+            "{{ modelo.id }}": "{{ modelo.descricao|escapejs }}"{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        };
         
-        const progressBar = panel.querySelector('progress');
-        const progressText = panel.querySelector('progress + span');
-        
-        if (progressBar && progressText) {
-            let percent = Math.round((event.detail.loaded / event.detail.total) * 100);
-            progressBar.value = percent;
-            progressText.innerText = `${percent}%`;
-        }
-    });
+        selectModelo.addEventListener('change', function() {
+            textareaDescricao.value = modelos[this.value] || '';
+        });
+    }
     
-    document.body.addEventListener('htmx:afterSwap', function(event) {
-        if (event.detail.target.id === 'file-list-panel') {
-            const fileListPreview = document.getElementById('file-list-panel').querySelector('.file-list-preview');
-            if (fileListPreview) fileListPreview.textContent = '';
-        }
-    });
+    // ⏱️ FORMATAÇÃO DE TEMPO
+    const tempoInput = document.querySelector('input[name="tempo"]');
+    if (tempoInput) {
+        tempoInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 2) {
+                value = value.substring(0, 2) + ':' + value.substring(2, 4);
+            }
+            e.target.value = value.substring(0, 5);
+        });
+    }
+    
+    console.log('✅ Sistema de abas carregado!');
 });
 
 // ========================================
@@ -2533,7 +2774,7 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// Animações do toast
+// Adiciona animações do toast
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideInRight {
@@ -2547,16 +2788,11 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// Mostra toast se houver mensagem de sucesso
+// Mostra toast se houver mensagem
 {% if messages %}
     {% for message in messages %}
         showToast('{{ message|escapejs }}', '{{ message.tags }}');
     {% endfor %}
 {% endif %}
-
-console.log('✅ Detalhe do Caso carregado com sistema de edição por card!');
-console.log('💡 Atalhos disponíveis:');
-console.log('   - ESC: Fechar modal');
-console.log('   - Clique no botão Editar de cada card para editar rapidamente');
 </script>
 {% endblock %}

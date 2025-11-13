@@ -40,6 +40,7 @@ urlpatterns = [
     path('workflow/', include('workflow.urls', namespace='workflow')), # <-- Namespace adicionado
     path('equipamentos/', include('equipamentos.urls', namespace='equipamentos')),
     path('campos-custom/', include('campos_custom.urls', namespace='campos_custom')),
+    path('analyser/', include('analyser.urls')),
     
     # ==========================================================
     # 4. ROTAS ESPECÍFICAS (Importação, etc.)

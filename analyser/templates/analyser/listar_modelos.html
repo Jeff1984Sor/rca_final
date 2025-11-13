@@ -1,0 +1,238 @@
+{# analyser/templates/analyser/listar_modelos.html #}
+{% extends 'base.html' %}
+
+{% block title %}Modelos de Análise | Analyser{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --primary-solid: #667eea;
+    --success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --danger: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    --gray-100: #f1f5f9;
+    --gray-600: #475569;
+    --gray-900: #0f172a;
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-attachment: fixed;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.hero-header {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 32px 40px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.hero-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--gray-900);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    padding: 14px 28px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+}
+
+.modelos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 24px;
+}
+
+.modelo-card {
+    background: white;
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: var(--shadow-lg);
+    transition: all 0.3s;
+}
+
+.modelo-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.modelo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 16px;
+}
+
+.modelo-nome {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.badge {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.badge-ativo {
+    background: var(--success);
+    color: white;
+}
+
+.badge-inativo {
+    background: var(--danger);
+    color: white;
+}
+
+.modelo-info {
+    color: var(--gray-600);
+    font-size: 0.9rem;
+    margin: 8px 0;
+}
+
+.modelo-footer {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 2px solid var(--gray-100);
+}
+
+.btn {
+    padding: 8px 16px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-editar {
+    background: #f59e0b;
+    color: white;
+}
+
+.btn-deletar {
+    background: #ef4444;
+    color: white;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    background: white;
+    border-radius: 20px;
+}
+
+.empty-state i {
+    font-size: 5rem;
+    color: #cbd5e1;
+    margin-bottom: 20px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    
+    <div class="hero-header">
+        <h1 class="hero-title">
+            <i class="fa-solid fa-robot"></i>
+            Modelos de Análise
+        </h1>
+        <a href="{% url 'analyser:criar_modelo' %}" class="btn-primary">
+            <i class="fa-solid fa-plus-circle"></i>
+            Novo Modelo
+        </a>
+    </div>
+    
+    {% if modelos %}
+        <div class="modelos-grid">
+            {% for modelo in modelos %}
+                <div class="modelo-card">
+                    <div class="modelo-header">
+                        <div>
+                            <h3 class="modelo-nome">{{ modelo.nome }}</h3>
+                            <div class="modelo-info">
+                                <i class="fa-solid fa-building"></i> {{ modelo.cliente.nome }}
+                            </div>
+                            <div class="modelo-info">
+                                <i class="fa-solid fa-box"></i> {{ modelo.produto.nome }}
+                            </div>
+                        </div>
+                        <span class="badge {% if modelo.ativo %}badge-ativo{% else %}badge-inativo{% endif %}">
+                            {% if modelo.ativo %}Ativo{% else %}Inativo{% endif %}
+                        </span>
+                    </div>
+                    
+                    {% if modelo.descricao %}
+                        <p style="color: #64748b; font-size: 0.9rem; margin: 12px 0;">
+                            {{ modelo.descricao|truncatewords:15 }}
+                        </p>
+                    {% endif %}
+                    
+                    <div class="modelo-info">
+                        <i class="fa-solid fa-list"></i> 
+                        {{ modelo.descricoes_campos|length }} campo(s) mapeado(s)
+                    </div>
+                    
+                    <div class="modelo-footer">
+                        <a href="{% url 'analyser:editar_modelo' pk=modelo.pk %}" class="btn btn-editar">
+                            <i class="fa-solid fa-pen"></i> Editar
+                        </a>
+                        <a href="{% url 'analyser:deletar_modelo' pk=modelo.pk %}" class="btn btn-deletar">
+                            <i class="fa-solid fa-trash"></i> Deletar
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="fa-solid fa-robot"></i>
+            <h2>Nenhum modelo criado ainda</h2>
+            <p>Crie seu primeiro modelo de análise para começar!</p>
+        </div>
+    {% endif %}
+    
+</div>
+{% endblock %}
