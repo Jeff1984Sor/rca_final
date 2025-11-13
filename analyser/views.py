@@ -371,29 +371,22 @@ def deletar_modelo(request, pk):
 
 @login_required
 def carregar_arquivos_sharepoint(request, caso_id):
-    """
-    View para o HTMX buscar e renderizar a árvore de arquivos do SharePoint.
-    """
+    """View para o HTMX buscar e renderizar a árvore de arquivos do SharePoint."""
     caso = get_object_or_404(Caso, pk=caso_id)
     if not caso.sharepoint_folder_id:
         return HttpResponse("<div class='alert alert-warning'>⚠️ Este caso não possui uma pasta no SharePoint.</div>")
 
     try:
-        # ✅✅✅ CHAMADA REAL AO SHAREPOINT ✅✅✅
         from integrations.sharepoint import SharePoint
         sp = SharePoint()
-        
-        # Assumindo que o método `listar_conteudo_pasta` retorna uma lista de dicionários
-        # com chaves como 'id', 'name', 'is_folder', 'mime_type', etc.
+        # Esta é a chamada REAL para sua integração
         conteudo = sp.listar_conteudo_pasta(caso.sharepoint_folder_id)
 
         arquivos_formatados = []
         for item in conteudo:
-            # Vamos mostrar apenas arquivos, não subpastas por enquanto
-            if not item.get('is_folder'):
+            if not item.get('is_folder'): # Mostrando apenas arquivos
                 tipo = item.get('mime_type', '')
                 icona_css, cor_css = "fa-solid fa-file", "#64748b" # Ícone padrão
-
                 if 'pdf' in tipo: icona_css, cor_css = "fa-solid fa-file-pdf", "#ef4444"
                 elif 'word' in tipo: icona_css, cor_css = "fa-solid fa-file-word", "#2563eb"
                 elif 'excel' in tipo: icona_css, cor_css = "fa-solid fa-file-excel", "#10b981"
@@ -407,11 +400,7 @@ def carregar_arquivos_sharepoint(request, caso_id):
                 })
 
     except Exception as e:
-        # Em caso de erro na API, mostra uma mensagem clara para o usuário
         return HttpResponse(f"<div class='alert alert-warning'>❌ Erro ao conectar com o SharePoint: {e}</div>")
         
-    context = {
-        'arquivos': arquivos_formatados,
-    }
-    # Renderiza o template parcial que mostra a lista de arquivos
+    context = {'arquivos': arquivos_formatados}
     return render(request, 'analyser/partials/arvore_arquivos.html', context)

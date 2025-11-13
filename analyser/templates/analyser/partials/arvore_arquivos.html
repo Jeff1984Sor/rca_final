@@ -1,0 +1,23 @@
+{# analyser/templates/analyser/partials/arvore_arquivos.html #}
+
+{% if not arquivos %}
+    <div class="empty-state">
+        <i class="fa-solid fa-folder-open"></i>
+        <p>Nenhum arquivo encontrado na pasta do SharePoint para este caso.</p>
+    </div>
+{% else %}
+    {% for arquivo in arquivos %}
+        <div class="file-item">
+            <input 
+                type="checkbox" 
+                class="file-checkbox" 
+                :checked="arquivosSelecionados.some(f => f.id === '{{ arquivo.id }}')"
+                @change="toggleSelecao('{{ arquivo.id }}', '{{ arquivo.name|escapejs }}', '{{ arquivo.icona_css }}', '{{ arquivo.cor_css }}')">
+            
+            <label class="file-label-wrapper" @click="toggleSelecao('{{ arquivo.id }}', '{{ arquivo.name|escapejs }}', '{{ arquivo.icona_css }}', '{{ arquivo.cor_css }}')">
+                <i class="{{ arquivo.icona_css }} file-icon" style="color: {{ arquivo.cor_css }};"></i>
+                <span class="file-name">{{ arquivo.name }}</span>
+            </label>
+        </div>
+    {% endfor %}
+{% endif %}
