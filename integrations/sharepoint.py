@@ -2,6 +2,7 @@
 import os
 import msal
 import requests
+import json
 
 class SharePoint:
     def __init__(self):
@@ -131,6 +132,40 @@ class SharePoint:
         response = requests.get(url, headers=self._get_headers())
         response.raise_for_status()
         return response.json()
+    
+    def get_item_details(self, item_id):
+        """
+        Busca os metadados de um item (pasta ou arquivo) pelo seu ID
+        e imprime a resposta completa para depuração.
+        """
+        print(f"Buscando detalhes do item com ID: {item_id}")
+        
+        # O nome da variável foi alterado de 'folder_id' para 'item_id' para maior clareza
+        url = f"{self.graph_url}/drives/{self.drive_id}/items/{item_id}"
+        
+        try:
+            response = requests.get(url, headers=self._get_headers())
+            response.raise_for_status()
+            
+            item_details = response.json()
+            
+            # ✅✅✅ LOG DE DEPURAÇÃO ADICIONADO ✅✅✅
+            # Imprime a resposta completa da API de forma legível
+            print("\n" + "="*30 + " DEBUG: RESPOSTA DA API get_item_details " + "="*30)
+            print(json.dumps(item_details, indent=2, ensure_ascii=False))
+            print("="*80 + "\n")
+            
+            return item_details
+
+        except requests.exceptions.HTTPError as e:
+            # Imprime o erro de forma mais detalhada
+            print(f"❌ ERRO HTTP ao buscar detalhes do item {item_id}: {e}")
+            print(f"   -> Status Code: {e.response.status_code}")
+            print(f"   -> Resposta: {e.response.text}")
+            raise # Relança a exceção para que o service possa tratá-la
+        except Exception as e:
+            print(f"❌ ERRO inesperado em get_item_details para o item {item_id}: {e}")
+            raise
     
     def get_preview_url(self, item_id):
         """Obtém uma URL de preview para um arquivo."""

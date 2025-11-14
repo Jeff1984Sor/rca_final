@@ -5,6 +5,7 @@ import json
 import re
 from datetime import datetime
 from decimal import Decimal
+import requests
 
 from django.utils import timezone
 from django.conf import settings
@@ -13,6 +14,9 @@ import google.generativeai as genai
 
 from .models import ResultadoAnalise, LogAnalise, ModeloAnalise
 from campos_custom.models import CampoPersonalizado, ValorCampoPersonalizado
+
+from .models import ResultadoAnalise,LogAnalise
+from integrations.sharepoint import SharePoint
 
 logger = logging.getLogger(__name__)
 
@@ -31,186 +35,284 @@ class AnalyserService:
     """
     
     def __init__(self, caso, modelo_analise, arquivos_selecionados, usuario):
-        """
-        Inicializa o serviço de análise.
-        
-        Args:
-            caso: Instância do Caso
-            modelo_analise: Instância do ModeloAnalise
-            arquivos_selecionados: Lista de dicts com info dos arquivos
-            usuario: User que está executando a análise
-        """
         self.caso = caso
         self.modelo = modelo_analise
-        self.arquivos = arquivos_selecionados
+        self.arquivos_info = arquivos_selecionados
         self.usuario = usuario
         self.resultado = None
         
-        # Configura Gemini API
         genai.configure(api_key=settings.GEMINI_API_KEY)
         self.gemini_model = genai.GenerativeModel(
-            model_name=getattr(settings, 'GEMINI_MODEL', 'gemini-1.5-pro')
+            model_name=getattr(settings, 'GEMINI_MODEL', 'gemini-2.5-pro')
         )
     
-    def executar_analise(self):
+    def executar_analise(self) -> ResultadoAnalise:
         """
-        Método principal - Executa o processo completo de análise.
-        
-        Returns:
-            ResultadoAnalise: Instância do resultado
+        Método principal que orquestra o processo de análise usando a estratégia MapReduce.
         """
-        print("🤖 INÍCIO DA ANÁLISE")
-        inicio = timezone.now()
         
-        # Cria registro de resultado
+        
+        # Cria o registro da análise com status inicial 'PROCESSANDO'
         self.resultado = ResultadoAnalise.objects.create(
             caso=self.caso,
             modelo_usado=self.modelo,
-            arquivos_analisados=self.arquivos,
+            arquivos_analisados=self.arquivos_info,
             status='PROCESSANDO',
             criado_por=self.usuario
         )
-        
-        self._log('INFO', f'🚀 Análise iniciada com {len(self.arquivos)} arquivo(s)')
-        self._log('INFO', f'📋 Modelo: {self.modelo.nome}')
-        self._log('INFO', f'📁 Caso: #{self.caso.id} - {self.caso.cliente.nome} / {self.caso.produto.nome}')
-        
+        self._log('INFO', f'🚀 Análise #{self.resultado.id} iniciada para o Caso #{self.caso.id}.')
+        inicio = timezone.now()
         try:
-            # 1. Baixar e preparar arquivos
-            self._log('INFO', '📥 Preparando arquivos para análise...')
-            print("📥 Baixando arquivos...")
-            arquivos_preparados = self._preparar_arquivos()
+           # --- Etapa 1: MAP - Analisa cada arquivo individualmente ---
+            resultados_parciais = []
+            for arquivo_info in self.arquivos_info:
+                self._log('INFO', f'📄 Processando arquivo: {arquivo_info["nome"]}...')
+                try:
+                    arquivo_preparado = self._preparar_um_arquivo(arquivo_info) # Prepara apenas um arquivo
+                    prompt_extracao = self._gerar_prompt_extracao()
+                    dados_parciais = self._chamar_gemini(prompt_extracao, arquivo_preparado, is_json=True)
+                    resultados_parciais.append(dados_parciais)
+                    self._log('SUCCESS', f'  -> ✅ Extração do arquivo "{arquivo_info["nome"]}" concluída.')
+                except Exception as e:
+                    self._log('WARNING', f'  -> ⚠️ Falha ao processar o arquivo "{arquivo_info["nome"]}": {e}')
+                    continue
+            if not resultados_parciais:
+                raise ValueError("Nenhum arquivo pôde ser analisado com sucesso.")
             
-            # 2. Gerar prompt baseado no modelo
-            self._log('INFO', '📝 Gerando prompt personalizado...')
-            print("🧠 Gerando prompt personalizado...")
-            prompt = self._gerar_prompt()
-            
-            # 3. Enviar para Gemini e extrair dados
-            self._log('INFO', '🤖 Enviando para Gemini AI...')
-            print("🚀 Enviando para Gemini API...")
-            dados_extraidos = self._analisar_com_gemini(prompt, arquivos_preparados)
-            
-            # 4. Gerar resumo se configurado
-            resumo = None
-            if self.modelo.gerar_resumo:
-                self._log('INFO', '📄 Gerando resumo executivo do caso...')
-                print("📄 Gerando resumo...")
-                resumo = self._gerar_resumo(dados_extraidos)
-            
-            # 5. Salvar resultados
+            # --- Etapa 2: REDUCE - Consolida os resultados ---
+            self._log('INFO', '🔄 Consolidando os resultados de todos os arquivos...')
+            prompt_consolidacao = self._gerar_prompt_consolidacao(resultados_parciais)
+            dados_extraidos = self._chamar_gemini(prompt_consolidacao, is_json=True)
             self.resultado.dados_extraidos = dados_extraidos
-            self.resultado.resumo_caso = resumo
+            self._log('SUCCESS', f'✅ Consolidação de {len(dados_extraidos)} campos concluída.')
+
+            # --- Etapa 3: Gerar o resumo (se aplicável) ---
+            if self.modelo.gerar_resumo:
+                prompt_resumo = self._gerar_prompt_resumo(dados_extraidos)
+                resumo = self._chamar_gemini(prompt_resumo, is_json=False)
+                self.resultado.resumo_caso = resumo
+                self._log('SUCCESS', '📄 Resumo gerado com sucesso.')
+
             self.resultado.status = 'CONCLUIDO'
-            self.resultado.tempo_processamento = timezone.now() - inicio
-            self.resultado.save()
-            
-            self._log('SUCCESS', f'✅ Análise concluída! {len(dados_extraidos)} campos extraídos')
-            print(f"✅ Análise concluída! Status: {self.resultado.status}")
-            
-            return self.resultado
-            
+
         except Exception as e:
-            logger.error(f"❌ Erro na análise: {str(e)}", exc_info=True)
-            
+            logger.error(f"[Análise #{self.resultado.id}] Falha crítica: {str(e)}", exc_info=True)
             self.resultado.status = 'ERRO'
             self.resultado.mensagem_erro = str(e)
+            self._log('ERROR', f'❌ Análise falhou: {str(e)}')
+        
+        finally:
             self.resultado.tempo_processamento = timezone.now() - inicio
             self.resultado.save()
-            
-            self._log('ERROR', f'❌ Erro durante análise: {str(e)}')
-            print(f"❌ ERRO: {str(e)}")
-            
-            raise
+            self._log('INFO', f'🏁 Análise finalizada com status: {self.resultado.status}. Duração: {self.resultado.tempo_processamento}.')
+
+        return self.resultado
     
+
+    # ✅✅✅ NOVO MÉTODO PARA CONSOLIDAÇÃO ✅✅✅
+    def _gerar_prompt_consolidacao(self, resultados_parciais: list) -> str:
+        """
+        Gera um prompt para a IA consolidar múltiplos resultados JSON em um único.
+        """
+        json_resultados = json.dumps(resultados_parciais, indent=2, ensure_ascii=False)
+        
+        return f"""
+# INSTRUÇÃO PRINCIPAL
+Você recebeu uma lista de objetos JSON, cada um contendo dados extraídos de um documento diferente. Sua tarefa é consolidar todas essas informações em um **único objeto JSON final e coerente**.
+
+# REGRAS DE CONSOLIDAÇÃO
+1.  **Combine as informações:** Se o mesmo campo (ex: "valor_apurado") aparece em múltiplos JSONs, escolha o valor mais completo ou relevante. Se forem textos, concatene-os com "\\n".
+2.  **Elimine "Não encontrado":** Se um campo tem um valor real em um JSON e "Não encontrado" em outro, use o valor real.
+3.  **Mantenha o formato:** O JSON final deve ter as mesmas chaves que os JSONs de entrada.
+4.  **OBRIGATÓRIO:** Sua resposta DEVE ser APENAS o JSON final consolidado. Não inclua explicações ou texto extra.
+
+# DADOS PARCIAIS PARA CONSOLIDAR
+```json
+{json_resultados}"""
+
+
     # ==========================================================================
     # PREPARAÇÃO DE ARQUIVOS
     # ==========================================================================
     
-    def _preparar_arquivos(self):
+    def _preparar_um_arquivo(self, arquivo_info: dict) -> dict:
         """
-        Prepara arquivos para envio ao Gemini.
-        Baixa do SharePoint e converte para formato adequado.
-        
-        Returns:
-            list: Lista de dicts com arquivos preparados
+        Baixa um único arquivo do SharePoint e o prepara para a API Gemini.
         """
-        arquivos_preparados = []
+        nome_arquivo = arquivo_info.get("nome", "desconhecido")
+        self._log('INFO', f'  -> Baixando "{nome_arquivo}"...')
         
-        for arquivo_info in self.arquivos:
-            try:
-                self._log('INFO', f'📄 Preparando: {arquivo_info["nome"]}')
-                print(f"📥 Baixando arquivo: {arquivo_info['nome']}")
-                
-                # Baixa arquivo do SharePoint
-                conteudo_bytes = self._baixar_do_sharepoint(arquivo_info)
-                
-                # Prepara para Gemini
-                arquivo_gemini = {
-                    'nome': arquivo_info['nome'],
-                    'mime_type': arquivo_info.get('tipo', 'application/pdf'),
-                    'data': conteudo_bytes
-                }
-                
-                arquivos_preparados.append(arquivo_gemini)
-                
-                self._log('SUCCESS', f'✅ Arquivo preparado: {arquivo_info["nome"]} ({len(conteudo_bytes)} bytes)')
-                
-            except Exception as e:
-                self._log('WARNING', f'⚠️ Erro ao preparar {arquivo_info["nome"]}: {str(e)}')
-                print(f"⚠️ Erro ao baixar {arquivo_info['nome']}: {str(e)}")
-                continue
+        conteudo_bytes = self._baixar_do_sharepoint(arquivo_info)
+        if not conteudo_bytes:
+            raise ValueError("O conteúdo retornado está vazio.")
         
-        if not arquivos_preparados:
-            raise ValueError("❌ Nenhum arquivo foi preparado com sucesso")
+        arquivo_preparado = {
+            'mime_type': arquivo_info.get('tipo', 'application/pdf'),
+            'data': conteudo_bytes
+        }
         
-        return arquivos_preparados
+        self._log('SUCCESS', f'  -> ✅ Arquivo "{nome_arquivo}" preparado com sucesso ({len(conteudo_bytes) // 1024} KB).')
+        return arquivo_preparado
     
-    def _baixar_do_sharepoint(self, arquivo_info):
+    def _baixar_do_sharepoint(self, arquivo_info: dict) -> bytes:
         """
-        Baixa o conteúdo de um arquivo do SharePoint.
+        Baixa o conteúdo de um único arquivo do SharePoint.
         
         Args:
-            arquivo_info: Dict com informações do arquivo (id, nome, tipo)
+            arquivo_info: Dicionário contendo pelo menos o 'id' e o 'nome' do arquivo.
             
         Returns:
-            bytes: Conteúdo do arquivo
-        """
-        try:
-            from integrations.sharepoint import SharePoint
+            O conteúdo do arquivo em bytes.
             
+        Raises:
+            ConnectionError: Se houver um erro de rede ou autenticação com o SharePoint.
+            ValueError: Se a URL de download não for encontrada ou o arquivo estiver vazio.
+        """
+        nome_arquivo = arquivo_info.get('nome', 'desconhecido')
+        arquivo_id = arquivo_info.get('id')
+        
+        if not arquivo_id:
+            raise ValueError("O dicionário 'arquivo_info' não contém um 'id'.")
+
+        try:
             sp = SharePoint()
             
-            # Busca os detalhes do arquivo para pegar a URL de download
-            file_details = sp.get_folder_details(arquivo_info['id'])
+            # 1. Busca os detalhes do item para obter a URL de download
+            # (Sugestão: renomear 'get_folder_details' para 'get_item_details' na sua classe SharePoint)
+            item_details = sp.get_item_details(arquivo_id)
             
-            # Pega a URL de download direto
-            download_url = file_details.get('@microsoft.graph.downloadUrl')
+            download_url = item_details.get('@microsoft.graph.downloadUrl')
             
             if not download_url:
-                raise ValueError(f"URL de download não encontrada para {arquivo_info['nome']}")
+                raise ValueError(f"A API do SharePoint não retornou uma URL de download para o arquivo '{nome_arquivo}'.")
             
-            # Baixa o conteúdo usando requests
-            import requests
-            response = requests.get(download_url)
-            response.raise_for_status()
+            # 2. Baixa o conteúdo do arquivo
+            response = requests.get(download_url, timeout=30) # Adiciona um timeout de 30s
+            response.raise_for_status() # Lança um erro para status 4xx/5xx
             
             conteudo_bytes = response.content
             
+            # 3. Valida o conteúdo
             if not conteudo_bytes:
-                raise ValueError(f"Conteúdo do arquivo '{arquivo_info['nome']}' está vazio")
+                raise ValueError(f"O arquivo '{nome_arquivo}' foi baixado mas está vazio.")
             
             return conteudo_bytes
             
+        except requests.exceptions.RequestException as e:
+            # Captura erros de rede específicos do 'requests'
+            raise ConnectionError(f"Erro de rede ao tentar baixar '{nome_arquivo}': {e}")
         except Exception as e:
-            logger.error(f"Erro ao baixar do SharePoint: {str(e)}")
-            # Para testes, retornar mock
-            print(f"⚠️ Usando mock para {arquivo_info['nome']}")
-            return b"Mock PDF content for testing - replace with real SharePoint integration"
+            # Captura outros erros (ex: da sua classe SharePoint, ValueErrors, etc.)
+            # e os relança como um ConnectionError para ser tratado no método principal.
+            raise ConnectionError(f"Falha ao processar o arquivo '{nome_arquivo}' no SharePoint: {e}")
+
     
     # ==========================================================================
     # GERAÇÃO DE PROMPT
     # ==========================================================================
+    
+    def _gerar_prompt_extracao(self):
+        """
+        Gera o prompt completo para o Gemini baseado no modelo de análise.
+        
+        Returns:
+            str: Prompt formatado
+        """
+        campos = self.modelo.get_campos_para_extrair()
+        
+        prompt = f"""# ANÁLISE DE DOCUMENTOS JURÍDICOS
+
+{self.modelo.instrucoes_gerais}
+
+## INFORMAÇÕES DO CASO
+- **Cliente:** {self.caso.cliente.nome}
+- **Produto:** {self.caso.produto.nome}
+- **Caso ID:** #{self.caso.id}
+
+## CAMPOS A EXTRAIR DOS DOCUMENTOS
+
+Analise os documentos anexados e extraia as seguintes informações:
+
+"""
+        
+        for i, campo in enumerate(campos, 1):
+            prompt += f"\n### {i}. {campo['label']}\n"
+            
+            # Adiciona descrição personalizada se houver
+            descricao = self.modelo.descricoes_campos.get(campo['nome'], '')
+            if descricao:
+                prompt += f"{descricao}\n"
+            else:
+                prompt += f"Extraia o valor do campo '{campo['label']}' dos documentos.\n"
+            
+            # Adiciona informações sobre o tipo
+            prompt += f"**Tipo:** {campo['tipo']}\n"
+            
+            # Dicas específicas por tipo
+            if campo['tipo'] == 'DATA':
+                prompt += "**Formato esperado:** DD/MM/AAAA\n"
+                prompt += "**Exemplos válidos:** 15/03/2025, 01/01/2024\n"
+            elif campo['tipo'] in ['MOEDA', 'NUMERO_DEC']:
+                prompt += "**Formato esperado:** Apenas números (ex: 10000.50)\n"
+                prompt += "**Observação:** Não inclua símbolos como R$, apenas o valor numérico\n"
+            elif campo['tipo'] == 'NUMERO_INT':
+                prompt += "**Formato esperado:** Apenas números inteiros (ex: 42)\n"
+            elif campo['tipo'] == 'BOOLEANO':
+                prompt += "**Formato esperado:** true ou false\n"
+            elif campo['tipo'] == 'TEXTO':
+                prompt += "**Formato esperado:** Texto curto e objetivo\n"
+            elif campo['tipo'] in ['LISTA_USUARIOS', 'LISTA_UNICA']:
+                prompt += "**Formato esperado:** Um valor da lista de opções\n"
+            elif campo['tipo'] == 'LISTA_MULTIPLA':
+                prompt += "**Formato esperado:** Valores separados por vírgula\n"
+            
+            prompt += "\n"
+        
+        prompt += """
+## FORMATO DE RESPOSTA OBRIGATÓRIO
+
+⚠️ IMPORTANTE: Você DEVE responder APENAS com um JSON válido, sem nenhum texto adicional.
+Não inclua explicações, comentários, markdown ou qualquer texto fora do JSON.
+
+Use exatamente os nomes dos campos listados acima como chaves do JSON.
+
+Exemplo de formato:
+{
+"""
+        
+        for i, campo in enumerate(campos):
+            virgula = "," if i < len(campos) - 1 else ""
+            prompt += f'  "{campo["label"]}": "valor_extraído"{virgula}\n'
+        
+        prompt += """}
+
+## REGRAS DE EXTRAÇÃO
+
+1. ✅ Se não encontrar uma informação, use exatamente: "Não encontrado"
+2. ✅ Para datas, use sempre formato DD/MM/AAAA
+3. ✅ Para valores monetários e decimais, use apenas números com ponto decimal (ex: 10000.50)
+4. ✅ Seja preciso e objetivo - extraia exatamente o que está no documento
+5. ✅ Não invente informações - apenas extraia o que realmente existe
+6. ✅ Se houver múltiplas ocorrências, use a primeira encontrada
+7. ✅ Para campos booleanos, use "true" ou "false"
+8. ✅ Retorne APENAS o JSON puro, sem markdown ou explicações
+9. ✅ Certifique-se de que o JSON está válido e bem formatado
+
+---
+
+**📁 Documentos anexados para análise:**
+"""
+        
+        for i, arquivo in enumerate(self.arquivos_info, 1):
+            prompt += f"\n{i}. **{arquivo['nome']}**"
+            if arquivo.get('pasta'):
+                prompt += f" (Pasta: {arquivo['pasta']})"
+        
+        prompt += "\n\n**Agora analise os documentos e retorne APENAS o JSON com os dados extraídos.**"
+        secao_arquivos = "\n".join(
+                                        f"- **{arquivo['nome']}**" for arquivo in self.arquivos_info
+                                    )
+        return prompt
     
     def _gerar_prompt(self):
         """
@@ -317,89 +419,68 @@ Exemplo de formato:
     # ANÁLISE COM GEMINI
     # ==========================================================================
     
-    def _analisar_com_gemini(self, prompt, arquivos):
+    def _chamar_gemini(self, prompt: str, arquivos: list = None, is_json: bool = False):
         """
-        Envia arquivos e prompt para o Gemini e extrai dados estruturados.
-        
+        Chama a API Gemini com um prompt e arquivos, e processa a resposta.
+
         Args:
-            prompt: String com o prompt
-            arquivos: Lista de arquivos preparados
-            
+            prompt: O texto do prompt a ser enviado.
+            arquivos: Uma lista de dicionários de arquivos preparados (opcional).
+            is_json: Se True, espera e tenta extrair um JSON da resposta.
+
         Returns:
-            dict: Dados extraídos em formato JSON
+            Um dicionário (se is_json=True) ou uma string com a resposta.
         """
-        try:
-            # Prepara conteúdo para envio
-            content_parts = [prompt]
-            
-            # Adiciona arquivos
-            for arquivo in arquivos:
-                self._log('INFO', f'📤 Enviando arquivo: {arquivo["nome"]}')
-                print(f"📤 Enviando: {arquivo['nome']}")
-                
-                # Gemini aceita bytes diretamente
-                content_parts.append({
-                    'mime_type': arquivo['mime_type'],
-                    'data': arquivo['data']
-                })
-            
-            # Configurações de geração
-            generation_config = genai.GenerationConfig(
-                temperature=getattr(settings, 'GEMINI_TEMPERATURE', 0.1),
-                top_p=0.8,
-                top_k=40,
-                max_output_tokens=getattr(settings, 'GEMINI_MAX_TOKENS', 8192),
-            )
-            
-            # Configurações de segurança (permite conteúdo jurídico)
-            safety_settings = [
-                {
-                    "category": "HARM_CATEGORY_HARASSMENT",
-                    "threshold": "BLOCK_NONE"
-                },
-                {
-                    "category": "HARM_CATEGORY_HATE_SPEECH",
-                    "threshold": "BLOCK_NONE"
-                },
-                {
-                    "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                    "threshold": "BLOCK_NONE"
-                },
-                {
-                    "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                    "threshold": "BLOCK_NONE"
-                }
+        # --- 1. Monta o conteúdo da requisição ---
+        content = [prompt]
+        if arquivos:
+            content.extend(arquivos)
+
+        self._log('INFO', f"🤖 Enviando requisição para a IA ({'JSON' if is_json else 'Texto'}) com {len(arquivos or [])} arquivo(s)...")
+
+        # --- 2. Define as configurações da API ---
+        generation_config = genai.GenerationConfig(
+            temperature=0.1 if is_json else 0.4,
+            max_output_tokens=8192 if is_json else 2048
+        )
+        
+        safety_settings = [
+            {"category": c, "threshold": "BLOCK_NONE"} 
+            for c in [
+                "HARM_CATEGORY_HARASSMENT", 
+                "HARM_CATEGORY_HATE_SPEECH", 
+                "HARM_CATEGORY_SEXUALLY_EXPLICIT", 
+                "HARM_CATEGORY_DANGEROUS_CONTENT"
             ]
-            
-            # Gera resposta
-            self._log('INFO', '⏳ Aguardando resposta do Gemini AI...')
-            print("⏳ Aguardando resposta do Gemini...")
-            
+        ]
+
+        # --- 3. Executa a chamada à API ---
+        try:
             response = self.gemini_model.generate_content(
-                content_parts,
+                content,
                 generation_config=generation_config,
                 safety_settings=safety_settings
             )
+            self._log('SUCCESS', f'✅ Resposta recebida da IA ({len(response.text)} caracteres).')
             
-            # Extrai texto da resposta
-            resposta_texto = response.text
+            # --- 4. Processa a resposta ---
+            if is_json:
+                # Tenta extrair um objeto JSON da resposta de texto
+                json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
+                if not json_match:
+                    raise ValueError("Nenhum objeto JSON foi encontrado na resposta da IA.")
+                
+                json_text = json_match.group(0)
+                return json.loads(json_text)
             
-            self._log('INFO', f'📨 Resposta recebida ({len(resposta_texto)} caracteres)')
-            print(f"✅ Resposta recebida do Gemini!")
-            
-            # Parse do JSON
-            dados_extraidos = self._extrair_json_da_resposta(resposta_texto)
-            
-            self._log('SUCCESS', f'✅ {len(dados_extraidos)} campos extraídos com sucesso')
-            print(f"📊 Extraindo dados...")
-            
-            return dados_extraidos
-            
+            # Se não for JSON, retorna o texto limpo
+            return response.text.strip()
+
         except Exception as e:
-            logger.error(f"Erro ao analisar com Gemini: {str(e)}", exc_info=True)
-            self._log('ERROR', f'❌ Erro na comunicação com Gemini: {str(e)}')
+            logger.error(f"Erro na comunicação com a API Gemini: {e}", exc_info=True)
+            self._log('ERROR', f'❌ Erro na comunicação com Gemini: {e}')
+            # Relança a exceção para ser tratada pelo método `executar_analise`
             raise
-    
     def _extrair_json_da_resposta(self, resposta_texto):
         """
         Extrai JSON da resposta do Gemini.
@@ -501,6 +582,60 @@ Com base nos dados extraídos abaixo, crie um resumo executivo do caso jurídico
             self._log('WARNING', f'⚠️ Não foi possível gerar o resumo: {str(e)}')
             return None
     
+    def _gerar_prompt_resumo(self, dados_extraidos):
+        """
+        Gera um resumo executivo do caso usando Gemini.
+        
+        Args:
+            dados_extraidos: Dict com os dados extraídos
+            
+        Returns:
+            str: Resumo do caso
+        """
+        prompt = f"""# GERAR RESUMO EXECUTIVO
+
+Com base nos dados extraídos abaixo, crie um resumo executivo do caso jurídico.
+
+## Informações do Caso
+- **Cliente:** {self.caso.cliente.nome}
+- **Produto:** {self.caso.produto.nome}
+- **Caso ID:** #{self.caso.id}
+
+## Dados Extraídos
+```json
+{json.dumps(dados_extraidos, indent=2, ensure_ascii=False)}
+```
+
+## Instruções para o Resumo
+1. Resuma as informações principais do caso em até 3 parágrafos
+2. Destaque pontos importantes (datas, valores, partes envolvidas)
+3. Use linguagem clara, objetiva e profissional
+4. Foque no essencial para entender rapidamente o caso
+5. NÃO adicione informações que não estejam nos dados extraídos
+6. NÃO inclua especulações ou suposições
+
+**Resumo Executivo:**
+"""
+        
+        try:
+            response = self.gemini_model.generate_content(
+                prompt,
+                generation_config=genai.GenerationConfig(
+                    temperature=0.3,
+                    max_output_tokens=100000,
+                )
+            )
+            
+            resumo = response.text.strip()
+            
+            self._log('SUCCESS', f'✅ Resumo gerado ({len(resumo)} caracteres)')
+            
+            return resumo
+            
+        except Exception as e:
+            logger.error(f"Erro ao gerar resumo: {str(e)}")
+            self._log('WARNING', f'⚠️ Não foi possível gerar o resumo: {str(e)}')
+            return None
     # ==========================================================================
     # APLICAÇÃO DOS DADOS AO CASO
     # ==========================================================================

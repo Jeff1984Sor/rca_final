@@ -1,23 +1,46 @@
 {# analyser/templates/analyser/partials/arvore_arquivos.html #}
 
-{% if not arquivos %}
-    <div class="empty-state">
-        <i class="fa-solid fa-folder-open"></i>
-        <p>Nenhum arquivo encontrado na pasta do SharePoint para este caso.</p>
+{% if not pastas and not arquivos %}
+    <div class="empty-state" style="padding: 20px;">
+        <i class="fa-solid fa-box-open"></i>
+        <p>Esta pasta está vazia.</p>
     </div>
 {% else %}
+    {# Renderiza as PASTAS primeiro #}
+    {% for pasta in pastas %}
+        <div x-data="{ open: false, loaded: false }">
+            <div class="folder-item" @click="open = !open; if (!loaded) { htmx.trigger('#folder-content-{{ pasta.id }}', 'loadFolder'); loaded = true; }">
+                <i class="{{ pasta.icona_css }}" style="color: {{ pasta.cor_css }};"></i>
+                <span class="folder-name">{{ pasta.name }}</span>
+                <i class="fa-solid fa-chevron-right" :class="{ 'rotate-90': open }" style="margin-left: auto; font-size: 0.8rem; transition: transform 0.3s;"></i>
+            </div>
+            <div class="folder-content" x-show="open" x-transition style="padding-left: 20px;">
+                <div id="folder-content-{{ pasta.id }}"
+                     hx-get="{% url 'analyser:carregar_arquivos' caso_id=caso_id %}?folder_id={{ pasta.id }}"
+                     hx-trigger="loadFolder"
+                     hx-swap="innerHTML">
+                    <div class="empty-state" style="padding: 10px; font-size: 0.9rem;">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Carregando...
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+
+    {# Renderiza os ARQUIVOS #}
     {% for arquivo in arquivos %}
         <div class="file-item">
             <input 
                 type="checkbox" 
                 class="file-checkbox" 
-                :checked="arquivosSelecionados.some(f => f.id === '{{ arquivo.id }}')"
-                @change="toggleSelecao('{{ arquivo.id }}', '{{ arquivo.name|escapejs }}', '{{ arquivo.icona_css }}', '{{ arquivo.cor_css }}')">
+                @change="toggleSelecao('{{ arquivo.id }}', '{{ arquivo.name|escapejs }}', '{{ arquivo.icona_css }}', '{{ arquivo.cor_css }}')"
+                :checked="arquivosSelecionados.some(f => f.id === '{{ arquivo.id }}')">
             
-            <label class="file-label-wrapper" @click="toggleSelecao('{{ arquivo.id }}', '{{ arquivo.name|escapejs }}', '{{ arquivo.icona_css }}', '{{ arquivo.cor_css }}')">
+            <label class="file-label-wrapper" @click.prevent="document.querySelector('#checkbox-{{ arquivo.id }}').click()">
                 <i class="{{ arquivo.icona_css }} file-icon" style="color: {{ arquivo.cor_css }};"></i>
                 <span class="file-name">{{ arquivo.name }}</span>
             </label>
         </div>
     {% endfor %}
 {% endif %}
+<style>.rotate-90 { transform: rotate(90deg); }</style>

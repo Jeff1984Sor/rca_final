@@ -174,7 +174,8 @@ select { cursor: pointer; appearance: none; background-image: url("data:image/sv
                     </div>
                 </div>
                 
-                <input type="hidden" name="arquivos_selecionados_ids" :value="arquivosIds.join(',')">
+                <input type="hidden" name="arquivos_selecionados_ids" :value="JSON.stringify(arquivosSelecionados)">
+
             </div>
             {% endif %}
             

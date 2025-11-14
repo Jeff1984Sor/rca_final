@@ -633,7 +633,7 @@ document.addEventListener('DOMContentLoaded', function() {
         emptyCampos.style.display = 'none';
         
         // Busca campos via AJAX
-        fetch(`{% url 'analyser:ajax_campos_produto' %}?cliente_id=${clienteId}&produto_id=${produtoId}`)
+        fetch(`{% url 'analyser:ajax_buscar_campos' %}?cliente_id=${clienteId}&produto_id=${produtoId}`)
             .then(response => response.json())
             .then(data => {
                 loadingCampos.style.display = 'none';

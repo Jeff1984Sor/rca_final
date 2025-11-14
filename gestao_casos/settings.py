@@ -241,6 +241,6 @@ DATETIME_FORMAT = 'd/m/Y H:i'
 LOGIN_REDIRECT_URL = '/'
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')  # ✅ Usa os.getenv()
-GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-pro')
+GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
 GEMINI_TEMPERATURE = float(os.getenv('GEMINI_TEMPERATURE', '0.1'))
 GEMINI_MAX_TOKENS = int(os.getenv('GEMINI_MAX_TOKENS', '4096'))

@@ -2446,7 +2446,7 @@ input[type="file"] {
                             
                             {% if analise.status == 'CONCLUIDO' %}
                                 <div class="analise-footer">
-                                    <a href="{% url 'analyser:resultado' resultado_id=analise.id %}" class="btn btn-sm btn-view">
+                                    <a href="{% url 'analyser:resultado_analise' resultado_id=analise.id %}" class="btn btn-sm btn-view">
                                         <i class="fa-solid fa-eye"></i>
                                         Ver Resultado
                                     </a>
