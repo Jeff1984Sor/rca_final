@@ -81,33 +81,48 @@ def criar_ou_editar_modelo(request, pk=None):
 
 @login_required
 def ajax_buscar_campos(request):
-    """AJAX: Retorna campos para um cliente/produto."""
+    """
+    AJAX: Retorna uma lista padronizada de campos (padrão + personalizados)
+    para um determinado Cliente e Produto.
+    """
     cliente_id = request.GET.get('cliente_id')
     produto_id = request.GET.get('produto_id')
     
     if not cliente_id or not produto_id:
         return JsonResponse({'campos': []})
     
+    # --- 1. Define os campos padrão do sistema ---
     campos = [
         {'nome_variavel': 'titulo', 'nome_campo': 'Título do Caso', 'tipo_campo': 'TEXTO', 'is_padrao': True},
         {'nome_variavel': 'data_entrada', 'nome_campo': 'Data de Entrada', 'tipo_campo': 'DATA', 'is_padrao': True},
         {'nome_variavel': 'valor_apurado', 'nome_campo': 'Valor Apurado', 'tipo_campo': 'MOEDA', 'is_padrao': True},
     ]
+    
+    # --- 2. Busca e adiciona os campos personalizados ---
     try:
-        estrutura = EstruturaDeCampos.objects.get(cliente_id=cliente_id, produto_id=produto_id)
+        # prefetch_related('campos') otimiza a consulta, buscando todos os campos
+        # relacionados em uma única query adicional, evitando o problema N+1.
+        estrutura = EstruturaDeCampos.objects.prefetch_related('campos').get(
+            cliente_id=cliente_id, 
+            produto_id=produto_id
+        )
+        
+        # Itera sobre os campos já carregados em memória
         for campo in estrutura.campos.all():
             campos.append({
                 'nome_variavel': campo.nome_variavel,
                 'nome_campo': campo.nome_campo,
                 'tipo_campo': campo.tipo_campo,
                 'is_padrao': False,
-                'campo_id': campo.id
+                'campo_id': campo.id  # Mantém o ID se for útil no frontend
             })
+            
     except EstruturaDeCampos.DoesNotExist:
+        # Se não houver estrutura, a função simplesmente retornará os campos padrão.
         pass
     
+    # --- 3. Retorna a lista completa como JSON ---
     return JsonResponse({'campos': campos})
-
 
 @login_required
 def selecionar_arquivos(request, caso_id):

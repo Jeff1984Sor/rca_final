@@ -653,53 +653,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function renderizarCampos(campos) {
-        // Pega descrições existentes (se está editando)
-        const descricoesExistentes = {
-            {% if modelo %}
-                {% for key, value in modelo.descricoes_campos.items %}
-                    "{{ key }}": `{{ value|escapejs }}`,
-                {% endfor %}
-            {% endif %}
-        };
-        
         let html = '';
-        
-        campos.forEach(function(campo) {
-            const descricaoExistente = descricoesExistentes[campo.nome] || '';
-            const badgeClass = campo.is_padrao ? 'badge-padrao' : 'badge-personalizado';
-            const badgeText = campo.is_padrao ? 'Padrão' : 'Personalizado';
-            const placeholderText = getPlaceholderPorTipo(campo.tipo, campo.label);
-            
+        campos.forEach(campo => {
+            // ✅ USA AS CHAVES CORRETAS: nome_campo, tipo_campo, nome_variavel
             html += `
                 <div class="campo-item">
                     <div class="campo-header">
-                        <div class="campo-name">
-                            <i class="fa-solid fa-circle-dot"></i>
-                            ${campo.label}
-                        </div>
-                        <div style="display: flex; gap: 8px;">
-                            <span class="campo-badge ${badgeClass}">${badgeText}</span>
-                            <span class="campo-tipo">${campo.tipo}</span>
-                        </div>
+                        <span class="campo-nome">${campo.nome_campo}</span>
+                        <span class="badge ${campo.is_padrao ? 'badge-padrao' : 'badge-custom'}">
+                            ${campo.is_padrao ? 'Padrão' : 'Custom'}
+                        </span>
+                        <span class="badge badge-tipo">${campo.tipo_campo}</span>
                     </div>
-                    
-                    <div class="campo-descricao">
-                        <label class="form-label">
-                            <i class="fa-solid fa-lightbulb"></i>
-                            Como a IA deve encontrar este campo?
-                        </label>
-                        <textarea name="descricao_${campo.nome}" 
-                                  class="form-control" 
-                                  rows="4"
-                                  placeholder="${placeholderText}">${descricaoExistente}</textarea>
-                        <div class="help-text">
-                            Seja específico: onde procurar, como identificar, formato esperado, etc.
-                        </div>
+                    <div class="form-group">
+                        <label for="descricao_${campo.nome_variavel}">Como a IA deve encontrar este campo?</label>
+                        <textarea id="descricao_${campo.nome_variavel}"
+                                  name="descricao_${campo.nome_variavel}"
+                                  class="form-control"
+                                  rows="3"
+                                  placeholder="Seja específico: onde procurar, como identificar, formato esperado, etc."></textarea>
                     </div>
                 </div>
             `;
         });
-        
         camposContainer.innerHTML = html;
     }
     
