@@ -9,6 +9,7 @@ from django.dispatch import receiver
 from .models import Caso
 from pastas.models import EstruturaPasta
 from integrations.sharepoint import SharePoint
+from .folder_utils import recriar_estrutura_de_pastas
 
 @receiver(post_save, sender=Caso)
 def caso_post_save(sender, instance, created, **kwargs):
@@ -68,3 +69,16 @@ def criar_pastas_sharepoint(sender, instance, created, **kwargs):
             # Se qualquer coisa der errado na comunicação com o SharePoint,
             # registramos o erro no console para depuração.
             print(f"ERRO ao criar pastas no SharePoint para o Caso #{instance.id}: {e}")
+
+@receiver(post_save, sender=Caso)
+def criar_pastas_sharepoint_signal(sender, instance, created, **kwargs):
+    """
+    Dispara a criação de pastas no SharePoint APENAS quando um caso é criado.
+    """
+    if created:
+        try:
+            # ✅ CHAMA A FUNÇÃO REUTILIZÁVEL
+            recriar_estrutura_de_pastas(instance)
+        except Exception as e:
+            # Apenas registra o erro no console, não impede o salvamento do caso
+            print(f"FALHA NO SIGNAL: Não foi possível criar a estrutura de pastas para o Caso #{instance.id}. Erro: {e}")

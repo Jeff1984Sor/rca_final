@@ -1,0 +1,81 @@
+{% load file_icons %}
+
+<!-- Grid de Arquivos e Pastas para Seleção -->
+<div class="file-grid">
+    {% for item in itens %}
+        {% if item.folder %}
+            <!-- É uma PASTA: Ao clicar, recarrega este0 0 0 4px rgba(16, 185, 129, 0.2); }
+    .icon-container { font-size: 2.5rem; margin-bottom: 12px; color: #667eea; }
+    .item-name { font-size: 0.85rem; text-align: center; word-break: break-word; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    
+    <!-- CABEÇALHO -->
+    <div class="hero-header">
+        ...
+    </div>
+    
+    <form method="POST" action="{% url 'analyser:iniciar_analise' caso_id=caso.id %}">
+        {% csrf_token %}
+        <div class="main-card">
+            
+            <!-- ETAPA  mesmo painel com o conteúdo da subpasta -->
+            <div class="grid-item">
+                <button type="button" class="grid-item-link"
+                        hx-get="{% url 'analyser:car1: SELECIONAR MODELO -->
+            <div class="card-section">
+                ...
+                <select name="modelo_id" required>
+                    ...
+                </select>
+            </div>
+            
+            <!-- ETAPA 2: SELECIONAR ARQUIVOS -->
+            <div class="card-section">
+                <div class="section-header">
+                    <i class="fa-solid fa-folder-open"></i>
+                    <hregar_arquivos_para_analise' caso_id=caso.id %}?folder_id={{ item.id }}"
+                        hx-target="#folder-tree-container"
+                        hx-swap="innerHTML">
+                    <div class="icon-container"><i class="fa-solid fa-folder"></i></div>
+                    <span class="item-name">{{ item.name }}</span>
+                </button>
+            </div>
+        {% else %}
+            <!-- É um ARQUIVO: Agora é um item selecionável com checkbox -->
+            <div class="grid-item-selectable">2 class="section-title">2. Selecione os Arquivos</h2>
+                </div>
+                
+                <!-- ✅✅✅ O CONTAINER AGORA RENDERIZA O PARCIAL DIRETAMENTE ✅✅✅ -->
+                <div id="folder-tree-container">
+                    {% include 'analyser/partials/_file_selection_grid.html' with itens=itens caso=caso current_folder_id=initial_folder_id %}
+                </div>
+            </div>
+            
+            <div class="form-footer">
+                <a href="{% url 'casos:detalhe_caso' pk=caso.id %}" class="btn btn-secondary">Cancelar</a>
+                <button type="submit" class
+                <input type="checkbox" 
+                       id="file-{{ item.id }}"
+                       name="arquivos_selecionados" {# Todos têm o mesmo nome para formar uma lista #}
+                       value="{{ item.id }}"> {# O valor enviado será o ID do arquivo #}
+                
+                <label for="file-{{ item.id }}">
+                    <div class="icon-container"><i class="{{ item.name|get_file_icon }}"></i></div>
+                    <span class="item-name">{{ item.name }}</span>
+                </label>
+            </div>
+        {% endif %}
+    {% empty %}
+        <p style="grid-column: 1 / -1; text-align: center; padding: 20px;">Esta pasta está vazia.</p>
+    {% endfor %}="btn btn-primary">
+                    Iniciar Análise
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

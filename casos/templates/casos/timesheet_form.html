@@ -1,82 +1,66 @@
-<!-- casos/templates/casos/timesheet_form.html -->
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Editar Lançamento de Timesheet{% endblock %}
-
-{% block extra_css %}
-<style>
-    .form-container { max-width: 700px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .form-row { display: flex; gap: 20px; }
-    .form-group { flex-grow: 1; margin-bottom: 15px; }
-    .form-group label { font-weight: bold; display: block; margin-bottom: 5px; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; font-size: 1rem; }
-    .btn-container { margin-top: 20px; }
-    .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; }
-    .btn-primary { background-color: #007BFF; color: white; }
-    .btn-secondary { background-color: #6c757d; color: white; }
-</style>
-{% endblock %}
+{% block title %}Editar Lançamento de Timesheet | Sistema Jurídico{% endblock %}
 
 {% block content %}
-    <div class="form-container">
-        <h1>Editar Lançamento de Timesheet</h1>
-        <p><strong>Caso:</strong> #{{ caso.id }} - {{ caso.titulo }}</p>
-
+<div class="container" style="max-width: 700px;">
+    
+    <!-- HERO HEADER -->
+    <div class="hero-header">
+        <h1 class="hero-title"><i class="fa-solid fa-hourglass-end"></i> Editar Lançamento</h1>
+        <p class="hero-subtitle text-muted">Atualize as informações do registro de tempo</p>
+    </div>
+    
+    <!-- FORM CARD -->
+    <div class="card">
+        
+        <!-- INFORMAÇÕES DO CASO -->
+        <div class="form-info-box">
+            <div class="form-info-box-header">
+                <i class="fa-solid fa-folder-open"></i>
+                <h3>Caso</h3>
+            </div>
+            <div class="form-info-box-content">
+                <strong>#{{ caso.id|stringformat:"05d" }}</strong> - {{ caso.titulo }}
+            </div>
+        </div>
+        
+        <!-- FORMULÁRIO -->
         <form method="post">
             {% csrf_token %}
-            <div class="form-row">
-                <div class="form-group">{{ form.data_execucao.label_tag }}{{ form.data_execucao }}</div>
-                <div class="form-group">{{ form.tempo.label_tag }}{{ form.tempo }}</div>
-            </div>
-            <div class="form-group">{{ form.advogado.label_tag }}{{ form.advogado }}</div>
-            <div class="form-group">{{ form.descricao.label_tag }}{{ form.descricao }}</div>
             
-            <div class="btn-container">
-                <button type="submit" class="btn btn-primary">Salvar Alterações</button>
-                <a href="{% url 'casos:detalhe_caso' pk=caso.pk %}?aba=timesheet" class="btn btn-secondary">Cancelar</a>
+            <div class="form-row">
+                {% include "_form_field.html" with field=form.data_execucao icon="calendar" %}
+                {% include "_form_field.html" with field=form.tempo icon="clock" %}
+            </div>
+            
+            <div class="form-row">
+                {% include "_form_field.html" with field=form.advogado classes="full-width" icon="user-tie" %}
+            </div>
+            
+            <div class="form-row">
+                {% include "_form_field.html" with field=form.descricao classes="full-width" icon="align-left" %}
+            </div>
+            
+            <!-- BOTÕES -->
+            <div class="form-actions">
+                <a href="{% url 'casos:detalhe_caso' pk=caso.pk %}?aba=timesheet" class="btn btn-outline-secondary"><i class="fa-solid fa-times-circle"></i> Cancelar</a>
+                <button type="submit" class="btn btn-primary" id="submitBtn"><i class="fa-solid fa-save"></i> Salvar Alterações</button>
             </div>
         </form>
     </div>
+    
+</div>
+{% endblock %}
 
-    <!-- Adicionamos a mesma máscara de input aqui -->
+{% block extra_js %}
+<script src="{% static 'js/form_timesheet.js' %}"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const tempoInput = document.querySelector('input[name="tempo"]');
-
-    function formatTime(e) {
-        let value = e.target.value.replace(/\D/g, ''); // Remove não-dígitos
-        let formattedValue = '';
-
-        if (value.length > 2) {
-            formattedValue = value.substring(0, 2) + ':' + value.substring(2, 4);
-        } else {
-            formattedValue = value;
-        }
-        
-        e.target.value = formattedValue.substring(0, 5);
-    }
-
-    if (tempoInput) {
-        // Aplica a máscara enquanto o usuário digita
-        tempoInput.addEventListener('input', formatTime);
-
-        // Adiciona um zero à esquerda na hora se necessário ao sair do campo
-        tempoInput.addEventListener('blur', function(e){
-            let parts = e.target.value.split(':');
-            if (parts.length === 2) {
-                let hour = parts[0];
-                let minute = parts[1];
-                if (hour.length === 1) {
-                    hour = '0' + hour;
-                }
-                if (minute.length === 1) {
-                    minute = '0' + minute;
-                }
-                e.target.value = hour + ':' + minute;
-            }
+    document.addEventListener('DOMContentLoaded', function() {
+        initTimesheetForm({
+            cancelUrl: "{% url 'casos:detalhe_caso' pk=caso.pk %}?aba=timesheet"
         });
-    }
-});
+    });
 </script>
-
 {% endblock %}

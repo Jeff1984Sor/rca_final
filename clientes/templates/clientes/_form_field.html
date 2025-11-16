@@ -1,0 +1,16 @@
+<!-- clientes/templates/clientes/_form_field.html -->
+<div class="form-group {{ classes }}">
+    <label for="{{ field.id_for_label }}" class="form-label">
+        {{ field.label }}
+        {% if field.field.required %}
+            <span class="required">*</span>
+        {% endif %}
+    </label>
+    {{ field }}
+    {% if field.help_text %}
+        <small class="form-text-muted">{{ field.help_text|safe }}</small>
+    {% endif %}
+    {% for error in field.errors %}
+        <div class="error-message">{{ error }}</div>
+    {% endfor %}
+</div>

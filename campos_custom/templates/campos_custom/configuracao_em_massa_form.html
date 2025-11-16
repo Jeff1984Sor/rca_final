@@ -1,9 +1,16 @@
-{% extends 'base.html' %} {# Ou o seu template base principal #}
+{% extends 'base.html' %}
+{% load static %}
 
 {% block title %}{{ titulo }}{% endblock %}
 
 {% block content %}
-    <h1 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 24px;">{{ titulo }}</h1>
+<div class="container" style="max-width: 900px;">
+    
+    <!-- HERO HEADER -->
+    <div class="hero-header">
+        <h1 class="hero-title"><i class="fa-solid fa-layer-group"></i> {{ titulo }}</h1>
+        <p class="hero-subtitle text-muted">Selecione o cliente, produto e os campos a serem adicionados à estrutura.</p>
+    </div>
 
     {% if messages %}
         {% for message in messages %}
@@ -14,47 +21,41 @@
     <div class="card">
         <form method="post">
             {% csrf_token %}
+            <div class="card-body">
 
-            <!-- Campos Cliente e Produto -->
-            <div class="form-group">
-                <label for="{{ form.cliente.id_for_label }}">{{ form.cliente.label }}</label>
-                {{ form.cliente }}
-            </div>
-            <div class="form-group">
-                <label for="{{ form.produto.id_for_label }}">{{ form.produto.label }}</label>
-                {{ form.produto }}
-            </div>
-
-            <hr>
-
-            <!-- Lista de Campos com Checkboxes -->
-            <div class="form-group">
-                <label>{{ form.campos.label }}</label>
-                <div class="checkbox-list-container">
-                    {{ form.campos }}
+                <!-- SEÇÃO: SELEÇÃO PRINCIPAL -->
+                <div class="form-section">
+                    <h3 class="form-section-title"><i class="fa-solid fa-sitemap"></i> Seleção de Estrutura</h3>
+                    <div class="form-row">
+                        {% include "_form_field.html" with field=form.cliente icon="building" %}
+                        {% include "_form_field.html" with field=form.produto icon="box" %}
+                    </div>
                 </div>
-                 {% for error in form.campos.errors %}
-                    <div class="error-message">{{ error }}</div>
-                {% endfor %}
+
+                <!-- SEÇÃO: CAMPOS DISPONÍVEIS -->
+                <div class="form-section">
+                    <h3 class="form-section-title"><i class="fa-solid fa-tasks"></i> Campos Disponíveis para Adicionar</h3>
+                    <div class="form-group">
+                        <label class="form-label">{{ form.campos.label }}</label>
+                        <div class="checkbox-columns-container">
+                            {{ form.campos }}
+                        </div>
+                        {% for error in form.campos.errors %}
+                            <div class="error-message">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
 
-            <div style="display: flex; gap: 10px; margin-top: 24px;">
-                <button type="submit" class="btn btn-primary">Salvar Configuração</button>
+            <div class="form-actions">
+                <a href="{% url 'admin:campos_custom_configuracaocampopersonalizado_changelist' %}" class="btn btn-outline-secondary">
+                    <i class="fa-solid fa-times-circle"></i> Voltar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-save"></i> Salvar Configuração
+                </button>
             </div>
         </form>
     </div>
-
-<style>
-    /* Estilo simples para organizar os checkboxes */
-    .checkbox-list-container ul {
-        list-style: none;
-        padding: 0;
-        columns: 3; /* Tente ajustar para 2, 3 ou 4 colunas */
-        -webkit-columns: 3;
-        -moz-columns: 3;
-    }
-    .checkbox-list-container li {
-        padding: 5px 0;
-    }
-</style>
+</div>
 {% endblock %}

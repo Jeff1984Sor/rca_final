@@ -1,691 +1,50 @@
 {% extends 'base.html' %}
-{% load custom_tags %}
+{% load custom_tags static %}
 
 {% block title %}Dashboard {{ ano_selecionado }} | Sistema Jurídico{% endblock %}
-
-{% block extra_css %}
-<style>
-/* ==================================================================== */
-/* 🎨 DESIGN SYSTEM - DASHBOARD */
-/* ==================================================================== */
-:root {
-    --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --primary-solid: #667eea;
-    --success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    --success-solid: #10b981;
-    --danger: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    --danger-solid: #ef4444;
-    --warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    --warning-solid: #f59e0b;
-    --info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    --info-solid: #0ea5e9;
-    
-    --gray-50: #f8fafc;
-    --gray-100: #f1f5f9;
-    --gray-200: #e2e8f0;
-    --gray-300: #cbd5e1;
-    --gray-400: #94a3b8;
-    --gray-500: #64748b;
-    --gray-600: #475569;
-    --gray-700: #334155;
-    --gray-800: #1e293b;
-    --gray-900: #0f172a;
-    
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    
-    --transition: 250ms ease-in-out;
-}
-
-body {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    background-attachment: fixed;
-    min-height: 100vh;
-}
-
-.dashboard-container {
-    max-width: 1600px;
-    margin: 40px auto;
-    padding: 0 20px;
-}
-
-/* ==================================================================== */
-/* 💎 HERO HEADER */
-/* ==================================================================== */
-.hero-header {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px) saturate(180%);
-    border-radius: 24px;
-    padding: 32px 40px;
-    margin-bottom: 32px;
-    box-shadow: var(--shadow-xl);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    position: relative;
-    overflow: hidden;
-    animation: slideDown 0.5s ease-out;
-}
-
-@keyframes slideDown {
-    from { opacity: 0; transform: translateY(-30px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.hero-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 5px;
-    background: var(--primary);
-    animation: shimmer 3s infinite;
-}
-
-@keyframes shimmer {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-.hero-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 24px;
-}
-
-.hero-title {
-    font-size: 2.25rem;
-    font-weight: 800;
-    color: var(--gray-900);
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.hero-title i {
-    background: var(--primary);
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.5rem;
-}
-
-.hero-subtitle {
-    color: var(--gray-600);
-    font-size: 1.1rem;
-    margin-top: 8px;
-}
-
-.year-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 24px;
-    background: var(--primary);
-    color: white;
-    border-radius: 14px;
-    font-size: 1.5rem;
-    font-weight: 700;
-    box-shadow: var(--shadow-lg);
-}
-
-/* ==================================================================== */
-/* 📊 DASHBOARD GRID */
-/* ==================================================================== */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(12, 1fr);
-    gap: 24px;
-}
-
-.grid-col-span-12 { grid-column: span 12; }
-.grid-col-span-6 { grid-column: span 6; }
-.grid-col-span-4 { grid-column: span 4; }
-.grid-col-span-3 { grid-column: span 3; }
-
-/* ==================================================================== */
-/* 🎴 CARDS */
-/* ==================================================================== */
-.card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    overflow: hidden;
-    transition: all var(--transition);
-    animation: fadeInUp 0.6s ease-out both;
-}
-
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.card:hover {
-    box-shadow: var(--shadow-xl);
-    transform: translateY(-3px);
-}
-
-.card-header {
-    background: var(--gray-50);
-    padding: 20px 28px;
-    border-bottom: 2px solid var(--gray-200);
-}
-
-.card-header h5 {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: var(--gray-900);
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.card-header i {
-    color: var(--primary-solid);
-    font-size: 1.2rem;
-}
-
-.card-body {
-    padding: 28px;
-}
-
-/* ==================================================================== */
-/* 📊 KPI STATS CARDS */
-/* ==================================================================== */
-.kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 20px;
-    margin-bottom: 32px;
-}
-
-.kpi-card {
-    background: white;
-    padding: 24px;
-    border-radius: 20px;
-    box-shadow: var(--shadow-md);
-    position: relative;
-    overflow: hidden;
-    transition: all var(--transition);
-}
-
-.kpi-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 5px;
-    height: 100%;
-    background: var(--primary);
-}
-
-.kpi-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-xl);
-}
-
-.kpi-label {
-    font-size: 0.85rem;
-    color: var(--gray-600);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 600;
-    margin-bottom: 8px;
-}
-
-.kpi-value {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--gray-900);
-    line-height: 1;
-}
-
-.kpi-icon {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    opacity: 0.15;
-}
-
-/* ==================================================================== */
-/* 🔍 FILTROS DE AÇÕES */
-/* ==================================================================== */
-.filtros-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 16px;
-}
-
-.filtros-form {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.btn-group-sm .btn {
-    padding: 8px 16px;
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    transition: all var(--transition);
-}
-
-.btn-group-sm .btn:first-child {
-    border-radius: 10px 0 0 10px;
-}
-
-.btn-group-sm .btn:last-child {
-    border-radius: 0 10px 10px 0;
-}
-
-.btn-primary {
-    background: var(--primary);
-    color: white;
-    border: none;
-}
-
-.btn-outline-secondary {
-    background: white;
-    color: var(--gray-700);
-    border: 2px solid var(--gray-300);
-}
-
-.btn-outline-secondary:hover {
-    background: var(--gray-50);
-    border-color: var(--gray-400);
-}
-
-.form-control-sm {
-    padding: 8px 12px;
-    border: 2px solid var(--gray-200);
-    border-radius: 10px;
-    font-size: 0.9rem;
-    transition: all var(--transition);
-}
-
-.form-control-sm:focus {
-    outline: none;
-    border-color: var(--primary-solid);
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-}
-
-.btn-outline-primary {
-    background: white;
-    color: var(--primary-solid);
-    border: 2px solid var(--primary-solid);
-    padding: 8px 16px;
-    border-radius: 10px;
-    font-weight: 600;
-    transition: all var(--transition);
-}
-
-.btn-outline-primary:hover {
-    background: var(--primary);
-    color: white;
-}
-
-/* ==================================================================== */
-/* 📊 TABELAS */
-/* ==================================================================== */
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.data-table thead {
-    background: linear-gradient(135deg, var(--gray-800) 0%, var(--gray-700) 100%);
-}
-
-.data-table thead th {
-    padding: 16px 20px;
-    text-align: left;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 700;
-    color: white;
-    border: none;
-}
-
-.data-table tbody tr {
-    border-bottom: 1px solid var(--gray-100);
-    transition: all var(--transition);
-}
-
-.data-table tbody tr:hover {
-    background: var(--gray-50);
-}
-
-.data-table tbody td {
-    padding: 16px 20px;
-    color: var(--gray-800);
-    font-size: 0.95rem;
-}
-
-.caso-details-cell {
-    font-size: 0.9rem;
-    color: var(--gray-600);
-}
-
-.caso-details-cell strong {
-    color: var(--primary-solid);
-    font-size: 1rem;
-    font-weight: 700;
-}
-
-.caso-details-cell small {
-    display: block;
-    margin-top: 4px;
-    color: var(--gray-500);
-}
-
-/* ==================================================================== */
-/* 🏷️ BADGES */
-/* ==================================================================== */
-.badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border-radius: 10px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-}
-
-.bg-success {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    color: white;
-}
-
-.bg-danger {
-    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    color: white;
-}
-
-.bg-warning {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    color: white;
-}
-
-.bg-secondary {
-    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-    color: white;
-}
-
-.bg-dark {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    color: white;
-}
-
-/* ==================================================================== */
-/* 🎯 BOTÕES DE AÇÃO */
-/* ==================================================================== */
-.action-btn {
-    padding: 8px 16px;
-    border-radius: 10px;
-    border: none;
-    font-weight: 600;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: all var(--transition);
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    text-decoration: none;
-    box-shadow: var(--shadow-sm);
-}
-
-.btn-info {
-    background: var(--info);
-    color: white;
-}
-
-.action-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-/* ==================================================================== */
-/* 📭 EMPTY STATE */
-/* ==================================================================== */
-.empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--gray-500);
-}
-
-.empty-state i {
-    font-size: 4rem;
-    color: var(--gray-300);
-    margin-bottom: 20px;
-    display: block;
-}
-
-.empty-state p {
-    font-size: 1.1rem;
-    margin: 0;
-}
-
-/* ==================================================================== */
-/* 📊 GRÁFICOS */
-/* ==================================================================== */
-#pizzaStatusChart {
-    max-height: 350px;
-    padding: 20px;
-}
-
-.chart-container {
-    position: relative;
-    padding: 20px;
-}
-
-/* ==================================================================== */
-/* 🎨 SECTION TITLE */
-/* ==================================================================== */
-.section-title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: var(--gray-900);
-    padding: 20px 28px;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.section-title strong {
-    color: var(--primary-solid);
-}
-
-/* ==================================================================== */
-/* 📱 RESPONSIVIDADE */
-/* ==================================================================== */
-@media (max-width: 1200px) {
-    .grid-col-span-6 {
-        grid-column: span 12;
-    }
-}
-
-@media (max-width: 768px) {
-    .hero-content {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .filtros-form {
-        width: 100%;
-        flex-direction: column;
-    }
-    
-    .btn-group-sm {
-        width: 100%;
-    }
-    
-    .btn-group-sm .btn {
-        flex: 1;
-    }
-    
-    .form-control-sm {
-        width: 100% !important;
-    }
-    
-    .data-table {
-        font-size: 0.85rem;
-    }
-    
-    .data-table thead th,
-    .data-table tbody td {
-        padding: 12px 10px;
-    }
-}
-
-/* ==================================================================== */
-/* 🎨 SCROLLBAR */
-/* ==================================================================== */
-::-webkit-scrollbar {
-    width: 12px;
-    height: 12px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--gray-100);
-    border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--gray-300);
-    border-radius: 10px;
-    border: 3px solid var(--gray-100);
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--gray-400);
-}
-
-/* ==================================================================== */
-/* ✨ ANIMAÇÕES ESPECIAIS */
-/* ==================================================================== */
-@keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.5;
-    }
-}
-
-.pulse {
-    animation: pulse 2s infinite;
-}
-
-/* Delay nas animações dos cards */
-.card:nth-child(1) { animation-delay: 0s; }
-.card:nth-child(2) { animation-delay: 0.1s; }
-.card:nth-child(3) { animation-delay: 0.2s; }
-.card:nth-child(4) { animation-delay: 0.3s; }
-</style>
-{% endblock %}
 
 {% block content %}
 <div class="dashboard-container">
     
-    <!-- 💎 HERO HEADER -->
+    <!-- HERO HEADER -->
     <div class="hero-header">
         <div class="hero-content">
             <div>
-                <h1 class="hero-title">
-                    <i class="fa-solid fa-chart-line"></i>
-                    Dashboard Executivo
-                </h1>
-                <p class="hero-subtitle">Visão geral do desempenho e ações pendentes</p>
+                <h1 class="hero-title"><i class="fa-solid fa-chart-line"></i> Dashboard Executivo</h1>
+                <p class="hero-subtitle text-muted">Visão geral do desempenho e ações pendentes</p>
             </div>
-            <div class="year-badge">
-                <i class="fa-solid fa-calendar"></i>
-                {{ ano_selecionado }}
-            </div>
+            <div class="year-badge"><i class="fa-solid fa-calendar"></i> {{ ano_selecionado }}</div>
         </div>
     </div>
     
-    <!-- 📊 DASHBOARD GRID -->
+    <!-- DASHBOARD GRID -->
     <div class="dashboard-grid">
         
-        <!-- ============================================== -->
-        <!-- 📋 SUAS AÇÕES COM FILTROS -->
-        <!-- ============================================== -->
+        <!-- SUAS AÇÕES COM FILTROS -->
         <div class="grid-col-span-12">
             <div class="card">
                 <div class="card-header filtros-header">
-                    <h5>
-                        <i class="fa-solid fa-list-check"></i>
-                        Suas Ações
-                    </h5>
-                    
+                    <h5><i class="fa-solid fa-list-check"></i> Suas Ações</h5>
                     <form method="get" action="" class="filtros-form">
                         <div class="btn-group btn-group-sm">
-                            <a href="?periodo=hoje" class="btn {% if valores_filtro.periodo == 'hoje' or not valores_filtro.periodo and not valores_filtro.data_inicio %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                                <i class="fa-solid fa-calendar-day"></i> Hoje
-                            </a>
-                            <a href="?periodo=semana" class="btn {% if valores_filtro.periodo == 'semana' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                                <i class="fa-solid fa-calendar-week"></i> Semana
-                            </a>
-                            <a href="?periodo=mes" class="btn {% if valores_filtro.periodo == 'mes' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                                <i class="fa-solid fa-calendar-alt"></i> Mês
-                            </a>
+                            <a href="?periodo=hoje" class="btn {% if valores_filtro.periodo == 'hoje' or not valores_filtro.periodo and not valores_filtro.data_inicio %}btn-primary{% else %}btn-outline-secondary{% endif %}"><i class="fa-solid fa-calendar-day"></i> Hoje</a>
+                            <a href="?periodo=semana" class="btn {% if valores_filtro.periodo == 'semana' %}btn-primary{% else %}btn-outline-secondary{% endif %}"><i class="fa-solid fa-calendar-week"></i> Semana</a>
+                            <a href="?periodo=mes" class="btn {% if valores_filtro.periodo == 'mes' %}btn-primary{% else %}btn-outline-secondary{% endif %}"><i class="fa-solid fa-calendar-alt"></i> Mês</a>
                         </div>
-                        
-                        <input type="date" 
-                               name="data_inicio" 
-                               class="form-control form-control-sm" 
-                               style="width: 160px;" 
-                               value="{{ valores_filtro.data_inicio }}"
-                               placeholder="Data início">
-                        
+                        <input type="date" name="data_inicio" class="form-control form-control-sm" value="{{ valores_filtro.data_inicio }}" placeholder="Data início">
                         <span class="text-muted">até</span>
-                        
-                        <input type="date" 
-                               name="data_fim" 
-                               class="form-control form-control-sm" 
-                               style="width: 160px;" 
-                               value="{{ valores_filtro.data_fim }}"
-                               placeholder="Data fim">
-                        
-                        <button type="submit" class="btn btn-outline-primary" title="Filtrar por data">
-                            <i class="fa-solid fa-filter"></i>
-                            Filtrar
-                        </button>
+                        <input type="date" name="data_fim" class="form-control form-control-sm" value="{{ valores_filtro.data_fim }}" placeholder="Data fim">
+                        <button type="submit" class="btn btn-sm btn-outline-primary" title="Filtrar por data"><i class="fa-solid fa-filter"></i> Filtrar</button>
                     </form>
                 </div>
-
-                <div class="data-table-container" style="border: none;">
+                <div class="data-table-container">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th><i class="fa-solid fa-folder"></i> Caso</th>
-                                <th><i class="fa-solid fa-tasks"></i> Ação</th>
-                                <th style="text-align: center;"><i class="fa-solid fa-clock"></i> Prazo</th>
-                                <th style="text-align: right;"><i class="fa-solid fa-link"></i> Acessar</th>
+                                <th>Caso</th>
+                                <th>Ação</th>
+                                <th class="text-center">Prazo</th>
+                                <th class="text-right">Acessar</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -696,41 +55,21 @@ body {
                                     <small>{{ acao_inst.caso.cliente.nome }} | {{ acao_inst.caso.produto.nome }}</small>
                                 </td>
                                 <td>{{ acao_inst.acao.titulo|truncatechars:40 }}</td>
-                                <td style="text-align: center;">
+                                <td class="text-center">
                                     {% with prazo=acao_inst.data_prazo %}
-                                        {% if prazo %}
-                                            {% with dias_restantes=prazo|days_until %}
-                                                <span class="badge 
-                                                    {% if dias_restantes < 0 %}bg-dark
-                                                    {% elif dias_restantes == 0 %}bg-danger
-                                                    {% elif dias_restantes < 7 %}bg-warning text-dark
-                                                    {% else %}bg-secondary
-                                                    {% endif %}
-                                                ">
-                                                    <i class="fa-solid fa-calendar-check"></i>
-                                                    {{ prazo|date:"d/m/Y" }}
-                                                </span>
-                                            {% endwith %}
-                                        {% endif %}
+                                        {% if prazo %}{% with dias_restantes=prazo|days_until %}
+                                            <span class="badge {% if dias_restantes < 0 %}bg-dark{% elif dias_restantes == 0 %}bg-danger{% elif dias_restantes < 7 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                                <i class="fa-solid fa-calendar-check"></i> {{ prazo|date:"d/m/Y" }}
+                                            </span>
+                                        {% endwith %}{% endif %}
                                     {% endwith %}
                                 </td>
-                                <td style="text-align: right;">
-                                    <a href="{% url 'casos:detalhe_caso' pk=acao_inst.caso.pk %}?aba=acoes" 
-                                       class="action-btn btn-info">
-                                        <i class="fa-solid fa-arrow-right"></i>
-                                        Ir
-                                    </a>
+                                <td class="text-right">
+                                    <a href="{% url 'casos:detalhe_caso' pk=acao_inst.caso.pk %}?aba=acoes" class="btn action-btn btn-info btn-sm"><i class="fa-solid fa-arrow-right"></i> Ir</a>
                                 </td>
                             </tr>
                             {% empty %}
-                            <tr>
-                                <td colspan="4">
-                                    <div class="empty-state">
-                                        <i class="fa-solid fa-check-circle"></i>
-                                        <p>🎉 Nenhuma ação encontrada para o período selecionado.</p>
-                                    </div>
-                                </td>
-                            </tr>
+                            <tr><td colspan="4"><div class="empty-state"><i class="fa-solid fa-check-circle"></i><p>🎉 Nenhuma ação encontrada para o período selecionado.</p></div></td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -738,25 +77,19 @@ body {
             </div>
         </div>
         
-        
-        <!-- ============================================== -->
-        <!-- 📊 TABELA DE PERFORMANCE -->
-        <!-- ============================================== -->
+        <!-- TABELA DE PERFORMANCE -->
         <div class="grid-col-span-12">
             {% for advogado, registros in tabela_performance.items %}
-                <div class="card" style="margin-top: 24px;">
-                    <h3 class="section-title">
-                        <i class="fa-solid fa-user-tie"></i>
-                        Casos atribuídos para: <strong>{{ advogado }}</strong>
-                    </h3>
-                    <div class="data-table-container" style="border: none;">
-                        <table class="data-table kpi-table">
+                <div class="card mt-4">
+                    <h3 class="section-title"><i class="fa-solid fa-user-tie"></i> Casos por: <strong>{{ advogado }}</strong></h3>
+                    <div class="data-table-container">
+                        <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th><i class="fa-solid fa-building"></i> Cliente</th>
-                                    <th><i class="fa-solid fa-box"></i> Produto</th>
-                                    <th><i class="fa-solid fa-flag"></i> Status</th>
-                                    <th style="text-align: right;"><i class="fa-solid fa-hashtag"></i> Qtd. Casos</th>
+                                    <th>Cliente</th>
+                                    <th>Produto</th>
+                                    <th>Status</th>
+                                    <th class="text-right">Qtd. Casos</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -764,12 +97,8 @@ body {
                                 <tr>
                                     <td>{{ registro.cliente }}</td>
                                     <td>{{ registro.produto }}</td>
-                                    <td>
-                                        <span class="badge {% if registro.status == 'ATIVO' %}bg-success{% elif registro.status == 'ENCERRADO' %}bg-secondary{% else %}bg-warning{% endif %}">
-                                            {{ registro.status }}
-                                        </span>
-                                    </td>
-                                    <td style="text-align: right;"><strong>{{ registro.total }}</strong></td>
+                                    <td><span class="badge {% if registro.status == 'ATIVO' %}bg-success{% elif registro.status == 'ENCERRADO' %}bg-secondary{% else %}bg-warning{% endif %}">{{ registro.status }}</span></td>
+                                    <td class="text-right"><strong>{{ registro.total }}</strong></td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -777,337 +106,47 @@ body {
                     </div>
                 </div>
             {% empty %}
-                <div class="card grid-col-span-12">
-                    <div class="empty-state">
-                        <i class="fa-solid fa-chart-bar"></i>
-                        <p>Nenhum dado de performance encontrado.</p>
-                    </div>
-                </div>
+                <div class="card grid-col-span-12"><div class="empty-state"><i class="fa-solid fa-chart-bar"></i><p>Nenhum dado de performance encontrado.</p></div></div>
             {% endfor %}
         </div>
         
     </div>
-    
 </div>
 {% endblock %}
 
 {% block extra_js %}
+{# Dependência externa para o gráfico #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{# Passando dados do Django para o JavaScript de forma segura #}
+{% if dados_grafico_pizza %}
+    {{ pizza_labels|json_script:"chart-pizza-labels" }}
+    {{ pizza_data|json_script:"chart-pizza-data" }}
+{% endif %}
+
+{# Nosso script customizado da página #}
+<script src="{% static 'js/dashboard.js' %}"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    
-    // 📊 GRÁFICO DE PIZZA - STATUS
-    const pizzaCtx = document.getElementById('pizzaStatusChart');
-    {% if dados_grafico_pizza %}
-    if (pizzaCtx) {
-        const pizzaLabels = {{ pizza_labels|safe }};
-        const pizzaData = {{ pizza_data|safe }};
-        
-        new Chart(pizzaCtx, {
-            type: 'doughnut',
-            data: {
-                labels: pizzaLabels, 
-                datasets: [{
-                    label: 'Quantidade de Casos', 
-                    data: pizzaData,
-                    backgroundColor: [
-                        '#667eea', // Roxo
-                        '#10b981', // Verde
-                        '#f59e0b', // Laranja
-                        '#ef4444', // Vermelho
-                        '#0ea5e9', // Azul
-                        '#8b5cf6'  // Roxo claro
-                    ],
-                    borderColor: '#ffffff', 
-                    borderWidth: 3, 
-                    hoverOffset: 10
-                }]
-            },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: true,
-                plugins: { 
-                    legend: { 
-                        position: 'right',
-                        labels: {
-                            padding: 15,
-                            font: {
-                                size: 13,
-                                weight: '600'
-                            }
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
-                        titleFont: {
-                            size: 14,
-                            weight: 'bold'
-                        },
-                        bodyFont: {
-                            size: 13
-                        },
-                        borderColor: '#667eea',
-                        borderWidth: 2
-                    }
-                },
-                animation: {
-                    animateScale: true,
-                    animateRotate: true
+    document.addEventListener('DOMContentLoaded', function() {
+        // Coleta os dados do gráfico do DOM
+        const labelsEl = document.getElementById('chart-pizza-labels');
+        const dataEl = document.getElementById('chart-pizza-data');
+        const chartData = (labelsEl && dataEl) ? {
+            labels: JSON.parse(labelsEl.textContent),
+            data: JSON.parse(dataEl.textContent)
+        } : null;
+
+        // Inicializa o script do dashboard
+        initDashboard({
+            chartData: chartData,
+            urls: {
+                periods: {
+                    hoje: "?periodo=hoje",
+                    semana: "?periodo=semana",
+                    mes: "?periodo=mes"
                 }
             }
         });
-    }
-    {% endif %}
-    
-    // 🎨 ANIMAÇÃO DAS LINHAS DA TABELA
-    const rows = document.querySelectorAll('.data-table tbody tr');
-    rows.forEach((row, index) => {
-        row.style.opacity = '0';
-        row.style.transform = 'translateX(-20px)';
-        
-        setTimeout(() => {
-            row.style.transition = 'all 0.3s ease-out';
-            row.style.opacity = '1';
-            row.style.transform = 'translateX(0)';
-        }, index * 50);
     });
-    
-    // 🔔 NOTIFICAÇÃO DE AÇÕES URGENTES
-    const acoesUrgentes = document.querySelectorAll('.badge.bg-danger, .badge.bg-warning');
-    if (acoesUrgentes.length > 0) {
-        console.log(`⚠️ ${acoesUrgentes.length} ação(ões) urgente(s) detectada(s)!`);
-    }
-    
-    // ⌨️ ATALHOS DE TECLADO
-    document.addEventListener('keydown', function(e) {
-        // H = Hoje
-        if (e.key === 'h' || e.key === 'H') {
-            if (!e.target.matches('input, textarea, select')) {
-                e.preventDefault();
-                window.location.href = "?periodo=hoje";
-            }
-        }
-        
-        // S = Semana
-        if (e.key === 's' || e.key === 'S') {
-            if (!e.target.matches('input, textarea, select')) {
-                e.preventDefault();
-                window.location.href = "?periodo=semana";
-            }
-        }
-        
-        // M = Mês
-        if (e.key === 'm' || e.key === 'M') {
-            if (!e.target.matches('input, textarea, select')) {
-                e.preventDefault();
-                window.location.href = "?periodo=mes";
-            }
-        }
-    });
-    
-    // 📊 CONTADOR DE AÇÕES POR STATUS
-    const contarAcoesPorStatus = () => {
-        const badges = document.querySelectorAll('.data-table .badge');
-        const counts = {
-            urgente: 0,
-            atencao: 0,
-            normal: 0,
-            atrasado: 0
-        };
-        
-        badges.forEach(badge => {
-            if (badge.classList.contains('bg-dark')) counts.atrasado++;
-            else if (badge.classList.contains('bg-danger')) counts.urgente++;
-            else if (badge.classList.contains('bg-warning')) counts.atencao++;
-            else counts.normal++;
-        });
-        
-        console.log('📊 Ações por urgência:', counts);
-        return counts;
-    };
-    
-    contarAcoesPorStatus();
-    
-    // 🎯 HIGHLIGHT NOS FILTROS ATIVOS
-    const urlParams = new URLSearchParams(window.location.search);
-    const hasFiltros = urlParams.has('data_inicio') || urlParams.has('data_fim');
-    
-    if (hasFiltros) {
-        const cardHeader = document.querySelector('.filtros-header');
-        if (cardHeader) {
-            cardHeader.style.borderLeft = '5px solid var(--success-solid)';
-            
-            // Badge de "Filtros Ativos"
-            const badge = document.createElement('span');
-            badge.className = 'badge bg-success';
-            badge.innerHTML = '<i class="fa-solid fa-filter"></i> Período Personalizado';
-            badge.style.cssText = 'position: absolute; top: 10px; right: 10px;';
-            cardHeader.style.position = 'relative';
-            cardHeader.appendChild(badge);
-        }
-    }
-    
-    // ✨ EFEITO PULSE NAS AÇÕES URGENTES
-    const urgentBadges = document.querySelectorAll('.badge.bg-danger');
-    urgentBadges.forEach(badge => {
-        badge.classList.add('pulse');
-    });
-    
-    // 🔄 AUTO-REFRESH (OPCIONAL - 5 minutos)
-    // Descomente se quiser auto-refresh
-    /*
-    let refreshInterval = 5 * 60 * 1000; // 5 minutos
-    setTimeout(() => {
-        console.log('🔄 Atualizando dashboard...');
-        location.reload();
-    }, refreshInterval);
-    */
-    
-    // 📱 RESPONSIVIDADE - AJUSTE DE TABELAS
-    function adjustTables() {
-        const tables = document.querySelectorAll('.data-table');
-        tables.forEach(table => {
-            const container = table.closest('.data-table-container');
-            if (container && window.innerWidth < 768) {
-                container.style.overflowX = 'auto';
-                container.style.webkitOverflowScrolling = 'touch';
-            }
-        });
-    }
-    
-    adjustTables();
-    window.addEventListener('resize', adjustTables);
-    
-    // 💡 TOOLTIP NAS AÇÕES (se hover > 2s, mostra detalhes)
-    let hoverTimeout;
-    const actionButtons = document.querySelectorAll('.action-btn');
-    
-    actionButtons.forEach(btn => {
-        btn.addEventListener('mouseenter', function() {
-            hoverTimeout = setTimeout(() => {
-                console.log('💡 Clique para ir ao caso');
-            }, 2000);
-        });
-        
-        btn.addEventListener('mouseleave', function() {
-            clearTimeout(hoverTimeout);
-        });
-    });
-    
-    // 🎨 ANIMAÇÃO DAS KPI CARDS (se existirem)
-    const kpiCards = document.querySelectorAll('.kpi-card');
-    kpiCards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'scale(0.9)';
-        
-        setTimeout(() => {
-            card.style.transition = 'all 0.4s ease-out';
-            card.style.opacity = '1';
-            card.style.transform = 'scale(1)';
-        }, index * 100);
-    });
-    
-    // 📊 ANALYTICS (OPCIONAL)
-    const trackDashboardView = () => {
-        const stats = {
-            totalAcoes: rows.length - (rows[0]?.querySelector('.empty-state') ? 1 : 0),
-            periodo: urlParams.get('periodo') || 'padrao',
-            timestamp: new Date().toISOString()
-        };
-        
-        console.log('📊 Dashboard Stats:', stats);
-        // Aqui você pode enviar para analytics se quiser
-    };
-    
-    trackDashboardView();
-    
-    // 🎯 DESTAQUE AO CLICAR NA LINHA
-    rows.forEach(row => {
-        if (!row.querySelector('.empty-state')) {
-            row.addEventListener('click', function(e) {
-                // Se não clicou no botão de ação
-                if (!e.target.closest('.action-btn')) {
-                    this.style.backgroundColor = 'var(--primary-solid)';
-                    this.style.color = 'white';
-                    
-                    setTimeout(() => {
-                        this.style.backgroundColor = '';
-                        this.style.color = '';
-                    }, 300);
-                }
-            });
-        }
-    });
-    
-    // 🔍 BUSCA RÁPIDA (OPCIONAL - Ctrl+K)
-    document.addEventListener('keydown', function(e) {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-            e.preventDefault();
-            
-            // Cria campo de busca rápida
-            const searchBox = document.createElement('input');
-            searchBox.type = 'text';
-            searchBox.placeholder = 'Buscar caso...';
-            searchBox.className = 'form-control';
-            searchBox.style.cssText = `
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                width: 400px;
-                max-width: 90%;
-                z-index: 9999;
-                padding: 16px;
-                font-size: 1.1rem;
-                border: 3px solid var(--primary-solid);
-                box-shadow: var(--shadow-xl);
-            `;
-            
-            const overlay = document.createElement('div');
-            overlay.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0, 0, 0, 0.5);
-                z-index: 9998;
-            `;
-            
-            document.body.appendChild(overlay);
-            document.body.appendChild(searchBox);
-            searchBox.focus();
-            
-            // Busca ao digitar
-            searchBox.addEventListener('input', function() {
-                const term = this.value.toLowerCase();
-                rows.forEach(row => {
-                    const text = row.textContent.toLowerCase();
-                    row.style.display = text.includes(term) ? '' : 'none';
-                });
-            });
-            
-            // Fechar ao clicar fora ou ESC
-            overlay.addEventListener('click', () => {
-                overlay.remove();
-                searchBox.remove();
-                rows.forEach(row => row.style.display = '');
-            });
-            
-            searchBox.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    overlay.click();
-                }
-            });
-        }
-    });
-    
-    console.log('✅ Dashboard carregado com sucesso!');
-    console.log('💡 Atalhos disponíveis:');
-    console.log('   - H: Filtrar Hoje');
-    console.log('   - S: Filtrar Semana');
-    console.log('   - M: Filtrar Mês');
-    console.log('   - Ctrl+K: Busca rápida');
-});
 </script>
 {% endblock %}

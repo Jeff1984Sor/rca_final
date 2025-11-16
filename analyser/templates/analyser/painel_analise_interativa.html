@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}Análise Interativa | Caso #{{ caso.id }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="card shadow-lg">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <div>
+                <h3>Análise Interativa do Caso #{{ caso.id }}</h3>
+                <p class="text-muted mb-0">Analisando arquivo com o modelo: <strong>{{ resultado.modelo_usado.nome }}</strong></p>
+            </div>
+            <a href="{% url 'casos:detalhe_caso' pk=caso.id %}" class="btn btn-secondary">Voltar ao Caso</a>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- PAINEL ESQUERDO: PREVIEW DO DOCUMENTO -->
+                <div class="col-md-7">
+                    <div id="preview-panel" style="height: 80vh; border: 1px solid #eee; border-radius: 8px;">
+                        <iframe src="{{ preview_url }}" style="width: 100%; height: 100%; border: none; border-radius: 8px;"></iframe>
+                    </div>
+                </div>
+
+                <!-- PAINEL DIREITO: CAMPOS EXTRAÍDOS -->
+                <div class="col-md-5">
+                    <h4><i class="fa-solid fa-robot"></i> Campos Extraídos</h4>
+                    <ul class="list-group" id="fields-list">
+                        {% for campo in campos_do_modelo %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ campo.label }}
+                                <span id="field-{{ campo.label|slugify }}" class="badge bg-secondary rounded-pill">
+                                    <i class="fa-solid fa-spinner fa-spin"></i>
+                                </span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    
+                    <div class="mt-4">
+                        <h4><i class="fa-solid fa-file-alt"></i> Resumo</h4>
+                        <div id="summary-container" style="white-space: pre-wrap; background: #f8f9fa; padding: 15px; border-radius: 5px; min-height: 100px;">
+                            <i class="fa-solid fa-spinner fa-spin"></i> Aguardando resumo...
+                        </div>
+                    </div>
+                    
+                    <form action="{% url 'analyser:gravar_analise_no_caso' resultado_id=resultado.id %}" method="POST" class="mt-3">
+                        {% csrf_token %}
+                        <button id="gravar-btn" type="submit" class="btn btn-success w-100" disabled>
+                            <i class="fa-solid fa-save"></i> Gravar no Caso
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const resultadoId = "{{ resultado.id }}";
+        const socketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const socket = new WebSocket(
+            socketProtocol + '//' + window.location.host + '/ws/analise/' + resultadoId + '/'
+        );
+
+        socket.onmessage = function(e) {
+            const message = JSON.parse(e.data);
+            const eventType = message.type;
+            const data = message.data;
+
+            if (eventType === 'field_update') {
+                const slug = data.field_label.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+                const fieldSpan = document.getElementById('field-' + slug);
+                if (fieldSpan) {
+                    fieldSpan.innerHTML = `<strong>${data.value}</strong>`;
+                    fieldSpan.classList.remove('bg-secondary');
+                    fieldSpan.classList.add('bg-primary');
+                }
+            }
+            else if (eventType === 'summary_update') {
+                document.getElementById('summary-container').innerText = data.summary;
+            }
+            else if (eventType === 'analysis_complete') {
+                document.getElementById('gravar-btn').disabled = false;
+                document.querySelectorAll('#fields-list .fa-spinner').forEach(spinner => spinner.parentElement.innerHTML = '<span class="text-muted">N/A</span>');
+                const summarySpinner = document.querySelector('#summary-container .fa-spinner');
+                if (summarySpinner) { summarySpinner.parentElement.innerText = 'Nenhum resumo gerado.'; }
+            }
+            else if (eventType === 'analysis_error') {
+                alert('Erro na análise: ' + data.message);
+            }
+        };
+
+        socket.onclose = function(e) {
+            console.error('Conexão WebSocket fechada.');
+        };
+    });
+</script>
+{% endblock %}

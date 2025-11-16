@@ -1,0 +1,39 @@
+{# casos/templates/casos/partials/painel_analyser_erro.html #}
+
+<div style="
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    padding: 40px;
+    border-radius: 16px;
+    color: white;
+    text-align: center;
+">
+    <div style="font-size: 3rem; margin-bottom: 20px;">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+    </div>
+    
+    <h3 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 12px 0;">
+        ⚠️ Erro ao Carregar Analyser
+    </h3>
+    
+    <p style="margin: 0 0 24px 0; opacity: 0.95; font-size: 1rem;">
+        {{ erro }}
+    </p>
+    
+    <button type="button"
+            onclick="location.reload()"
+            style="
+                background: white;
+                color: #f5576c;
+                padding: 12px 28px;
+                border: none;
+                border-radius: 12px;
+                font-weight: 700;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+            ">
+        <i class="fa-solid fa-rotate-right"></i>
+        Tentar Novamente
+    </button>
+</div>

@@ -1,310 +1,181 @@
-{# analyser/templates/analyser/resultado_analise.html #}
 {% extends 'base.html' %}
 
-{% block title %}Resultado da Análise #{{ resultado.id }} | Analyser{% endblock %}
+{% block title %}Resultado da Análise #{{ resultado.id }}{% endblock %}
 
 {% block extra_css %}
 <style>
-:root {
-    --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --primary-solid: #667eea;
-    --success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    --success-solid: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    
-    --gray-50: #f8fafc;
-    --gray-100: #f1f5f9;
-    --gray-200: #e2e8f0;
-    --gray-600: #475569;
-    --gray-700: #334155;
-    --gray-900: #0f172a;
-    
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+body { 
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+    background-attachment: fixed; 
 }
 
-body {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    background-attachment: fixed;
+.container { 
+    max-width: 1200px; 
+    margin: 40px auto; 
+    padding: 0 20px; 
 }
 
-.container {
-    max-width: 1400px;
-    margin: 40px auto;
-    padding: 0 20px;
+.hero-header { 
+    background: rgba(255, 255, 255, 0.95); 
+    backdrop-filter: blur(20px); 
+    border-radius: 24px; 
+    padding: 32px 40px; 
+    margin-bottom: 32px; 
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
-/* HERO */
-.hero-header {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 32px 40px;
-    margin-bottom: 32px;
-    box-shadow: var(--shadow-xl);
+.hero-title { 
+    font-size: 2rem; 
+    font-weight: 800; 
+    color: #0f172a; 
+    margin: 0 0 12px; 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
 }
 
-.hero-title {
-    font-size: 2rem;
-    font-weight: 800;
-    color: var(--gray-900);
-    margin: 0 0 12px;
+.hero-icon { 
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+    width: 50px; 
+    height: 50px; 
+    border-radius: 14px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    color: white; 
+    font-size: 1.3rem; 
+}
+
+.info-badge { 
+    display: inline-flex; 
+    align-items: center; 
+    gap: 8px; 
+    padding: 8px 16px; 
+    background: #f1f5f9; 
+    border-radius: 10px; 
+    font-weight: 600; 
+    color: #334155; 
+}
+
+.main-card { 
+    background: rgba(255, 255, 255, 0.95); 
+    backdrop-filter: blur(20px); 
+    border-radius: 24px; 
+    overflow: hidden; 
+}
+
+.card-section { 
+    padding: 40px; 
+    border-bottom: 1px solid #f1f5f9; 
+}
+
+.card-section:last-child { 
+    border-bottom: none; 
+}
+
+.section-header { 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+    margin-bottom: 24px; 
+}
+
+.section-header i { 
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+    width: 40px; 
+    height: 40px; 
+    border-radius: 12px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    color: white; 
+}
+
+.section-title { 
+    font-size: 1.4rem; 
+    font-weight: 700; 
+    color: #0f172a; 
+    margin: 0; 
+}
+
+.log-container {
+    background-color: #0f172a;
+    color: #e2e8f0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    padding: 20px;
+    border-radius: 12px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.log-entry {
+    margin-bottom: 8px;
     display: flex;
-    align-items: center;
     gap: 12px;
 }
 
-.hero-icon {
-    background: var(--primary);
-    width: 50px;
-    height: 50px;
-    border-radius: 14px;
-    display: flex;
+.log-timestamp {
+    color: #64748b;
+    min-width: 80px;
+}
+
+.log-icon {
+    min-width: 30px;
+}
+
+.btn { 
+    padding: 14px 32px; 
+    border-radius: 12px; 
+    border: none; 
+    font-weight: 700; 
+    font-size: 1rem; 
+    cursor: pointer; 
+    text-decoration: none; 
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.3rem;
+    gap: 10px;
+}
+
+.btn-primary { 
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+    color: white; 
+}
+
+.btn-secondary { 
+    background: #e2e8f0; 
+    color: #475569; 
+}
+
+.btn:hover { 
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
 }
 
 .status-badge {
-    padding: 8px 16px;
-    border-radius: 10px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-weight: 600;
     font-size: 0.9rem;
-    font-weight: 700;
-    text-transform: uppercase;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-}
-
-.status-concluido {
-    background: var(--success);
-    color: white;
+    margin-left: auto;
 }
 
 .status-processando {
-    background: var(--warning);
-    color: white;
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.status-concluido {
+    background: #dcfce7;
+    color: #15803d;
 }
 
 .status-erro {
-    background: var(--danger);
-    color: white;
-}
-
-/* GRID LAYOUT */
-.content-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-}
-
-.card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    box-shadow: var(--shadow-xl);
-    overflow: hidden;
-}
-
-.card-header {
-    padding: 24px 32px;
-    background: var(--gray-50);
-    border-bottom: 3px solid var(--gray-200);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.card-title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: var(--gray-900);
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.card-title i {
-    color: var(--primary-solid);
-}
-
-.card-body {
-    padding: 32px;
-}
-
-/* PREVIEW DOCUMENTO */
-.doc-preview {
-    width: 100%;
-    height: 700px;
-    border: none;
-    border-radius: 12px;
-    background: white;
-}
-
-/* CAMPOS EXTRAÍDOS */
-.campos-list {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    max-height: 700px;
-    overflow-y: auto;
-    padding-right: 8px;
-}
-
-.campo-item {
-    background: var(--gray-50);
-    border: 2px solid var(--gray-200);
-    border-radius: 12px;
-    padding: 16px;
-    transition: all 0.3s;
-}
-
-.campo-item:hover {
-    border-color: var(--primary-solid);
-    box-shadow: var(--shadow-lg);
-}
-
-.campo-label {
-    font-size: 0.85rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--gray-600);
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.campo-label i {
-    color: var(--primary-solid);
-}
-
-.campo-valor {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--gray-900);
-    word-break: break-word;
-}
-
-.campo-valor.empty {
-    color: var(--gray-600);
-    font-style: italic;
-}
-
-/* RESUMO */
-.resumo-box {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border: 2px solid #f59e0b;
-    border-radius: 16px;
-    padding: 24px;
-    margin-top: 24px;
-}
-
-.resumo-title {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #92400e;
-    margin: 0 0 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.resumo-text {
-    color: #78350f;
-    line-height: 1.8;
-    white-space: pre-wrap;
-}
-
-/* FOOTER ACTIONS */
-.actions-footer {
-    background: var(--gray-50);
-    padding: 28px 40px;
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    border-top: 3px solid var(--gray-200);
-}
-
-.btn {
-    padding: 14px 32px;
-    border-radius: 12px;
-    border: none;
-    font-weight: 700;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all 0.3s;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    text-decoration: none;
-    box-shadow: var(--shadow-lg);
-}
-
-.btn:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-xl);
-}
-
-.btn-primary {
-    background: var(--primary);
-    color: white;
-}
-
-.btn-success {
-    background: var(--success);
-    color: white;
-}
-
-.btn-secondary {
-    background: var(--gray-600);
-    color: white;
-}
-
-/* LOGS */
-.logs-container {
-    grid-column: 1 / -1;
-}
-
-.log-item {
-    padding: 12px 16px;
-    border-left: 4px solid var(--gray-200);
-    margin-bottom: 8px;
-    border-radius: 8px;
-    background: var(--gray-50);
-    font-size: 0.9rem;
-}
-
-.log-item.info {
-    border-left-color: #4facfe;
-}
-
-.log-item.success {
-    border-left-color: #10b981;
-}
-
-.log-item.warning {
-    border-left-color: #f59e0b;
-}
-
-.log-item.error {
-    border-left-color: #ef4444;
-}
-
-.log-timestamp {
-    font-weight: 600;
-    color: var(--gray-600);
-    margin-right: 12px;
-}
-
-/* RESPONSIVE */
-@media (max-width: 1200px) {
-    .content-grid {
-        grid-template-columns: 1fr;
-    }
+    background: #fee2e2;
+    color: #991b1b;
 }
 </style>
 {% endblock %}
@@ -312,190 +183,51 @@ body {
 {% block content %}
 <div class="container">
     
-    <!-- HERO -->
+    <!-- HERO HEADER -->
     <div class="hero-header">
         <h1 class="hero-title">
-            <div class="hero-icon">
-                <i class="fa-solid fa-chart-line"></i>
-            </div>
-            <span>Resultado da Análise #{{ resultado.id }}</span>
+            <div class="hero-icon"><i class="fa-solid fa-clipboard-check"></i></div>
+            <span>Resultado da Análise</span>
         </h1>
-        
-        <div style="display: flex; gap: 16px; align-items: center; margin-top: 16px;">
-            <span class="status-badge {% if resultado.status == 'CONCLUIDO' %}status-concluido{% elif resultado.status == 'ERRO' %}status-erro{% else %}status-processando{% endif %}">
-                {% if resultado.status == 'CONCLUIDO' %}
-                    <i class="fa-solid fa-check-circle"></i> Concluído
-                {% elif resultado.status == 'ERRO' %}
-                    <i class="fa-solid fa-times-circle"></i> Erro
-                {% else %}
+        <div style="display: flex; gap: 12px;">
+            <div class="info-badge"><i class="fa-solid fa-hashtag"></i> #{{ resultado.id }}</div>
+            <div class="info-badge"><i class="fa-solid fa-file-invoice"></i> Caso #{{ caso.id }}</div>
+        </div>
+    </div>
+
+    <!-- ÁREA DE LOGS -->
+    <div class="main-card">
+        <div class="card-section" 
+             id="log-container"
+             hx-get="{% url 'analyser:carregar_logs' resultado_id=resultado.id %}"
+             hx-trigger="load, every 3s"
+             hx-swap="innerHTML">
+            
+            <!-- Estado inicial de carregamento -->
+            <div class="section-header">
+                <i class="fa-solid fa-terminal"></i>
+                <h2 class="section-title">Log de Execução</h2>
+                <span class="status-badge status-processando">
                     <i class="fa-solid fa-spinner fa-spin"></i> Processando
-                {% endif %}
-            </span>
-            
-            <span style="color: var(--gray-600);">
-                <i class="fa-solid fa-calendar"></i>
-                {{ resultado.data_criacao|date:"d/m/Y H:i" }}
-            </span>
-            
-            {% if resultado.tempo_processamento %}
-                <span style="color: var(--gray-600);">
-                    <i class="fa-solid fa-clock"></i>
-                    {{ resultado.tempo_processamento }}
                 </span>
-            {% endif %}
+            </div>
+            
+            <div class="log-container">
+                <div class="log-entry">
+                    <span class="log-timestamp">[--:--:--]</span>
+                    <span class="log-icon" style="color: #3b82f6;">ℹ️</span>
+                    <span><i class="fa-solid fa-spinner fa-spin"></i> Carregando logs...</span>
+                </div>
+            </div>
         </div>
     </div>
     
-    <!-- CONTEÚDO -->
-    {% if resultado.status == 'CONCLUIDO' %}
-        <div class="content-grid">
-            
-            <!-- PREVIEW DO DOCUMENTO -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fa-solid fa-file-pdf"></i>
-                        Documento Analisado
-                    </h2>
-                </div>
-                <div class="card-body">
-                    {% if resultado.arquivos_analisados %}
-                        <div style="margin-bottom: 16px;">
-                            <strong>Arquivo:</strong> {{ resultado.arquivos_analisados.0.nome }}
-                        </div>
-                        <!-- TODO: Iframe com preview do documento -->
-                        <iframe src="about:blank" class="doc-preview"></iframe>
-                    {% else %}
-                        <p style="color: var(--gray-600); text-align: center; padding: 40px;">
-                            Nenhum arquivo disponível para preview
-                        </p>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <!-- CAMPOS EXTRAÍDOS -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fa-solid fa-list-check"></i>
-                        Dados Extraídos
-                    </h2>
-                    <span style="background: var(--success); color: white; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 0.85rem;">
-                        {{ resultado.dados_extraidos|length }} campo(s)
-                    </span>
-                </div>
-                <div class="card-body">
-                    <div class="campos-list">
-                        {% for campo_nome, valor in resultado.dados_extraidos.items %}
-                            <div class="campo-item">
-                                <div class="campo-label">
-                                    <i class="fa-solid fa-tag"></i>
-                                    {{ campo_nome }}
-                                </div>
-                                <div class="campo-valor {% if not valor or valor == 'Não encontrado' %}empty{% endif %}">
-                                    {{ valor|default:"Não encontrado" }}
-                                </div>
-                            </div>
-                        {% empty %}
-                            <p style="text-align: center; color: var(--gray-600);">
-                                Nenhum dado extraído
-                            </p>
-                        {% endfor %}
-                    </div>
-                    
-                    <!-- RESUMO -->
-                    {% if resultado.resumo_caso %}
-                        <div class="resumo-box">
-                            <h3 class="resumo-title">
-                                <i class="fa-solid fa-file-text"></i>
-                                Resumo Executivo do Caso
-                            </h3>
-                            <div class="resumo-text">{{ resultado.resumo_caso }}</div>
-                        </div>
-                    {% endif %}
-                </div>
-                
-                <!-- ACTIONS -->
-                <div class="actions-footer">
-                    <a href="{% url 'casos:detalhe_caso' pk=caso.id %}" class="btn btn-secondary">
-                        <i class="fa-solid fa-arrow-left"></i>
-                        Voltar ao Caso
-                    </a>
-                    
-                    {% if not resultado.aplicado_ao_caso %}
-                        <form method="POST" action="{% url 'analyser:aplicar_ao_caso' resultado_id=resultado.id %}" style="margin: 0;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-success">
-                                <i class="fa-solid fa-check-double"></i>
-                                Aplicar ao Caso
-                            </button>
-                        </form>
-                    {% else %}
-                        <div style="color: var(--success-solid); font-weight: 700; display: flex; align-items: center; gap: 8px;">
-                            <i class="fa-solid fa-check-circle"></i>
-                            Já aplicado ao caso em {{ resultado.data_aplicacao|date:"d/m/Y H:i" }}
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <!-- LOGS -->
-            <div class="card logs-container">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fa-solid fa-terminal"></i>
-                        Logs do Processamento
-                    </h2>
-                </div>
-                <div class="card-body">
-                    {% for log in logs %}
-                        <div class="log-item {{ log.nivel|lower }}">
-                            <span class="log-timestamp">{{ log.timestamp|date:"H:i:s" }}</span>
-                            <span>{{ log.mensagem }}</span>
-                        </div>
-                    {% empty %}
-                        <p style="color: var(--gray-600); text-align: center;">
-                            Nenhum log disponível
-                        </p>
-                    {% endfor %}
-                </div>
-            </div>
-            
-        </div>
-    {% elif resultado.status == 'ERRO' %}
-        <div class="card">
-            <div class="card-body" style="text-align: center; padding: 60px;">
-                <i class="fa-solid fa-exclamation-triangle" style="font-size: 4rem; color: var(--danger); margin-bottom: 20px;"></i>
-                <h2 style="color: var(--gray-900); margin-bottom: 12px;">Erro no Processamento</h2>
-                <p style="color: var(--gray-600);">{{ resultado.mensagem_erro }}</p>
-                <a href="{% url 'analyser:selecionar_arquivos' caso_id=caso.id %}" class="btn btn-primary" style="margin-top: 20px;">
-                    <i class="fa-solid fa-redo"></i>
-                    Tentar Novamente
-                </a>
-            </div>
-        </div>
-    {% else %}
-        <div class="card">
-            <div class="card-body" style="text-align: center; padding: 60px;">
-                <i class="fa-solid fa-spinner fa-spin" style="font-size: 4rem; color: var(--primary-solid); margin-bottom: 20px;"></i>
-                <h2 style="color: var(--gray-900); margin-bottom: 12px;">Processando Análise...</h2>
-                <p style="color: var(--gray-600);">Aguarde enquanto a IA analisa os documentos.</p>
-            </div>
-        </div>
-        
-        <script>
-            // Atualiza status a cada 3 segundos
-            setInterval(function() {
-                fetch('{% url "analyser:ajax_status_analise" resultado_id=resultado.id %}')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status !== 'PROCESSANDO') {
-                            location.reload();
-                        }
-                    });
-            }, 3000);
-        </script>
-    {% endif %}
-    
+    <!-- BOTÕES DE AÇÃO -->
+    <div style="margin-top: 32px; display: flex; gap: 16px; justify-content: center;">
+        <a href="{% url 'casos:detalhe_caso' pk=caso.id %}" class="btn btn-secondary">
+            <i class="fa-solid fa-arrow-left"></i> Voltar ao Caso
+        </a>
+    </div>
+
 </div>
 {% endblock %}

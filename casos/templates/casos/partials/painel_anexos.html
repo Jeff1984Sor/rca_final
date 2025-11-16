@@ -1,0 +1,146 @@
+{% load file_icons humanize %}
+
+<div class="sharepoint-anexos-container">
+    
+    {% if folder_id != root_folder_id %}
+    <div class="sp-breadcrumb">
+        <button class="btn btn-sm btn-outline-primary"
+                hx-get="{% url 'casos:carregar_painel_anexos' pk=caso.pk %}"
+                hx-target="#anexos-content"
+                hx-swap="innerHTML">
+            <i class="fa-solid fa-home"></i> Voltar para Raiz
+        </button>
+        
+        <span class="sp-breadcrumb-path">
+            <i class="fa-solid fa-chevron-right"></i>
+            {{ folder_name }}
+        </span>
+    </div>
+    {% endif %}
+    <!-- Barra de Ferramentas -->
+    <div class="sp-toolbar">
+        <div class="sp-folder-nav">
+            <i class="fa-solid fa-folder-tree"></i>
+            <span class="sp-current-folder">Caso #{{ caso.id }} - Anexos</span>
+        </div>
+        
+        <button class="btn btn-sm btn-outline-secondary sp-refresh-btn"
+                hx-get="{% url 'casos:carregar_painel_anexos' pk=caso.pk %}"
+                hx-target="#anexos-content"
+                hx-swap="innerHTML">
+            <i class="fa-solid fa-sync"></i> Atualizar
+        </button>
+    </div>
+
+    <!-- Formulário de Upload -->
+    <div class="sp-upload-section">
+        <form class="sp-upload-form"
+              hx-post="{% url 'casos:upload_arquivo_sharepoint' caso_pk=caso.pk %}"
+              hx-target="#anexos-content"
+              hx-swap="innerHTML"
+              hx-encoding="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="pasta_id" value="{{ folder_id }}">
+            
+            <label for="file-upload-{{ caso.pk }}" class="sp-file-label">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                Selecionar Arquivos
+            </label>
+            
+            <input id="file-upload-{{ caso.pk }}" 
+                   name="arquivo" 
+                   type="file" 
+                   multiple 
+                   class="sp-file-input">
+            
+            <button type="submit" class="btn btn-success sp-upload-btn">
+                <i class="fa-solid fa-upload"></i> Enviar
+            </button>
+            
+            <div class="sp-file-preview"></div>
+        </form>
+    </div>
+
+    <!-- Criar Nova Pasta (CAMPO MAIOR) -->
+    <div class="sp-newfolder-section">
+        <form class="sp-newfolder-form"
+              hx-post="{% url 'casos:criar_pasta_sharepoint' caso_pk=caso.pk %}"
+              hx-target="#anexos-content"
+              hx-swap="innerHTML">
+            {% csrf_token %}
+            <input type="text" 
+                   name="nome_pasta" 
+                   class="form-control sp-folder-input-large" 
+                   placeholder="Digite o nome da nova pasta..." 
+                   required>
+            <button type="submit" class="btn btn-warning sp-create-folder-btn">
+                <i class="fa-solid fa-folder-plus"></i> Criar Pasta
+            </button>
+        </form>
+    </div>
+
+    <hr class="sp-divider">
+
+    <!-- Grid de Arquivos e Pastas -->
+    <div class="sp-file-grid">
+        {% for item in itens %}
+            <div class="sp-grid-item">
+                {% if item.folder %}
+                    {# PASTA - Clicável #}
+                    <button class="sp-item-link sp-folder-item sp-folder-btn"
+                            hx-get="{% url 'casos:carregar_conteudo_pasta' folder_id=item.id %}?caso_pk={{ caso.pk }}&root_folder_id={{ root_folder_id }}"
+                            hx-target="#anexos-content"
+                            hx-swap="innerHTML"
+                            type="button">
+                        <div class="sp-icon-container sp-folder-icon">
+                            <i class="fa-solid fa-folder"></i>
+                        </div>
+                        <span class="sp-item-name" title="{{ item.name }}">{{ item.name }}</span>
+                    </button>
+                {% else %}
+                    {# ARQUIVO - Com 3 botões #}
+                    <div class="sp-file-card">
+                        <div class="sp-file-icon-wrapper">
+                            {{ item.name|get_file_icon|safe }}
+                        </div>
+                        <span class="sp-item-name" title="{{ item.name }}">{{ item.name }}</span>
+                        <span class="sp-item-size">{{ item.size|filesizeformat }}</span>
+                        
+                        {# Botões de Ação #}
+                        <div class="sp-file-actions">
+                            <a href="{{ item.webUrl }}" 
+                               target="_blank" 
+                               class="sp-action-btn sp-btn-open"
+                               title="Abrir">
+                                <i class="fa-solid fa-eye"></i>
+                            </a>
+                            
+                            <a href="{% url 'casos:baixar_arquivo_sharepoint' caso_pk=caso.pk arquivo_id=item.id %}" 
+                               class="sp-action-btn sp-btn-download"
+                               title="Baixar">
+                                <i class="fa-solid fa-download"></i>
+                            </a>
+                            
+                            <button type="button"
+                                    class="sp-action-btn sp-btn-delete"
+                                    hx-post="{% url 'casos:deletar_arquivo_sharepoint' caso_pk=caso.pk %}?arquivo_id={{ item.id }}"
+                                    hx-target="#anexos-content"
+                                    hx-swap="innerHTML"
+                                    hx-confirm="Tem certeza que deseja excluir '{{ item.name }}'?"
+                                    title="Deletar">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        {% empty %}
+            <div class="sp-empty-state">
+                <i class="fa-solid fa-folder-open"></i>
+                <h3>Pasta Vazia</h3>
+                <p>Nenhum anexo encontrado. Faça upload do primeiro arquivo acima.</p>
+            </div>
+        {% endfor %}
+    </div>
+
+</div>

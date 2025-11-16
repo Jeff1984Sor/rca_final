@@ -1,0 +1,12 @@
+<div class="empty-state">
+    <i class="fa-solid fa-folder-plus"></i>
+    <h3>Pasta de Anexos não encontrada</h3>
+    <p>A pasta para este caso ainda não existe no SharePoint. Clique no botão abaixo para criá-la.</p>
+    <button class="btn btn-primary mt-3"
+            hx-post="{% url 'casos:criar_pasta_para_caso' pk=caso.pk %}"
+            hx-target="#anexos-content"
+            hx-swap="innerHTML">
+        <i class="fa-solid fa-hammer"></i>
+        Criar Estrutura de Pastas
+    </button>
+</div>

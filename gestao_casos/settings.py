@@ -36,6 +36,7 @@ INSTALLED_APPS = [
 
     # Apps de terceiros
     'django_htmx',
+    'daphne',
     'nested_admin',
     'rest_framework',
     'rest_framework.authtoken',  # Adicionado para a autenticação da API (n8n)
@@ -58,6 +59,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',  # Para formatação amigável de números e datas
+    'channels',
     
 
 ]
@@ -107,6 +110,22 @@ MIDDLEWARE = [
     'django_htmx.middleware.HtmxMiddleware',
 ]
 
+ASGI_APPLICATION = 'gestao_casos.asgi.application'
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
+
+STATIC_URL = '/static/'
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
 
 # ==============================================================================
 # 4. URLs e Aplicação WSGI

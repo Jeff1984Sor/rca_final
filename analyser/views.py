@@ -1,311 +1,416 @@
-# analyser/views.py
+# analyser/views.py - CORRIGIDO COM IMPORTS CERTOS
 
 import logging
 import json
-import traceback
-
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
-
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.utils import timezone
 from casos.models import Caso
-from .models import ModeloAnalise, ResultadoAnalise
+from .models import ResultadoAnalise, LogAnalise, ModeloAnalise
 from .services import AnalyserService
-from clientes.models import Cliente
-from produtos.models import Produto
-from campos_custom.models import EstruturaDeCampos
+from integrations.sharepoint import SharePoint
+from clientes.models import Cliente  # ✅ CORRIGIDO
+from produtos.models import Produto  # ✅ CORRIGIDO
+from campos_custom.models import CampoPersonalizado
+from django.contrib import messages
+
 
 logger = logging.getLogger(__name__)
 
 
 @login_required
+@require_http_methods(["GET"])
+def selecionar_arquivos(request, caso_id):
+    """Página para seleção de arquivos e modelo para análise."""
+    caso = get_object_or_404(Caso, id=caso_id)
+    modelos = ModeloAnalise.objects.filter(ativo=True)
+    
+    try:
+        sp = SharePoint()
+        # Lista arquivos da RAIZ do SharePoint
+        itens = sp.listar_arquivos_pasta_raiz()
+        
+        logger.info(f"📁 Encontrados {len(itens)} itens na raiz para o caso #{caso.id}")
+        
+    except Exception as e:
+        logger.error(f"Erro ao listar arquivos do caso: {e}", exc_info=True)
+        itens = []
+    
+    context = {
+        'caso': caso,
+        'modelos': modelos,
+        'itens': itens,
+    }
+    return render(request, 'analyser/selecionar_arquivos.html', context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def carregar_arquivos_navegacao(request, caso_id):
+    """HTMX - Carrega arquivos de uma subpasta."""
+    folder_id = request.GET.get('folder_id')
+    caso = get_object_or_404(Caso, id=caso_id)
+    
+    sp = SharePoint()
+    itens = sp.listar_arquivos_pasta(folder_id) if folder_id else sp.listar_arquivos_pasta_raiz()
+    
+    context = {'itens': itens, 'caso': caso}
+    return render(request, 'analyser/partials/_file_grid.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def iniciar_analise(request, caso_id):
+    """Inicia a análise com os arquivos selecionados."""
+    caso = get_object_or_404(Caso, id=caso_id)
+    
+    modelo_id = request.POST.get('modelo_id')
+    arquivos_ids = request.POST.getlist('arquivos_selecionados')
+    
+    if not modelo_id or not arquivos_ids:
+        return JsonResponse({
+            'type': 'log',
+            'data': {'level': 'ERROR', 'message': '❌ Selecione um modelo e pelo menos um arquivo.'}
+        })
+    
+    modelo = get_object_or_404(ModeloAnalise, id=modelo_id)
+    sp = SharePoint()
+    
+    # Prepara informações dos arquivos
+    arquivos_info = []
+    for arquivo_id in arquivos_ids:
+        item = sp.get_item_details(arquivo_id)
+        arquivos_info.append({
+            'id': arquivo_id,
+            'name': item.get('name', 'desconhecido'),
+            'type': item.get('file', {}).get('mimeType', 'application/pdf'),
+        })
+    
+    # Cria resultado de análise
+    resultado = ResultadoAnalise.objects.create(
+        caso=caso,
+        modelo_usado=modelo,
+        arquivos_analisados=arquivos_info,
+        status='PROCESSANDO',
+        criado_por=request.user
+    )
+    
+    # Inicia análise em background
+    try:
+        service = AnalyserService(caso, modelo, arquivos_info, request.user, resultado.id)
+        service.executar_analise()
+    except Exception as e:
+        logger.error(f"Erro ao iniciar análise: {e}")
+        resultado.status = 'ERRO'
+        resultado.mensagem_erro = str(e)
+        resultado.save()
+    
+    # Redireciona para resultado
+    return redirect('analyser:resultado_analise', resultado_id=resultado.id)
+
+
+@login_required
+@require_http_methods(["GET"])
+def resultado_analise(request, resultado_id):
+    """Página com o resultado da análise e logs."""
+    resultado = get_object_or_404(ResultadoAnalise, id=resultado_id)
+    caso = resultado.caso
+    
+    context = {
+        'resultado': resultado,
+        'caso': caso,
+    }
+    return render(request, 'analyser/resultado_analise.html', context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def carregar_logs(request, resultado_id):
+    """HTMX - Carrega e atualiza os logs da análise."""
+    resultado = get_object_or_404(ResultadoAnalise, id=resultado_id)
+    logs = resultado.logs.all().order_by('timestamp')
+    
+    context = {
+        'resultado': resultado,
+        'logs': logs,
+    }
+    return render(request, 'analyser/partials/lista_logs.html', context)
+
+
+@login_required
+@require_http_methods(["GET"])
 def listar_modelos(request):
-    """Lista modelos de análise."""
-    modelos = ModeloAnalise.objects.select_related('cliente', 'produto').order_by('-data_criacao')
+    """Lista todos os modelos de análise."""
+    modelos = ModeloAnalise.objects.all().order_by('-data_criacao')
+    
     context = {'modelos': modelos}
     return render(request, 'analyser/listar_modelos.html', context)
 
 
 @login_required
-def criar_ou_editar_modelo(request, pk=None):
-    """Cria um novo modelo ou edita um existente."""
-    modelo = get_object_or_404(ModeloAnalise, pk=pk) if pk else None
-
+@require_http_methods(["GET", "POST"])
+def criar_modelo(request):
+    """Cria um novo modelo de análise."""
     if request.method == 'POST':
+        nome = request.POST.get('nome')
+        descricao = request.POST.get('descricao', '')
+        cliente_id = request.POST.get('cliente')
+        produto_id = request.POST.get('produto')
+        instrucoes = request.POST.get('instrucoes_gerais', '')
+        gerar_resumo = request.POST.get('gerar_resumo') == 'on'
+        
+        cliente = get_object_or_404(Cliente, id=cliente_id)
+        produto = get_object_or_404(Produto, id=produto_id)
+        
+        # Verifica se já existe um modelo com este nome
+        if ModeloAnalise.objects.filter(nome=nome, cliente=cliente, produto=produto).exists():
+            messages.error(request, f"❌ Já existe um modelo chamado '{nome}' para {cliente.nome} - {produto.nome}. Use um nome diferente!")
+            return redirect('analyser:criar_modelo')
+        
         try:
-            nome = request.POST.get('nome')
-            cliente_id = request.POST.get('cliente')
-            produto_id = request.POST.get('produto')
-
-            if not all([nome, cliente_id, produto_id]):
-                raise ValueError("Nome, Cliente e Produto são obrigatórios.")
-
-            descricoes_campos = {
-                key.replace('descricao_', ''): value.strip()
-                for key, value in request.POST.items() if key.startswith('descricao_') and value.strip()
-            }
-
-            fields_to_update = {
-                'nome': nome,
-                'descricao': request.POST.get('descricao', ''),
-                'cliente_id': cliente_id,
-                'produto_id': produto_id,
-                'instrucoes_gerais': request.POST.get('instrucoes_gerais', ''),
-                'gerar_resumo': request.POST.get('gerar_resumo') == 'on',
-                'descricoes_campos': descricoes_campos,
-                'criado_por': request.user if not modelo else modelo.criado_por
-            }
-
-            if modelo:
-                for key, value in fields_to_update.items():
-                    setattr(modelo, key, value)
-                modelo.save()
-                messages.success(request, f'✅ Modelo "{modelo.nome}" atualizado com sucesso!')
-            else:
-                modelo = ModeloAnalise.objects.create(**fields_to_update)
-                messages.success(request, f'✅ Modelo "{modelo.nome}" criado com sucesso!')
+            modelo = ModeloAnalise.objects.create(
+                nome=nome,
+                descricao=descricao,
+                cliente=cliente,
+                produto=produto,
+                instrucoes_gerais=instrucoes,
+                gerar_resumo=gerar_resumo,
+                criado_por=request.user
+            )
             
+            # Salva descrições dos campos
+            descricoes = {}
+            for chave, valor in request.POST.items():
+                if chave.startswith('descricao_') and chave != 'descricao':
+                    nome_variavel = chave.replace('descricao_', '')
+                    descricoes[nome_variavel] = valor
+            
+            modelo.descricoes_campos = descricoes
+            modelo.save()
+            
+            logger.info(f"✅ Modelo '{nome}' criado com sucesso")
+            messages.success(request, f"✅ Modelo '{nome}' criado com sucesso!")
             return redirect('analyser:listar_modelos')
+            
         except Exception as e:
-            messages.error(request, f"❌ Erro ao salvar o modelo: {e}")
-
+            logger.error(f"❌ Erro ao criar modelo: {e}")
+            messages.error(request, f"❌ Erro ao criar modelo: {str(e)}")
+            return redirect('analyser:criar_modelo')
+    
+    clientes = Cliente.objects.all()
+    produtos = Produto.objects.all()
+    
     context = {
-        'modelo': modelo,
-        'campos': modelo.get_campos_para_extrair() if modelo else [],
-        'clientes': Cliente.objects.all().order_by('nome'),
-        'produtos': Produto.objects.all().order_by('nome'),
+        'clientes': clientes,
+        'produtos': produtos,
     }
     return render(request, 'analyser/criar_modelo.html', context)
 
 
 @login_required
+@require_http_methods(["GET", "POST"])
+def editar_modelo(request, pk):
+    """Edita um modelo existente."""
+    modelo = get_object_or_404(ModeloAnalise, id=pk)
+    
+    if request.method == 'POST':
+        modelo.nome = request.POST.get('nome')
+        modelo.descricao = request.POST.get('descricao', '')
+        modelo.instrucoes_gerais = request.POST.get('instrucoes_gerais', '')
+        modelo.gerar_resumo = request.POST.get('gerar_resumo') == 'on'
+        
+        descricoes = {}
+        
+        # Percorre todos os dados POST procurando por descricao_*
+        for chave, valor in request.POST.items():
+            if chave.startswith('descricao_') and chave != 'descricao':
+                nome_variavel = chave.replace('descricao_', '')
+                descricoes[nome_variavel] = valor
+        
+        modelo.descricoes_campos = descricoes
+        modelo.save()
+        
+        logger.info(f"✅ Modelo '{modelo.nome}' atualizado com sucesso")
+        return redirect('analyser:listar_modelos')
+    
+    clientes = Cliente.objects.all()
+    produtos = Produto.objects.all()
+    
+    context = {
+        'modelo': modelo,
+        'clientes': clientes,
+        'produtos': produtos,
+    }
+    return render(request, 'analyser/criar_modelo.html', context)
+
+@login_required
+@require_http_methods(["POST"])
+def deletar_modelo(request, pk):
+    """Deleta um modelo de análise."""
+    modelo = get_object_or_404(ModeloAnalise, id=pk)
+    modelo.delete()
+    return redirect('analyser:listar_modelos')
+
+
+@login_required
+@require_http_methods(["GET"])
 def ajax_buscar_campos(request):
-    """
-    AJAX: Retorna uma lista padronizada de campos (padrão + personalizados)
-    para um determinado Cliente e Produto.
-    """
+    """AJAX - Busca campos para um cliente e produto."""
     cliente_id = request.GET.get('cliente_id')
     produto_id = request.GET.get('produto_id')
     
-    if not cliente_id or not produto_id:
-        return JsonResponse({'campos': []})
+    logger.info(f"🔍 Buscando campos - Cliente: {cliente_id}, Produto: {produto_id}")
     
-    # --- 1. Define os campos padrão do sistema ---
-    campos = [
-        {'nome_variavel': 'titulo', 'nome_campo': 'Título do Caso', 'tipo_campo': 'TEXTO', 'is_padrao': True},
-        {'nome_variavel': 'data_entrada', 'nome_campo': 'Data de Entrada', 'tipo_campo': 'DATA', 'is_padrao': True},
-        {'nome_variavel': 'valor_apurado', 'nome_campo': 'Valor Apurado', 'tipo_campo': 'MOEDA', 'is_padrao': True},
-    ]
-    
-    # --- 2. Busca e adiciona os campos personalizados ---
     try:
-        # prefetch_related('campos') otimiza a consulta, buscando todos os campos
-        # relacionados em uma única query adicional, evitando o problema N+1.
-        estrutura = EstruturaDeCampos.objects.prefetch_related('campos').get(
-            cliente_id=cliente_id, 
+        from campos_custom.models import EstruturaDeCampos
+        
+        # Busca a Estrutura de Campos para este cliente e produto
+        estrutura = EstruturaDeCampos.objects.filter(
+            cliente_id=cliente_id,
             produto_id=produto_id
-        )
+        ).first()
         
-        # Itera sobre os campos já carregados em memória
-        for campo in estrutura.campos.all():
-            campos.append({
-                'nome_variavel': campo.nome_variavel,
-                'nome_campo': campo.nome_campo,
-                'tipo_campo': campo.tipo_campo,
-                'is_padrao': False,
-                'campo_id': campo.id  # Mantém o ID se for útil no frontend
-            })
-            
-    except EstruturaDeCampos.DoesNotExist:
-        # Se não houver estrutura, a função simplesmente retornará os campos padrão.
-        pass
-    
-    # --- 3. Retorna a lista completa como JSON ---
-    return JsonResponse({'campos': campos})
-
-@login_required
-def selecionar_arquivos(request, caso_id):
-    """Tela para selecionar arquivos e modelo para análise."""
-    caso = get_object_or_404(Caso, pk=caso_id)
-    modelos = ModeloAnalise.objects.filter(
-        cliente=caso.cliente, produto=caso.produto, ativo=True
-    ).order_by('nome')
-    analises_anteriores = ResultadoAnalise.objects.filter(caso=caso).order_by('-data_criacao')[:5]
-    
-    context = {
-        'caso': caso,
-        'modelos': modelos,
-        'tem_modelos': modelos.exists(),
-        'analises_anteriores': analises_anteriores,
-    }
-    return render(request, 'analyser/selecionar_arquivos.html', context)
-
-
-# analyser/views.py
-
-@login_required
-def iniciar_analise(request, caso_id):
-    """
-    Valida os dados do formulário e dispara o processo de análise.
-    """
-    if request.method != 'POST':
-        return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
-
-    logger.info(f"🚀 [VIEW: iniciar_analise] - Requisição recebida para Caso ID: {caso_id} por {request.user.username}")
-
-    caso = get_object_or_404(Caso, pk=caso_id)
-    modelo_id = request.POST.get('modelo_id')
-    arquivos_json_str = request.POST.get('arquivos_selecionados_ids')
-
-    logger.info(f"📋 Dados recebidos: Modelo ID={modelo_id}, Arquivos JSON='{arquivos_json_str}'")
-
-    # --- 1. Validação dos Dados de Entrada ---
-    try:
-        if not modelo_id or not arquivos_json_str:
-            raise ValueError("Modelo e arquivos são obrigatórios.")
+        if not estrutura:
+            logger.warning(f"⚠️ Nenhuma estrutura encontrada para Cliente {cliente_id}, Produto {produto_id}")
+            return JsonResponse({'campos': []})
         
-        modelo = get_object_or_404(ModeloAnalise, pk=modelo_id)
-        arquivos_info = json.loads(arquivos_json_str)
+        # Busca os campos da estrutura
+        campos = estrutura.campos.all().values('id', 'nome_campo', 'nome_variavel', 'tipo_campo')
         
-        if not isinstance(arquivos_info, list) or not arquivos_info:
-            raise ValueError("A lista de arquivos selecionados é inválida ou está vazia.")
-
-    except (ValueError, json.JSONDecodeError, ModeloAnalise.DoesNotExist) as e:
-        logger.error(f"❌ Erro de validação na entrada: {e}")
-        messages.error(request, f"Erro nos dados enviados: {e}")
-        return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
-
-    # --- 2. Disparar a Análise ---
-    try:
-        logger.info(f"✅ Dados validados. Modelo: '{modelo.nome}', Arquivos: {len(arquivos_info)}. Disparando análise...")
-
-        # =================================================================
-        # PONTO DE MELHORIA FUTURA: Mover para uma tarefa Celery
-        # from .tasks import executar_analise_task
-        # executar_analise_task.delay(caso.id, modelo.id, arquivos_info, request.user.id)
-        # =================================================================
+        campos_list = list(campos)
+        logger.info(f"✅ Encontrados {len(campos_list)} campos")
         
-        # Por enquanto, executamos diretamente (sincronamente)
-        service = AnalyserService(
-            caso=caso,
-            modelo_analise=modelo,
-            arquivos_selecionados=arquivos_info,
-            usuario=request.user
-        )
-        resultado = service.executar_analise()
+        return JsonResponse({'campos': campos_list})
         
-        # --- 3. Tratar o Resultado da Execução Síncrona ---
-        if resultado.status == 'CONCLUIDO':
-            logger.info(f"✅ SUCESSO: Análise síncrona concluída. Redirecionando para resultado ID: {resultado.id}")
-            messages.success(request, f"Análise com o modelo '{modelo.nome}' foi concluída com sucesso!")
-            return redirect('analyser:resultado_analise', resultado_id=resultado.id)
-        else:
-            logger.error(f"❌ FALHA: Análise síncrona terminou com status '{resultado.status}'. Mensagem: {resultado.mensagem_erro}")
-            messages.error(request, f"A análise falhou: {resultado.mensagem_erro}")
-            return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
-
     except Exception as e:
-        logger.error(f"❌ Erro inesperado ao instanciar ou executar o AnalyserService: {e}", exc_info=True)
-        messages.error(request, f"Ocorreu um erro inesperado ao iniciar a análise: {e}")
-        return redirect('analyser:selecionar_arquivos', caso_id=caso_id)
-
-@login_required
-def carregar_arquivos_sharepoint(request, caso_id):
-    """
-    View para o HTMX buscar e renderizar a árvore de arquivos do SharePoint.
-    Agora suporta carregar conteúdo de subpastas.
-    """
-    caso = get_object_or_404(Caso, pk=caso_id)
-    
-    # Pega o ID da pasta da URL (se for uma subpasta) ou usa a raiz do caso
-    folder_id = request.GET.get('folder_id', caso.sharepoint_folder_id)
-
-    if not folder_id:
-        return HttpResponse("<div class='alert alert-warning'>⚠️ Este caso não possui uma pasta no SharePoint.</div>")
-
-    try:
-        from integrations.sharepoint import SharePoint
-        sp = SharePoint()
-        conteudo = sp.listar_conteudo_pasta(folder_id)
-
-        pastas = []
-        arquivos = []
-        for item in conteudo:
-            # Formata o item para o template
-            tipo = item.get('file', {}).get('mimeType', '')
-            icona_css, cor_css = "fa-solid fa-file", "#64748b"
-            if 'folder' in item:
-                icona_css, cor_css = "fa-solid fa-folder", "#f59e0b"
-            elif 'pdf' in tipo: icona_css, cor_css = "fa-solid fa-file-pdf", "#ef4444"
-            elif 'word' in tipo: icona_css, cor_css = "fa-solid fa-file-word", "#2563eb"
-            # ... adicione mais tipos se precisar
-
-            item_formatado = {
-                'id': item['id'],
-                'name': item['name'],
-                'is_folder': 'folder' in item,
-                'icona_css': icona_css,
-                'cor_css': cor_css
-            }
-            
-            if item_formatado['is_folder']:
-                pastas.append(item_formatado)
-            else:
-                arquivos.append(item_formatado)
-
-    except Exception as e:
-        return HttpResponse(f"<div class='alert alert-warning'>❌ Erro ao conectar com o SharePoint: {e}</div>")
-        
-    context = {
-        'pastas': sorted(pastas, key=lambda p: p['name']),
-        'arquivos': sorted(arquivos, key=lambda a: a['name']),
-        'caso_id': caso_id,
-    }
-    return render(request, 'analyser/partials/arvore_arquivos.html', context)
-@login_required
-def resultado_analise(request, resultado_id):
-    """Exibe resultado de uma análise."""
-    resultado = get_object_or_404(ResultadoAnalise.objects.select_related('caso', 'modelo_usado'), pk=resultado_id)
-    logs = resultado.logs.all().order_by('timestamp')
-    context = {'resultado': resultado, 'caso': resultado.caso, 'logs': logs}
-    return render(request, 'analyser/resultado_analise.html', context)
+        logger.error(f"❌ Erro ao buscar campos: {e}", exc_info=True)
+        return JsonResponse({
+            'campos': [],
+            'error': str(e)
+        }, status=400)
 
 
 @login_required
+@require_http_methods(["POST"])
 def aplicar_ao_caso(request, resultado_id):
-    """Aplica dados extraídos por uma análise ao caso."""
-    resultado = get_object_or_404(ResultadoAnalise, pk=resultado_id)
+    """Aplica os dados da análise ao caso."""
+    resultado = get_object_or_404(ResultadoAnalise, id=resultado_id)
     
-    if resultado.status != 'CONCLUIDO' or resultado.aplicado_ao_caso:
-        messages.warning(request, 'Esta análise não pode ser (ou já foi) aplicada.')
-        return redirect('analyser:resultado_analise', resultado_id=resultado.id)
+    if resultado.status != 'CONCLUIDO':
+        logger.warning(f"❌ Tentativa de aplicar análise não concluída: {resultado_id}")
+        return JsonResponse({
+            'error': 'Análise não foi concluída. Status atual: ' + resultado.status
+        }, status=400)
     
     try:
+        logger.info(f"📊 Aplicando dados da análise #{resultado_id} ao caso #{resultado.caso.id}...")
+        
         service = AnalyserService(
-            caso=resultado.caso,
-            modelo_analise=resultado.modelo_usado,
-            arquivos_selecionados=resultado.arquivos_analisados,
-            usuario=request.user
+            resultado.caso,
+            resultado.modelo_usado,
+            resultado.arquivos_analisados,
+            request.user,
+            resultado.id
         )
-        service.resultado = resultado # Atribui o resultado existente ao service
+        
+        # Aplica os dados
         service.aplicar_ao_caso()
         
-        messages.success(request, f'✅ Dados da análise foram aplicados ao Caso #{resultado.caso.id}!')
-        return redirect('casos:detalhe_caso', pk=resultado.caso.id)
+        logger.info(f"✅ Dados aplicados com sucesso ao caso #{resultado.caso.id}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': '✅ Dados aplicados com sucesso ao caso!',
+            'caso_url': f'/casos/{resultado.caso.id}/'
+        })
         
     except Exception as e:
-        messages.error(request, f'❌ Erro ao aplicar dados: {str(e)}')
-        return redirect('analyser:resultado_analise', resultado_id=resultado.id)
+        logger.error(f"❌ Erro ao aplicar dados: {e}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': f'Erro ao aplicar dados: {str(e)}'
+        }, status=400)
 
+
+# ============================================================================
+# DEBUG - FUNÇÃO DE DIAGNÓSTICO
+# ============================================================================
 
 @login_required
-def deletar_modelo(request, pk):
-    """Deleta um modelo de análise."""
-    modelo = get_object_or_404(ModeloAnalise, pk=pk)
-    if request.method == 'POST':
-        nome = modelo.nome
-        modelo.delete()
-        messages.success(request, f'✅ Modelo "{nome}" deletado com sucesso!')
-        return redirect('analyser:listar_modelos')
-    return render(request, 'analyser/confirmar_delete.html', {'modelo': modelo})
+@require_http_methods(["GET"])
+def debug_pasta_caso(request, caso_id):
+    """Debug - Mostra a estrutura de pastas do caso."""
+    caso = get_object_or_404(Caso, id=caso_id)
+    
+    try:
+        sp = SharePoint()
+        nome_pasta = f"Caso #{caso.id}"
+        
+        # Lista a raiz
+        print(f"\n{'='*60}")
+        print(f"🔍 DEBUGANDO PASTA DO CASO #{caso.id}")
+        print(f"{'='*60}\n")
+        
+        itens_raiz = sp.listar_arquivos_pasta_raiz()
+        print(f"📁 Itens na RAIZ: {len(itens_raiz)}\n")
+        
+        for item in itens_raiz:
+            eh_pasta = bool(item.get('folder'))
+            print(f"   - {item['name']}")
+            print(f"     ID: {item['id']}")
+            print(f"     É pasta: {eh_pasta}")
+            print(f"     Tamanho: {item.get('size', 0)} bytes\n")
+            
+            logger.info(f"   - {item['name']} (ID: {item['id']}, É pasta: {eh_pasta})")
+        
+        # Tenta encontrar a pasta do caso
+        pasta_encontrada = None
+        for item in itens_raiz:
+            if item['name'].lower() == nome_pasta.lower() and item.get('folder'):
+                pasta_encontrada = item
+                break
+        
+        if pasta_encontrada:
+            print(f"✅ Pasta '{nome_pasta}' encontrada!")
+            print(f"   ID: {pasta_encontrada['id']}\n")
+            logger.info(f"✅ Pasta '{nome_pasta}' encontrada! ID: {pasta_encontrada['id']}")
+            
+            # Lista conteúdo da pasta do caso
+            itens_caso = sp.listar_arquivos_pasta(pasta_encontrada['id'])
+            print(f"📄 Arquivos na pasta do caso: {len(itens_caso)}\n")
+            
+            for item in itens_caso:
+                print(f"   - {item['name']} (ID: {item['id']})")
+                logger.info(f"   - {item['name']} (ID: {item['id']})")
+            
+            print(f"\n{'='*60}\n")
+            
+            return JsonResponse({
+                'status': 'OK',
+                'pasta_id': pasta_encontrada['id'],
+                'pasta_nome': pasta_encontrada['name'],
+                'arquivos_encontrados': len(itens_caso),
+                'arquivos': itens_caso
+            })
+        else:
+            pastas_disponiveis = [item['name'] for item in itens_raiz if item.get('folder')]
+            print(f"❌ Pasta '{nome_pasta}' NÃO encontrada na raiz!")
+            print(f"   Pastas disponíveis: {pastas_disponiveis}\n")
+            print(f"{'='*60}\n")
+            
+            logger.warning(f"❌ Pasta '{nome_pasta}' NÃO encontrada na raiz")
+            logger.info(f"Pastas disponíveis: {pastas_disponiveis}")
+            
+            return JsonResponse({
+                'status': 'ERRO',
+                'mensagem': f"Pasta '{nome_pasta}' não encontrada",
+                'pastas_na_raiz': pastas_disponiveis,
+                'procurando_por': nome_pasta
+            }, status=404)
+    
+    except Exception as e:
+        print(f"\n❌ ERRO ao debugar pasta: {e}\n")
+        logger.error(f"❌ Erro ao debugar pasta: {e}", exc_info=True)
+        return JsonResponse({'status': 'ERRO', 'mensagem': str(e)}, status=500)

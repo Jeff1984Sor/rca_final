@@ -1,0 +1,48 @@
+{# analyser/templates/analyser/partials/_file_grid.html #}
+
+{% if itens %}
+    {% for item in itens %}
+        {% if item.folder %}
+            <!-- PASTA - Navegação com função JavaScript -->
+            <div class="grid-item">
+                <button type="button"
+                        onclick="carregarSubpasta('{{ item.id }}')"
+                        class="grid-item-link"
+                        style="cursor: pointer;">
+                    <div class="icon-container">
+                        <i class="fa-solid fa-folder"></i>
+                    </div>
+                    <span class="item-name">{{ item.name }}</span>
+                </button>
+            </div>
+        {% else %}
+            <!-- ARQUIVO - Checkbox para seleção -->
+            <div class="grid-item-selectable">
+                <input type="checkbox"
+                       id="file_{{ item.id }}"
+                       name="arquivos_selecionados"
+                       value="{{ item.id }}"
+                       onchange="atualizarContagem()">
+                <label for="file_{{ item.id }}">
+                    <div class="icon-container">
+                        {% if 'pdf' in item.file.mimeType %}
+                            <i class="fa-solid fa-file-pdf" style="color: #ef4444;"></i>
+                        {% elif 'word' in item.file.mimeType or 'document' in item.file.mimeType %}
+                            <i class="fa-solid fa-file-word" style="color: #2563eb;"></i>
+                        {% elif 'sheet' in item.file.mimeType or 'spreadsheet' in item.file.mimeType %}
+                            <i class="fa-solid fa-file-excel" style="color: #10b981;"></i>
+                        {% else %}
+                            <i class="fa-solid fa-file" style="color: #64748b;"></i>
+                        {% endif %}
+                    </div>
+                    <span class="item-name">{{ item.name }}</span>
+                </label>
+            </div>
+        {% endif %}
+    {% endfor %}
+{% else %}
+    <div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 40px;">
+        <i class="fa-solid fa-folder-open" style="font-size: 3rem; margin-bottom: 12px; display: block;"></i>
+        <p>Nenhum arquivo encontrado nesta pasta</p>
+    </div>
+{% endif %}

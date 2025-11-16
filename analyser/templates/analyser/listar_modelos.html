@@ -1,4 +1,3 @@
-{# analyser/templates/analyser/listar_modelos.html #}
 {% extends 'base.html' %}
 
 {% block title %}Modelos de Análise | Analyser{% endblock %}
@@ -47,6 +46,18 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
+}
+
+.hero-icon { 
+    background: var(--primary); 
+    width: 50px; 
+    height: 50px; 
+    border-radius: 14px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    color: white; 
+    font-size: 1.3rem; 
 }
 
 .btn-primary {
@@ -101,7 +112,7 @@ body {
 }
 
 .badge {
-    padding: 4px 10px;
+    padding: 6px 12px;
     border-radius: 8px;
     font-size: 0.75rem;
     font-weight: 700;
@@ -109,13 +120,13 @@ body {
 }
 
 .badge-ativo {
-    background: var(--success);
-    color: white;
+    background: #dcfce7;
+    color: #15803d;
 }
 
 .badge-inativo {
-    background: var(--danger);
-    color: white;
+    background: #fee2e2;
+    color: #991b1b;
 }
 
 .modelo-info {
@@ -144,6 +155,8 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    flex: 1;
+    justify-content: center;
 }
 
 .btn-editar {
@@ -154,6 +167,10 @@ body {
 .btn-deletar {
     background: #ef4444;
     color: white;
+}
+
+.btn:hover {
+    opacity: 0.8;
 }
 
 .empty-state {
@@ -168,6 +185,15 @@ body {
     color: #cbd5e1;
     margin-bottom: 20px;
 }
+
+.empty-state h2 {
+    color: var(--gray-900);
+    margin: 20px 0 10px;
+}
+
+.empty-state p {
+    color: var(--gray-600);
+}
 </style>
 {% endblock %}
 
@@ -176,7 +202,7 @@ body {
     
     <div class="hero-header">
         <h1 class="hero-title">
-            <i class="fa-solid fa-robot"></i>
+            <div class="hero-icon"><i class="fa-solid fa-robot"></i></div>
             Modelos de Análise
         </h1>
         <a href="{% url 'analyser:criar_modelo' %}" class="btn-primary">
@@ -200,7 +226,7 @@ body {
                             </div>
                         </div>
                         <span class="badge {% if modelo.ativo %}badge-ativo{% else %}badge-inativo{% endif %}">
-                            {% if modelo.ativo %}Ativo{% else %}Inativo{% endif %}
+                            {% if modelo.ativo %}✓ Ativo{% else %}✗ Inativo{% endif %}
                         </span>
                     </div>
                     

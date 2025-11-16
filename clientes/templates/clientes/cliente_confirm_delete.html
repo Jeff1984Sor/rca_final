@@ -1,34 +1,49 @@
-<!-- clientes/templates/clientes/cliente_confirm_delete.html -->
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>Confirmar Deleção</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .confirm-container { text-align: center; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h1 { color: #dc3545; }
-        .btn-container { margin-top: 30px; }
-        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; margin: 0 10px; font-weight: bold; }
-        .btn-danger { background-color: #dc3545; color: white; }
-        .btn-secondary { background-color: #6c757d; color: white; }
-    </style>
-</head>
-<body>
-    <div class="confirm-container">
-        <h1>Atenção!</h1>
-        <p>Você tem certeza que deseja deletar o cliente permanentemente?</p>
-        
-        <!-- Mostra o nome do cliente para que o usuário saiba exatamente o que está apagando -->
-        <h3 style="font-weight: normal;">"{{ cliente.nome }}"</h3>
+{% extends 'base.html' %}
+{% load static %}
 
-        <form method="post">
-            {% csrf_token %}
-            <div class="btn-container">
-                <button type="submit" class="btn btn-danger">Sim, tenho certeza</button>
-                <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-secondary">Cancelar</a>
+{% block title %}Confirmar Deleção | Sistema Jurídico{% endblock %}
+
+{% block content %}
+<div class="confirm-delete-container">
+    
+    <div class="card slide-up">
+        <div class="confirm-delete-content text-center">
+            
+            <!-- ÍCONE DE AVISO -->
+            <div class="confirm-delete-icon-wrapper">
+                <i class="fa-solid fa-triangle-exclamation"></i>
             </div>
-        </form>
-    </div>
-</body>
-</html>
+            
+            <!-- TÍTULO -->
+            <h1 class="confirm-delete-title">Atenção!</h1>
+            
+            <!-- MENSAGEM -->
+            <p class="confirm-delete-message">
+                Você tem certeza que deseja deletar o cliente permanentemente?
+            </p>
+            
+            <!-- NOME DO CLIENTE -->
+            <div class="object-to-delete-box">
+                <span class="label">Cliente a ser Deletado</span>
+                <span class="value">{{ object.nome }}</span>
+            </div>
+            
+            <!-- ALERTA -->
+            <div class="alert alert-danger text-left">
+                <div class="d-flex" style="gap: 12px; align-items: flex-start;">
+                    <i class="fa-solid fa-circle-exclamation" style="font-size: 1.5rem; margin-top: 4px;"></i>
+                    <div>
+                        <div style="font-weight: 700;">
+                            ⚠️ Esta ação é irreversível!
+                        </div>
+                        <div style="font-size: 0.9rem;">
+                            Todos os dados do cliente serão permanentemente removidos.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FORMULÁRIO -->
+            <form method="post" class="mt-4">
+                {% csrf_token %}
+                <div class="d-flex justify-content-center gap-12">

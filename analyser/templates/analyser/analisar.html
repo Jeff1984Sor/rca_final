@@ -1,0 +1,539 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Analisar Caso com IA | Caso #{{ caso.id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --primary-solid: #667eea;
+        --success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        --success-solid: #10b981;
+        --warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        --danger: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        --gray-50: #f8fafc;
+        --gray-100: #f1f5f9;
+        --gray-200: #e2e8f0;
+        --gray-300: #cbd5e1;
+        --gray-600: #475569;
+        --gray-700: #334155;
+        --gray-900: #0f172a;
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background-attachment: fixed;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .container-analyser {
+        max-width: 1000px;
+        margin: 40px auto;
+        padding: 20px;
+    }
+
+    /* HERO HEADER */
+    .analyser-hero {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border-radius: 24px;
+        padding: 40px;
+        margin-bottom: 32px;
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .analyser-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--primary);
+    }
+
+    .analyser-hero h1 {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--gray-900);
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .analyser-hero p {
+        color: var(--gray-600);
+        font-size: 1rem;
+        margin: 0;
+    }
+
+    /* CARD CONTAINER */
+    .analyser-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border-radius: 20px;
+        padding: 32px;
+        margin-bottom: 24px;
+        box-shadow: var(--shadow-lg);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .analyser-card-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .analyser-card-title i {
+        background: var(--primary);
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.1rem;
+    }
+
+    /* FORM CONTROLS */
+    .form-group {
+        margin-bottom: 24px;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--gray-700);
+        font-size: 0.95rem;
+    }
+
+    .form-select,
+    .form-input {
+        width: 100%;
+        padding: 14px 16px;
+        border: 2px solid var(--gray-200);
+        border-radius: 12px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        font-family: inherit;
+    }
+
+    .form-select:focus,
+    .form-input:focus {
+        outline: none;
+        border-color: var(--primary-solid);
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+
+    /* ARQUIVOS GRID */
+    .arquivos-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 16px;
+    }
+
+    .arquivo-card {
+        background: white;
+        border: 2px solid var(--gray-200);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+    }
+
+    .arquivo-card:hover {
+        border-color: var(--primary-solid);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        transform: translateY(-5px);
+    }
+
+    .arquivo-card input[type="checkbox"] {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+
+    .arquivo-card input[type="checkbox"]:checked + .arquivo-info {
+        color: var(--primary-solid);
+    }
+
+    .arquivo-card input[type="checkbox"]:checked {
+        accent-color: var(--primary-solid);
+    }
+
+    .arquivo-icone {
+        font-size: 2.5rem;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .arquivo-info {
+        font-size: 0.85rem;
+        color: var(--gray-700);
+        word-break: break-word;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .arquivo-tamanho {
+        font-size: 0.75rem;
+        color: var(--gray-600);
+        margin-top: 4px;
+    }
+
+    /* LOADING STATE */
+    .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid var(--gray-200);
+        border-top: 3px solid var(--primary-solid);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* EMPTY STATE */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--gray-600);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: var(--gray-300);
+        margin-bottom: 16px;
+    }
+
+    .empty-state p {
+        color: var(--gray-600);
+        font-size: 1rem;
+    }
+
+    /* BUTTONS */
+    .btn {
+        padding: 12px 28px;
+        border-radius: 12px;
+        border: none;
+        font-weight: 700;
+        font-size: 0.95rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.3s;
+        text-decoration: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+    }
+
+    .btn-secondary {
+        background: white;
+        color: var(--primary-solid);
+        border: 2px solid var(--gray-200);
+    }
+
+    .btn-success {
+        background: var(--success);
+        color: white;
+    }
+
+    .btn-disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .btn-disabled:hover {
+        transform: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* FOOTER */
+    .analyser-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-top: 24px;
+        padding-top: 24px;
+        border-top: 2px solid var(--gray-200);
+        flex-wrap: wrap;
+    }
+
+    .arquivos-selecionados {
+        color: var(--gray-600);
+        font-size: 0.95rem;
+        font-weight: 600;
+    }
+
+    .arquivos-selecionados strong {
+        color: var(--primary-solid);
+    }
+
+    /* RESPONSIVO */
+    @media (max-width: 768px) {
+        .container-analyser {
+            padding: 12px;
+        }
+
+        .analyser-hero {
+            padding: 24px;
+        }
+
+        .analyser-hero h1 {
+            font-size: 1.5rem;
+        }
+
+        .analyser-card {
+            padding: 20px;
+        }
+
+        .analyser-footer {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-analyser">
+    <!-- HERO HEADER -->
+    <div class="analyser-hero">
+        <h1>
+            <i class="fa-solid fa-magic" style="color: #667eea; font-size: 2rem;"></i>
+            Analisar Caso com IA
+        </h1>
+        <p>Use Inteligência Artificial para extrair informações dos documentos do caso #{{ caso.id }}</p>
+    </div>
+
+    <!-- FORMULÁRIO DE ANÁLISE -->
+    <form method="POST" id="form-analise">
+        {% csrf_token %}
+
+        <!-- PASSO 1: SELECIONE O MODELO -->
+        <div class="analyser-card">
+            <div class="analyser-card-title">
+                <i class="fa-solid fa-robot"></i>
+                1. Selecione o Modelo de Análise
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="modelo">Modelo de Análise *</label>
+                <select name="modelo_analise" id="modelo" class="form-select" required>
+                    <option value="">-- Escolha um modelo --</option>
+                    {% for modelo in modelos %}
+                        <option value="{{ modelo.id }}">
+                            {{ modelo.nome }} - {{ modelo.descricao|truncatewords:5 }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- PASSO 2: SELECIONE OS ARQUIVOS -->
+        <div class="analyser-card">
+            <div class="analyser-card-title">
+                <i class="fa-solid fa-file"></i>
+                2. Selecione os Arquivos
+            </div>
+
+            <p style="color: var(--gray-600); margin-bottom: 20px; font-size: 0.95rem;">
+                <i class="fa-solid fa-info-circle" style="color: #0ea5e9;"></i>
+                Clique nos arquivos para selecioná-los. Você pode selecionar múltiplos arquivos.
+            </p>
+
+            <!-- GRID DE ARQUIVOS -->
+            <div class="arquivos-grid" id="arquivos-container">
+                <div class="empty-state">
+                    <div class="loading-spinner"></div>
+                    <p style="margin-top: 12px;">Carregando arquivos do caso...</p>
+                </div>
+            </div>
+
+            <!-- INPUT HIDDEN PARA OS ARQUIVOS SELECIONADOS -->
+            <input type="hidden" name="arquivos_selecionados" id="arquivos-selecionados" value="">
+        </div>
+
+        <!-- FOOTER -->
+        <div class="analyser-footer">
+            <div class="arquivos-selecionados">
+                Arquivos selecionados: <strong id="contador-arquivos">0</strong>
+            </div>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <a href="{% url 'casos:detalhe_caso' pk=caso.pk %}" class="btn btn-secondary">
+                    <i class="fa-solid fa-times"></i>
+                    Cancelar
+                </a>
+                <button type="submit" class="btn btn-success" id="btn-analisar">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    Iniciar Análise
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const casoId = '{{ caso.id }}';
+    const container = document.getElementById('arquivos-container');
+    const inputArquivos = document.getElementById('arquivos-selecionados');
+    const contadorArquivos = document.getElementById('contador-arquivos');
+    const btnAnalisar = document.getElementById('btn-analisar');
+
+    // ===========================
+    // CARREGAR ARQUIVOS DO CASO
+    // ===========================
+    fetch(`/casos/${casoId}/arquivos-para-analise/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.arquivos && data.arquivos.length > 0) {
+                renderizarArquivos(data.arquivos);
+            } else {
+                mostrarEstadoVazio('Nenhum arquivo encontrado na pasta do caso');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao carregar arquivos:', error);
+            mostrarEstadoVazio('Erro ao carregar arquivos');
+        });
+
+    // ===========================
+    // RENDERIZAR GRID DE ARQUIVOS
+    // ===========================
+    function renderizarArquivos(arquivos) {
+        container.innerHTML = '';
+
+        arquivos.forEach((arquivo, index) => {
+            const card = document.createElement('div');
+            card.className = 'arquivo-card';
+            card.innerHTML = `
+                <input type="checkbox" value="${arquivo.id}" class="arquivo-checkbox" onchange="atualizarSelecionados()">
+                <span class="arquivo-icone">
+                    ${getIconeArquivo(arquivo.mimeType)}
+                </span>
+                <div class="arquivo-info">${arquivo.name}</div>
+                <div class="arquivo-tamanho">${formatarTamanho(arquivo.size)}</div>
+            `;
+            container.appendChild(card);
+        });
+
+        console.log(`✅ ${arquivos.length} arquivo(s) carregado(s)`);
+    }
+
+    // ===========================
+    // ESTADO VAZIO
+    // ===========================
+    function mostrarEstadoVazio(mensagem) {
+        container.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <i class="fa-solid fa-inbox"></i>
+                <p>${mensagem}</p>
+            </div>
+        `;
+    }
+
+    // ===========================
+    // ATUALIZAR SELECIONADOS
+    // ===========================
+    window.atualizarSelecionados = function() {
+        const checkboxes = document.querySelectorAll('.arquivo-checkbox:checked');
+        const ids = Array.from(checkboxes).map(cb => cb.value);
+
+        inputArquivos.value = JSON.stringify(ids);
+        contadorArquivos.textContent = ids.length;
+
+        // Habilita/desabilita botão
+        btnAnalisar.disabled = ids.length === 0;
+        if (ids.length === 0) {
+            btnAnalisar.classList.add('btn-disabled');
+        } else {
+            btnAnalisar.classList.remove('btn-disabled');
+        }
+    };
+
+    // ===========================
+    // ÍCONE DO ARQUIVO
+    // ===========================
+    window.getIconeArquivo = function(mimeType) {
+        if (mimeType === 'application/pdf') {
+            return '<i class="fa-solid fa-file-pdf" style="color: #ef4444;"></i>';
+        } else if (mimeType.includes('word') || mimeType.includes('document')) {
+            return '<i class="fa-solid fa-file-word" style="color: #2563eb;"></i>';
+        } else if (mimeType.includes('excel') || mimeType.includes('sheet')) {
+            return '<i class="fa-solid fa-file-excel" style="color: #10b981;"></i>';
+        } else if (mimeType.includes('image')) {
+            return '<i class="fa-solid fa-file-image" style="color: #ec4899;"></i>';
+        } else if (mimeType.includes('text')) {
+            return '<i class="fa-solid fa-file-text" style="color: #8b5cf6;"></i>';
+        }
+        return '<i class="fa-solid fa-file" style="color: #667eea;"></i>';
+    };
+
+    // ===========================
+    // FORMATAR TAMANHO
+    // ===========================
+    window.formatarTamanho = function(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+    };
+
+    // ===========================
+    // SUBMISSÃO DO FORMULÁRIO
+    // ===========================
+    document.getElementById('form-analise').addEventListener('submit', function(e) {
+        const arquivos = JSON.parse(inputArquivos.value || '[]');
+
+        if (arquivos.length === 0) {
+            e.preventDefault();
+            alert('⚠️ Selecione pelo menos um arquivo!');
+            return;
+        }
+
+        console.log(`✅ Iniciando análise com ${arquivos.length} arquivo(s)`);
+    });
+});
+</script>
+{% endblock %}

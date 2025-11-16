@@ -6,7 +6,7 @@
         <p>Esta pasta está vazia.</p>
     </div>
 {% else %}
-    {# Renderiza as PASTAS primeiro #}
+    {# Renderiza as PASTAS primeiro, ordenadas por nome #}
     {% for pasta in pastas %}
         <div x-data="{ open: false, loaded: false }">
             <div class="folder-item" @click="open = !open; if (!loaded) { htmx.trigger('#folder-content-{{ pasta.id }}', 'loadFolder'); loaded = true; }">
@@ -27,20 +27,14 @@
         </div>
     {% endfor %}
 
-    {# Renderiza os ARQUIVOS #}
+    {# Renderiza os ARQUIVOS como links para a análise interativa #}
     {% for arquivo in arquivos %}
         <div class="file-item">
-            <input 
-                type="checkbox" 
-                class="file-checkbox" 
-                @change="toggleSelecao('{{ arquivo.id }}', '{{ arquivo.name|escapejs }}', '{{ arquivo.icona_css }}', '{{ arquivo.cor_css }}')"
-                :checked="arquivosSelecionados.some(f => f.id === '{{ arquivo.id }}')">
-            
-            <label class="file-label-wrapper" @click.prevent="document.querySelector('#checkbox-{{ arquivo.id }}').click()">
-                <i class="{{ arquivo.icona_css }} file-icon" style="color: {{ arquivo.cor_css }};"></i>
-                <span class="file-name">{{ arquivo.name }}</span>
-            </label>
+            <a href="{% url 'analyser:iniciar_analise_interativa' caso_id=caso_id file_id=arquivo.id %}" class="btn btn-outline-primary btn-sm w-100 text-start">
+                <i class="{{ arquivo.icona_css }}" style="color: {{ arquivo.cor_css }};"></i>
+                {{ arquivo.name }}
+            </a>
         </div>
     {% endfor %}
 {% endif %}
-<style>.rotate-90 { transform: rotate(90deg); }</style>
+

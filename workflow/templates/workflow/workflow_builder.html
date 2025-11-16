@@ -1,481 +1,69 @@
 {# workflow/templates/workflow/workflow_builder.html #}
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Workflow Builder | Sistema Jurídico{% endblock %}
 
-{% block extra_css %}
-<style>
-:root {
-    --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --primary-solid: #667eea;
-    --success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    --success-solid: #10b981;
-    --danger: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    --info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    --warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    
-    --gray-50: #f8fafc;
-    --gray-100: #f1f5f9;
-    --gray-200: #e2e8f0;
-    --gray-700: #334155;
-    --gray-900: #0f172a;
-    
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    --transition: 250ms ease-in-out;
-}
-
-body {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    background-attachment: fixed;
-}
-
-.builder-container {
-    max-width: 1400px;
-    margin: 40px auto;
-    padding: 0 20px;
-}
-
-/* ============================================ */
-/* HERO HEADER */
-/* ============================================ */
-.hero-header {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 40px;
-    margin-bottom: 32px;
-    box-shadow: var(--shadow-xl);
-    animation: slideDown 0.5s ease-out;
-}
-
-@keyframes slideDown {
-    from { opacity: 0; transform: translateY(-30px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.hero-title {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--gray-900);
-    margin: 0 0 12px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.hero-icon {
-    background: var(--primary);
-    width: 60px;
-    height: 60px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.8rem;
-}
-
-/* ============================================ */
-/* FORM BÁSICO */
-/* ============================================ */
-.workflow-form-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 32px;
-    margin-bottom: 32px;
-    box-shadow: var(--shadow-lg);
-}
-
-.form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 24px;
-    margin-bottom: 24px;
-}
-
-.form-group label {
-    display: block;
-    font-weight: 700;
-    margin-bottom: 8px;
-    color: var(--gray-700);
-}
-
-.form-control, .form-select {
-    width: 100%;
-    padding: 12px 16px;
-    border: 2px solid var(--gray-200);
-    border-radius: 12px;
-    font-size: 1rem;
-    transition: all var(--transition);
-}
-
-.form-control:focus, .form-select:focus {
-    outline: none;
-    border-color: var(--primary-solid);
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-}
-
-/* ============================================ */
-/* TIMELINE DE FASES */
-/* ============================================ */
-.fases-section {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 32px;
-    margin-bottom: 32px;
-    box-shadow: var(--shadow-lg);
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 3px solid var(--gray-100);
-}
-
-.section-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--gray-900);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.fases-timeline {
-    display: flex;
-    gap: 16px;
-    overflow-x: auto;
-    padding: 20px 0;
-    min-height: 200px;
-}
-
-.fase-card {
-    min-width: 280px;
-    background: white;
-    border-radius: 16px;
-    padding: 20px;
-    box-shadow: var(--shadow-lg);
-    border-left: 5px solid var(--primary-solid);
-    transition: all var(--transition);
-    cursor: pointer;
-    position: relative;
-}
-
-.fase-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
-}
-
-.fase-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: start;
-    margin-bottom: 12px;
-}
-
-.fase-numero {
-    background: var(--primary);
-    color: white;
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1.1rem;
-}
-
-.fase-nome {
-    font-weight: 700;
-    font-size: 1.1rem;
-    color: var(--gray-900);
-    margin-top: 12px;
-}
-
-.fase-meta {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-    flex-wrap: wrap;
-}
-
-.badge {
-    padding: 4px 10px;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.badge-acoes {
-    background: var(--info);
-    color: white;
-}
-
-.badge-pausar {
-    background: var(--warning);
-    color: white;
-}
-
-.fase-actions {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    display: flex;
-    gap: 8px;
-}
-
-.btn-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all var(--transition);
-}
-
-.btn-edit {
-    background: var(--warning);
-    color: white;
-}
-
-.btn-delete {
-    background: var(--danger);
-    color: white;
-}
-
-.btn-icon:hover {
-    transform: scale(1.1);
-}
-
-.empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--gray-700);
-    width: 100%;
-}
-
-.empty-state i {
-    font-size: 4rem;
-    color: var(--gray-200);
-    margin-bottom: 16px;
-}
-
-/* ============================================ */
-/* BOTÕES */
-/* ============================================ */
-.btn {
-    padding: 12px 24px;
-    border-radius: 12px;
-    border: none;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    transition: all var(--transition);
-    box-shadow: var(--shadow-lg);
-}
-
-.btn:hover {
-    transform: translateY(-3px);
-}
-
-.btn-primary {
-    background: var(--primary);
-    color: white;
-}
-
-.btn-success {
-    background: var(--success);
-    color: white;
-}
-
-.btn-secondary {
-    background: white;
-    color: var(--gray-700);
-    border: 2px solid var(--gray-200);
-}
-
-/* ============================================ */
-/* MODAL */
-/* ============================================ */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    animation: fadeIn 0.3s ease-out;
-}
-
-.modal-overlay.active {
-    display: flex;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.modal-content {
-    background: white;
-    border-radius: 24px;
-    padding: 32px;
-    max-width: 800px;
-    width: 90%;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: var(--shadow-xl);
-    animation: slideUp 0.3s ease-out;
-}
-
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(50px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid var(--gray-100);
-}
-
-.modal-title {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--gray-900);
-}
-
-.btn-close {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    border: none;
-    background: var(--gray-100);
-    cursor: pointer;
-    font-size: 1.5rem;
-    transition: all var(--transition);
-}
-
-.btn-close:hover {
-    background: var(--danger);
-    color: white;
-}
-
-/* ============================================ */
-/* LISTA DE AÇÕES DENTRO DA FASE */
-/* ============================================ */
-.acoes-list {
-    margin-top: 24px;
-}
-
-.acao-item {
-    background: var(--gray-50);
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 12px;
-    border-left: 4px solid var(--info);
-}
-
-.acao-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: start;
-    margin-bottom: 8px;
-}
-
-.acao-titulo {
-    font-weight: 700;
-    color: var(--gray-900);
-}
-
-.acao-meta {
-    display: flex;
-    gap: 12px;
-    font-size: 0.9rem;
-    color: var(--gray-700);
-}
-
-/* ============================================ */
-/* RESPONSIVIDADE */
-/* ============================================ */
-@media (max-width: 968px) {
-    .form-grid {
-        grid-template-columns: 1fr;
-    }
-    .fases-timeline {
-        flex-direction: column;
-    }
-    .fase-card {
-        min-width: 100%;
-    }
-}
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="builder-container" x-data="workflowBuilder()">
+{# Este div irá conter todos os dados que precisamos passar do Django para o JavaScript #}
+<div id="workflow-data-provider"
+     data-workflow-id="{{ workflow.id|default:'' }}"
+     data-workflow-nome="{{ workflow.nome|escapejs|default:'' }}"
+     data-workflow-cliente-id="{{ workflow.cliente.id|default:'' }}"
+     data-workflow-produto-id="{{ workflow.produto.id|default:'' }}"
+     data-save-url="{% url 'workflow:salvar_workflow_json' %}"
+     data-load-url="{% if workflow.id %}{% url 'workflow:carregar_workflow_json' workflow.id %}{% endif %}"
+     data-list-url="{% url 'workflow:lista_workflows' %}"
+     data-csrf-token="{{ csrf_token }}">
+</div>
+
+<div class="builder-container" x-data="workflowBuilder({
+        workflowId: document.getElementById('workflow-data-provider').dataset.workflowId,
+        workflowNome: document.getElementById('workflow-data-provider').dataset.workflowNome,
+        workflowClienteId: document.getElementById('workflow-data-provider').dataset.workflowClienteId,
+        workflowProdutoId: document.getElementById('workflow-data-provider').dataset.workflowProdutoId,
+        saveUrl: document.getElementById('workflow-data-provider').dataset.saveUrl,
+        loadUrl: document.getElementById('workflow-data-provider').dataset.loadUrl,
+        listUrl: document.getElementById('workflow-data-provider').dataset.listUrl,
+        csrfToken: document.getElementById('workflow-data-provider').dataset.csrfToken
+    })" x-cloak>
     
     <!-- HERO HEADER -->
-    <div class="hero-header">
-        <h1 class="hero-title">
-            <div class="hero-icon">
+    <div class="builder-header">
+        <h1 class="builder-title">
+            <div class="builder-icon">
                 <i class="fa-solid fa-diagram-project"></i>
             </div>
             <span x-text="workflowId ? 'Editar Workflow: ' + workflow.nome : 'Criar Novo Workflow'"></span>
         </h1>
     </div>
     
-    <!-- FORM BÁSICO -->
-    <div class="workflow-form-card">
-        <div class="form-grid">
-            <div class="form-group">
-                <label><i class="fa-solid fa-tag"></i> Nome do Workflow</label>
-                <input type="text" 
-                       class="form-control"
-                       x-model="workflow.nome"
-                       placeholder="Ex: Sinistro RCG - Tokio"
-                       @input.debounce.500ms="autoSave">
-            </div>
-            <div class="form-group">
-                <label><i class="fa-solid fa-building"></i> Cliente</label>
-                <select class="form-select" x-model="workflow.cliente" @change="autoSave">
-                    <option value="">Selecione...</option>
-                    {% for cliente in clientes %}
-                        <option value="{{ cliente.id }}">{{ cliente.nome }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label><i class="fa-solid fa-box"></i> Produto</label>
-                <select class="form-select" x-model="workflow.produto" @change="autoSave">
-                    <option value="">Selecione...</option>
-                    {% for produto in produtos %}
-                        <option value="{{ produto.id }}">{{ produto.nome }}</option>
-                    {% endfor %}
-                </select>
+    <!-- FORM BÁSICO (USANDO CLASSES GLOBAIS .card) -->
+    <div class="card">
+        <div class="card-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label><i class="fa-solid fa-tag"></i> Nome do Workflow</label>
+                    <input type="text" 
+                           class="form-control"
+                           x-model="workflow.nome"
+                           placeholder="Ex: Sinistro RCG - Tokio"
+                           @input.debounce.500ms="autoSave">
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-building"></i> Cliente</label>
+                    <select class="form-control" x-model="workflow.cliente" @change="autoSave">
+                        <option value="">Selecione...</option>
+                        {% for cliente in clientes %}<option value="{{ cliente.id }}">{{ cliente.nome }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-box"></i> Produto</label>
+                    <select class="form-control" x-model="workflow.produto" @change="autoSave">
+                        <option value="">Selecione...</option>
+                        {% for produto in produtos %}<option value="{{ produto.id }}">{{ produto.nome }}</option>{% endfor %}
+                    </select>
+                </div>
             </div>
         </div>
     </div>
@@ -486,11 +74,10 @@ body {
             <h2 class="section-title">
                 <i class="fa-solid fa-list-ol"></i>
                 Fases do Workflow
-                <span class="badge badge-acoes" x-text="workflow.fases.length + ' fase' + (workflow.fases.length !== 1 ? 's' : '')"></span>
+                <span class="badge bg-dark" x-text="workflow.fases.length + ' fase' + (workflow.fases.length !== 1 ? 's' : '')"></span>
             </h2>
             <button class="btn btn-primary" @click="abrirModalFase(null)">
-                <i class="fa-solid fa-plus-circle"></i>
-                Nova Fase
+                <i class="fa-solid fa-plus-circle"></i> Nova Fase
             </button>
         </div>
         
@@ -500,24 +87,19 @@ body {
                     <div class="fase-header">
                         <div class="fase-numero" x-text="index + 1"></div>
                         <div class="fase-actions">
-                            <button class="btn-icon btn-edit" @click.stop="abrirModalFase(index)" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                            <button class="btn-icon btn-delete" @click.stop="deletarFase(index)" title="Deletar"><i class="fa-solid fa-trash"></i></button>
+                            <button class="btn-icon action-btn btn-edit" @click.stop="abrirModalFase(index)" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                            <button class="btn-icon action-btn btn-delete" @click.stop="deletarFase(index)" title="Deletar"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </div>
                     <div class="fase-nome" x-text="fase.nome"></div>
                     <div class="fase-meta">
-                        <span class="badge badge-acoes">
-                            <i class="fa-solid fa-tasks"></i>
-                            <span x-text="fase.acoes.length + ' ' + (fase.acoes.length === 1 ? 'ação' : 'ações')"></span>
-                        </span>
-                        <span class="badge badge-pausar" x-show="fase.pausar_prazo_automaticamente">
-                            <i class="fa-solid fa-pause"></i> Pausa Prazo
-                        </span>
+                        <span class="badge bg-dark"><i class="fa-solid fa-tasks"></i> <span x-text="fase.acoes.length + ' ' + (fase.acoes.length === 1 ? 'ação' : 'ações')"></span></span>
+                        <span class="badge badge-pausar" x-show="fase.pausar_prazo_automaticamente"><i class="fa-solid fa-pause"></i> Pausa Prazo</span>
                     </div>
                 </div>
             </template>
             <template x-if="workflow.fases.length === 0">
-                <div class="empty-state">
+                <div class="empty-state w-full">
                     <i class="fa-solid fa-layer-group"></i>
                     <h3>Nenhuma fase criada</h3>
                     <p>Clique em "Nova Fase" para começar a construir seu fluxo.</p>
@@ -527,8 +109,8 @@ body {
     </div>
     
     <!-- BOTÕES FINAIS -->
-    <div style="display: flex; justify-content: flex-end; gap: 12px;">
-        <a href="{% url 'workflow:lista_workflows' %}" class="btn btn-secondary">
+    <div class="d-flex justify-end gap-12">
+        <a href="{% url 'workflow:lista_workflows' %}" class="btn btn-outline-secondary">
             <i class="fa-solid fa-times"></i> Cancelar
         </a>
         <button class="btn btn-success" @click="salvarWorkflow" :disabled="!isValid">
@@ -537,7 +119,7 @@ body {
     </div>
     
     <!-- MODAL DE FASE -->
-    <div class="modal-overlay" :class="{ 'active': modalFaseAberto }" @click.self="fecharModalFase" x-show="modalFaseAberto" x-cloak>
+    <div class="modal-overlay" :class="{ 'active': modalFaseAberto }" @click.self="fecharModalFase" x-show="modalFaseAberto">
         <div class="modal-content" @click.stop>
             <div class="modal-header">
                 <h2 class="modal-title" x-text="faseEditando !== null ? 'Editar Fase' : 'Nova Fase'"></h2>
@@ -549,13 +131,11 @@ body {
                 <input type="text" class="form-control" x-model="faseTemp.nome" placeholder="Ex: Análise Inicial">
             </div>
             
-            <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
-                <div class="form-group">
-                    <label><input type="checkbox" x-model="faseTemp.pausar_prazo_automaticamente"> Pausar Prazo Automaticamente?</label>
-                </div>
+            <div class="form-row">
+                <div class="form-group"><label><input type="checkbox" x-model="faseTemp.pausar_prazo_automaticamente"> Pausar Prazo Automaticamente?</label></div>
                 <div class="form-group" x-show="faseTemp.pausar_prazo_automaticamente">
                     <label>Motivo da Pausa</label>
-                    <select class="form-select" x-model="faseTemp.tipo_pausa_padrao">
+                    <select class="form-control" x-model="faseTemp.tipo_pausa_padrao">
                         <option value="">Selecione...</option>
                         {% for tipo_pausa in tipos_pausa %}<option value="{{ tipo_pausa.id }}">{{ tipo_pausa.nome }}</option>{% endfor %}
                     </select>
@@ -563,97 +143,37 @@ body {
             </div>
             
             <div class="acoes-list">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div class="d-flex justify-between items-center mb-4">
                     <h3>Ações desta Fase</h3>
-                    <button class="btn btn-primary btn-sm" @click="adicionarAcao"><i class="fa-solid fa-plus"></i> Nova Ação</button>
+                    <button class="btn btn-primary" @click="adicionarAcao"><i class="fa-solid fa-plus"></i> Nova Ação</button>
                 </div>
                 
                 <template x-for="(acao, idx) in faseTemp.acoes" :key="acao.temp_id">
                     <div class="acao-item">
                         <div class="acao-header">
                             <input type="text" class="form-control" x-model="acao.titulo" placeholder="Título da ação">
-                            <button class="btn-icon btn-delete btn-sm" @click="deletarAcao(idx)"><i class="fa-solid fa-trash"></i></button>
+                            <button class="btn-icon action-btn btn-delete" @click="deletarAcao(idx)"><i class="fa-solid fa-trash"></i></button>
                         </div>
-                        
-                        <div class="form-group" style="margin-bottom: 16px;">
-                                    <label>
-                                        <i class="fa-solid fa-file-lines"></i> 
-                                        Descrição Detalhada da Tarefa
-                                    </label>
-                                    <textarea 
-                                        class="form-control" 
-                                        x-model="acao.descricao" 
-                                        placeholder="Descreva em detalhes o que deve ser feito nesta ação...&#10;&#10;Exemplo:&#10;1. Acessar o sistema XYZ&#10;2. Protocolar documento&#10;3. Anexar comprovante no SharePoint"
-                                        rows="5"
-                                        style="resize: vertical; font-family: inherit; line-height: 1.6;"></textarea>
-                        </div>
-                        <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr;">
-                            <div class="form-group"><label>Tipo</label><select class="form-select" x-model="acao.tipo"><option value="SIMPLES">Simples</option><option value="DECISAO_SN">Decisão S/N</option><option value="AGUARDAR_DIAS">Aguardar Dias</option></select></div>
+                        <div class="form-group mb-4"><label><i class="fa-solid fa-file-lines"></i> Descrição</label><textarea class="form-control" x-model="acao.descricao" placeholder="Descreva o que deve ser feito..." rows="5"></textarea></div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Tipo</label><select class="form-control" x-model="acao.tipo"><option value="SIMPLES">Simples</option><option value="DECISAO_SN">Decisão S/N</option><option value="AGUARDAR_DIAS">Aguardar Dias</option></select></div>
                             <div class="form-group"><label>Prazo (dias)</label><input type="number" class="form-control" x-model.number="acao.prazo_dias" min="0"></div>
-                            <div class="form-group"><label>Responsável</label><select class="form-select" x-model="acao.tipo_responsavel"><option value="INTERNO">Interno</option><option value="TERCEIRO">Terceiro</option></select></div>
+                            <div class="form-group"><label>Responsável</label><select class="form-control" x-model="acao.tipo_responsavel"><option value="INTERNO">Interno</option><option value="TERCEIRO">Terceiro</option></select></div>
                         </div>
-                        <div x-show="acao.tipo_responsavel === 'INTERNO'"><label>Usuário Responsável</label><select class="form-select" x-model="acao.responsavel_padrao"><option value="">Automático (advogado do caso)</option>{% for user in usuarios %}<option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>{% endfor %}</select></div>
-                        <div x-show="acao.tipo_responsavel === 'TERCEIRO'"><label>Nome do Terceiro</label><input type="text" class="form-control" x-model="acao.nome_responsavel_terceiro" placeholder="Ex: Cliente, Perito, Seguradora"></div>
+                        <div x-show="acao.tipo_responsavel === 'INTERNO'"><label>Usuário</label><select class="form-control" x-model="acao.responsavel_padrao"><option value="">Automático</option>{% for user in usuarios %}<option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>{% endfor %}</select></div>
+                        <div x-show="acao.tipo_responsavel === 'TERCEIRO'"><label>Nome do Terceiro</label><input type="text" class="form-control" x-model="acao.nome_responsavel_terceiro" placeholder="Ex: Cliente, Perito"></div>
                         
-                        <div class="form-group" style="margin-top: 16px;">
-                            <label><i class="fa-solid fa-flag"></i> Ao concluir, mudar status do caso para:</label>
-                            <select class="form-select" x-model="acao.mudar_status_caso_para">
-                                <option value="">-- Não alterar --</option>
-                                {% for value, display_name in caso_status_choices %}
-                                    <option value="{{ value }}">{{ display_name }}</option>
-                                {% endfor %}
-                            </select>
+                        <div class="form-group mt-4"><label><i class="fa-solid fa-flag"></i> Ao concluir, mudar status para:</label><select class="form-control" x-model="acao.mudar_status_caso_para"><option value="">-- Não alterar --</option>{% for value, display_name in caso_status_choices %}<option value="{{ value }}">{{ display_name }}</option>{% endfor %}</select></div>
+                        <div class="mt-4" style="border-top: 1px solid var(--border-light); padding-top: 16px;">
+                            <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 12px;"><i class="fa-solid fa-route"></i> Regras de Transição</h4>
+                            <div class="form-group" x-show="acao.tipo !== 'DECISAO_SN'"><label>Ao concluir, ir para a fase:</label><select class="form-control" x-model="acao.fase_destino_padrao"><option value="">-- Permanecer na fase atual --</option><template x-for="f in workflow.fases"><option :value="f.temp_id" x-text="f.nome" :disabled="f.temp_id === faseTemp.temp_id"></option></template></select></div>
+                            <div x-show="acao.tipo === 'DECISAO_SN'"><div class="form-row"><div class="form-group"><label>Se SIM, ir para:</label><select class="form-control" x-model="acao.fase_destino_sim"><option value="">-- Permanecer --</option><template x-for="f in workflow.fases"><option :value="f.temp_id" x-text="f.nome" :disabled="f.temp_id === faseTemp.temp_id"></option></template></select></div><div class="form-group"><label>Se NÃO, ir para:</label><select class="form-control" x-model="acao.fase_destino_nao"><option value="">-- Permanecer --</option><template x-for="f in workflow.fases"><option :value="f.temp_id" x-text="f.nome" :disabled="f.temp_id === faseTemp.temp_id"></option></template></select></div></div></div>
                         </div>
-
-                        {# ✅✅✅ NOVA SEÇÃO DE TRANSIÇÕES ADICIONADA AQUI ✅✅✅ #}
-                        <div style="margin-top: 16px; border-top: 1px solid var(--gray-200); padding-top: 16px;">
-                            <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 12px;">
-                                <i class="fa-solid fa-route"></i> Regras de Transição
-                            </h4>
-
-                            <!-- Transição para Ação Simples/Aguardar -->
-                            <div class="form-group" x-show="acao.tipo !== 'DECISAO_SN'">
-                                <label>Ao concluir, ir para a fase:</label>
-                                <select class="form-select" x-model="acao.fase_destino_padrao">
-                                    <option value="">-- Permanecer na fase atual --</option>
-                                    <template x-for="f in workflow.fases">
-                                        {# Não mostra a fase atual como opção de destino para evitar loops óbvios #}
-                                        <option :value="f.temp_id" x-text="f.nome" :disabled="f.temp_id === faseTemp.temp_id"></option>
-                                    </template>
-                                </select>
-                            </div>
-
-                            <!-- Transições para Ação de Decisão -->
-                            <div x-show="acao.tipo === 'DECISAO_SN'">
-                                <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
-                                    <div class="form-group">
-                                        <label>Se a resposta for SIM, ir para:</label>
-                                        <select class="form-select" x-model="acao.fase_destino_sim">
-                                            <option value="">-- Permanecer na fase atual --</option>
-                                            <template x-for="f in workflow.fases">
-                                                <option :value="f.temp_id" x-text="f.nome" :disabled="f.temp_id === faseTemp.temp_id"></option>
-                                            </template>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Se a resposta for NÃO, ir para:</label>
-                                        <select class="form-select" x-model="acao.fase_destino_nao">
-                                            <option value="">-- Permanecer na fase atual --</option>
-                                            <template x-for="f in workflow.fases">
-                                                <option :value="f.temp_id" x-text="f.nome" :disabled="f.temp_id === faseTemp.temp_id"></option>
-                                            </template>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
                     </div>
                 </template>
             </div>
-            
-            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
-                <button class="btn btn-secondary" @click="fecharModalFase">Cancelar</button>
+            <div class="d-flex justify-end gap-12 mt-4">
+                <button class="btn btn-outline-secondary" @click="fecharModalFase">Cancelar</button>
                 <button class="btn btn-success" @click="salvarFase">Salvar Fase</button>
             </div>
         </div>
@@ -662,215 +182,10 @@ body {
 {% endblock %}
 
 {% block extra_js %}
+{# Dependências externas continuam aqui #}
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
-<script>
-document.addEventListener('alpine:init', () => {
-    Alpine.data('workflowBuilder', () => ({
-        workflowId: {{ workflow.id|default:'null' }},
-        
-        workflow: {
-            nome: '{{ workflow.nome|escapejs|default:'' }}',
-            cliente: '{{ workflow.cliente.id|default:'' }}',
-            produto: '{{ workflow.produto.id|default:'' }}',
-            fases: [],
-        },
-        
-        modalFaseAberto: false,
-        faseEditando: null, // index da fase sendo editada
-        faseTemp: {},
-        
-        init() {
-            console.log('🚀 Workflow Builder inicializado!');
-            
-            if (this.workflowId) {
-                this.carregarWorkflowExistente();
-            } else {
-                this.carregarDraft();
-            }
-
-            this.$nextTick(() => this.initSortable());
-        },
-        
-        getFaseVazia() {
-            return {
-                temp_id: `f_${Date.now()}`,
-                nome: '',
-                pausar_prazo_automaticamente: false,
-                tipo_pausa_padrao: '',
-                retomar_prazo_ao_sair: false,
-                cor_fase: '#6c757d',
-                icone_fase: 'fa-circle',
-                acoes: [],
-            };
-        },
-        
-        getAcaoVazia() {
-            return {
-                temp_id: `a_${Date.now()}${Math.random()}`,
-                titulo: '',
-                descricao: '',
-                tipo: 'SIMPLES',
-                tipo_responsavel: 'INTERNO',
-                responsavel_padrao: '',
-                nome_responsavel_terceiro: '',
-                pausar_prazo_enquanto_aguarda: false,
-                tipo_pausa_acao: '',
-                prazo_dias: 0,
-                dias_aguardar: 0,
-                mudar_status_caso_para: '',
-                // ✅ NOVAS PROPRIEDADES PARA AS TRANSIÇÕES
-                fase_destino_padrao: '', // Para ações SIMPLES/AGUARDAR
-                fase_destino_sim: '',    // Para DECISAO_SN
-                fase_destino_nao: '',    // Para DECISAO_SN
-            };
-        },
-        
-        abrirModalFase(index) {
-            if (index !== null) {
-                this.faseEditando = index;
-                this.faseTemp = JSON.parse(JSON.stringify(this.workflow.fases[index]));
-            } else {
-                this.faseEditando = null;
-                this.faseTemp = this.getFaseVazia();
-            }
-            this.modalFaseAberto = true;
-        },
-        
-        fecharModalFase() {
-            this.modalFaseAberto = false;
-            this.faseTemp = {};
-        },
-        
-        salvarFase() {
-            if (!this.faseTemp.nome || !this.faseTemp.nome.trim()) {
-                alert('Por favor, informe o nome da fase!');
-                return;
-            }
-            
-            if (this.faseEditando !== null) {
-                this.workflow.fases[this.faseEditando] = { ...this.faseTemp };
-            } else {
-                this.workflow.fases.push({ ...this.faseTemp });
-            }
-            
-            this.fecharModalFase();
-            this.autoSave();
-        },
-        
-        deletarFase(index) {
-            if (confirm('Tem certeza que deseja deletar esta fase e todas as suas ações?')) {
-                this.workflow.fases.splice(index, 1);
-                this.autoSave();
-            }
-        },
-        
-        adicionarAcao() {
-            if (!this.faseTemp.acoes) {
-                this.faseTemp.acoes = [];
-            }
-            this.faseTemp.acoes.push(this.getAcaoVazia());
-        },
-        
-        deletarAcao(index) {
-            this.faseTemp.acoes.splice(index, 1);
-        },
-        
-        get isValid() {
-            return this.workflow.nome && this.workflow.cliente && this.workflow.produto && this.workflow.fases.length > 0;
-        },
-        
-        autoSave() {
-            if (!this.workflowId) {
-                localStorage.setItem(`workflow-draft-${this.workflow.cliente}-${this.workflow.produto}`, JSON.stringify(this.workflow));
-                console.log('💾 Draft salvo automaticamente');
-            }
-        },
-        
-        carregarDraft() {
-            if (this.workflow.cliente && this.workflow.produto) {
-                const draft = localStorage.getItem(`workflow-draft-${this.workflow.cliente}-${this.workflow.produto}`);
-                if (draft) {
-                    try {
-                        const parsedDraft = JSON.parse(draft);
-                        if (confirm('Encontramos um rascunho para este Cliente/Produto. Deseja recuperá-lo?')) {
-                            this.workflow = parsedDraft;
-                        }
-                    } catch (e) { console.error("Erro ao carregar draft:", e); }
-                }
-            }
-        },
-        
-        async salvarWorkflow() {
-            if (!this.isValid) {
-                alert('Por favor, preencha o nome, cliente, produto e adicione pelo menos uma fase.');
-                return;
-            }
-            const csrftoken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
-            try {
-                const response = await fetch('{% url "workflow:salvar_workflow_json" %}', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                    body: JSON.stringify({
-                        workflow_id: this.workflowId,
-                        nome: this.workflow.nome,
-                        cliente: this.workflow.cliente,
-                        produto: this.workflow.produto,
-                        fases: this.workflow.fases,
-                    }),
-                });
-                const data = await response.json();
-                if (response.ok && data.success) {
-                    if (!this.workflowId) { localStorage.removeItem(`workflow-draft-${this.workflow.cliente}-${this.workflow.produto}`); }
-                    alert('✅ Workflow salvo com sucesso!');
-                    window.location.href = '{% url "workflow:lista_workflows" %}';
-                } else {
-                    alert('❌ Erro ao salvar: ' + (data.error || 'Erro desconhecido.'));
-                }
-            } catch (error) {
-                console.error('Erro de rede:', error);
-                alert('❌ Erro de rede ao tentar salvar o workflow.');
-            }
-        },
-        
-        initSortable() {
-            const el = document.getElementById('fases-sortable');
-            if (el) {
-                Sortable.create(el, {
-                    animation: 150,
-                    handle: '.fase-numero',
-                    onEnd: (evt) => {
-                        const movedItem = this.workflow.fases.splice(evt.oldIndex, 1)[0];
-                        this.workflow.fases.splice(evt.newIndex, 0, movedItem);
-                        this.autoSave();
-                    }
-                });
-            }
-        },
-
-        async carregarWorkflowExistente() {
-            if (!this.workflowId) return;
-            console.log(`Carregando dados do workflow #${this.workflowId}...`);
-            try {
-                const url = `{% url 'workflow:carregar_workflow_json' 0 %}`.replace('0', this.workflowId);
-                const response = await fetch(url);
-                const data = await response.json();
-                if (data.success) {
-                    this.workflow.nome = data.workflow.nome;
-                    this.workflow.cliente = data.workflow.cliente;
-                    this.workflow.produto = data.workflow.produto;
-                    this.workflow.fases = data.workflow.fases;
-                    console.log('✅ Workflow carregado com sucesso!');
-                } else {
-                    alert('❌ Erro ao carregar dados do workflow: ' + data.error);
-                }
-            } catch (error) {
-                console.error('Erro de rede:', error);
-                alert('❌ Erro de rede ao carregar o workflow.');
-            }
-        },
-    }));
-});
-</script>
+{# Nosso novo arquivo de script, carregado de forma estática! #}
+<script src="{% static 'js/workflow_builder.js' %}"></script>
 {% endblock %}

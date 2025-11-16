@@ -390,3 +390,43 @@ class DespesaForm(forms.ModelForm):
             'valor': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'advogado': forms.Select(attrs={'class': 'form-select'}),
         }
+class CasoInfoBasicasForm(forms.ModelForm):
+    class Meta:
+        model = Caso
+        # Apenas os campos que aparecem no primeiro card
+        fields = ['status', 'data_entrada', 'valor_apurado', 'advogado_responsavel']
+        widgets = {
+            'data_entrada': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Aplica classes CSS globais para consistência
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'
+            
+# --- FORMULÁRIO PARA O SEGUNDO MODAL ---
+class CasoDadosAdicionaisForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        # A view vai passar os campos personalizados para o form
+        campos_personalizados = kwargs.pop('campos_personalizados', [])
+        super().__init__(*args, **kwargs)
+
+        for valor in campos_personalizados:
+            campo = valor.campo
+            field_name = f'campo_{campo.id}'
+            
+            # Define o tipo de campo do formulário baseado no modelo
+            if campo.tipo_campo == 'TEXTO_LONGO':
+                self.fields[field_name] = forms.CharField(label=campo.nome_campo, required=False, initial=valor.valor, widget=forms.Textarea(attrs={'rows': 3}))
+            elif campo.tipo_campo == 'DATA':
+                self.fields[field_name] = forms.DateField(label=campo.nome_campo, required=False, initial=valor.valor, widget=forms.DateInput(attrs={'type': 'date'}))
+            elif campo.tipo_campo == 'BOOLEANO':
+                self.fields[field_name] = forms.BooleanField(label=campo.nome_campo, required=False, initial=(valor.valor == 'True'))
+            # Adicione outros tipos de campo aqui (MOEDA, etc.)
+            else:
+                self.fields[field_name] = forms.CharField(label=campo.nome_campo, required=False, initial=valor.valor)
+        
+        # Aplica classes CSS globais
+        for field_name, field in self.fields.items():
+            field.widget.attrs.setdefault('class', 'form-control')

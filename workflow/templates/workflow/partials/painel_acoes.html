@@ -1,14 +1,16 @@
 <!-- workflow/templates/workflow/partials/painel_acoes.html -->
 
-<h2>Ações do Workflow: <span class="fase-atual-nome">{{ caso.fase_atual_wf.nome|default:"Não iniciado" }}</span></h2>
+<h2 class="partial-title">
+    Ações do Workflow: <span class="fase-atual-nome">{{ caso.fase_atual_wf.nome|default:"Não iniciado" }}</span>
+</h2>
 
 <!-- Seção de Ações Pendentes -->
 <div class="acoes-section">
     <h3 class="section-title">Ações Pendentes</h3>
     {% for acao_inst in acoes_pendentes %}
-        <div class="card acao-pendente">
+        <div class="card acao-pendente slide-up">
             <div class="card-header">
-                <i class="fa-solid fa-hourglass-start icon-pendente"></i>
+                <i class="fa-solid fa-hourglass-start"></i>
                 <strong>{{ acao_inst.acao.titulo }}</strong>
             </div>
             <div class="card-body">
@@ -26,10 +28,9 @@
                     {% endif %}
                 </div>
 
-                {# Exibe a descrição da tarefa se ela existir #}
                 {% if acao_inst.acao.descricao %}
                 <div class="acao-descricao">
-                    <p>{{ acao_inst.acao.descricao|linebreaksbr }}</p>
+                    {{ acao_inst.acao.descricao|linebreaksbr }}
                 </div>
                 {% endif %}
 
@@ -37,23 +38,24 @@
                     <form hx-post="{% url 'workflow:executar_acao' pk=acao_inst.pk %}" hx-target="#painel-acoes" hx-swap="outerHTML" hx-indicator="#spinner-{{ acao_inst.pk }}">
                         {% csrf_token %}
                         
-                        {# Campo de comentário agora usa 'form-group' e tem 5 linhas #}
                         <div class="form-group">
-                            <textarea name="comentario" placeholder="Adicione um comentário sobre a execução..." rows="5"></textarea>
+                            <textarea name="comentario" class="form-control" placeholder="Adicione um comentário sobre a execução..." rows="4"></textarea>
                         </div>
 
                         <div class="acao-botoes">
-                            <span id="spinner-{{ acao_inst.pk }}" class="htmx-indicator"><i class="fa-solid fa-spinner fa-spin"></i></span>
+                            <span id="spinner-{{ acao_inst.pk }}" class="htmx-indicator spinner"></span>
                             {% if acao_inst.acao.tipo == 'SIMPLES' %}
-                                <button type="submit" class="btn-submit andamento">Confirmar Execução</button>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fa-solid fa-check"></i> Confirmar Execução
+                                </button>
                             {% elif acao_inst.acao.tipo == 'DECISAO_SN' %}
-                                <button type="submit" name="resposta" value="SIM" class="btn-sim">Sim</button>
-                                <button type="submit" name="resposta" value="NAO" class="btn-nao">Não</button>
+                                <button type="submit" name="resposta" value="SIM" class="btn btn-sim">Sim</button>
+                                <button type="submit" name="resposta" value="NAO" class="btn btn-nao">Não</button>
                             {% endif %}
                         </div>
                     </form>
                 {% else %}
-                    <p class="aguardo-info"><i>Aguardando {{ acao_inst.acao.dias_aguardar }} dia(s). O sistema prosseguirá automaticamente.</i></p>
+                    <p class="aguardo-info"><i class="fa-solid fa-clock"></i> Aguardando {{ acao_inst.acao.dias_aguardar }} dia(s). O sistema prosseguirá automaticamente.</p>
                 {% endif %}
             </div>
         </div>
@@ -68,9 +70,9 @@
 <div class="acoes-section">
     <h3 class="section-title">Ações Concluídas</h3>
     {% for acao_inst in acoes_concluidas %}
-        <div class="card acao-concluida">
-            <div class="card-header">
-                <i class="fa-solid fa-check-circle icon-concluida"></i>
+        <div class="card acao-concluida slide-up">
+            <div class="card-header" style="align-items: center;">
+                <i class="fa-solid fa-check-circle"></i>
                 <strong>{{ acao_inst.acao.titulo }}</strong>
                 <small class="concluida-info">
                     (por {{ acao_inst.concluida_por.username }} em {{ acao_inst.data_conclusao|date:"d/m/Y H:i" }})
@@ -95,16 +97,3 @@
         </div>
     {% endfor %}
 </div>
-
-<!-- Estilo Opcional para a Descrição -->
-<style>
-    .acao-descricao {
-        background-color: #f8f9fa; /* Um cinza bem claro */
-        border-left: 3px solid #6c757d; /* Borda cinza */
-        padding: 10px 15px;
-        margin-top: 15px;
-        margin-bottom: 15px;
-        font-size: 0.95em;
-        color: #495057;
-    }
-</style>

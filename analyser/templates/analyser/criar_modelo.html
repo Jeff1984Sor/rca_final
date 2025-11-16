@@ -1,720 +1,268 @@
 {# analyser/templates/analyser/criar_modelo.html #}
-{% extends 'base.html' %}
 
-{% block title %}
-    {% if modelo %}Editar Modelo{% else %}Criar Modelo{% endif %} | Analyser
-{% endblock %}
-
-{% block extra_css %}
-<style>
-:root {
-    --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --primary-solid: #667eea;
-    --success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    --success-solid: #10b981;
-    --warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    --info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    
-    --gray-50: #f8fafc;
-    --gray-100: #f1f5f9;
-    --gray-200: #e2e8f0;
-    --gray-300: #cbd5e1;
-    --gray-600: #475569;
-    --gray-700: #334155;
-    --gray-800: #1e293b;
-    --gray-900: #0f172a;
-    
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    --transition: 250ms ease-in-out;
-}
-
-body {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    background-attachment: fixed;
-}
-
-.container {
-    max-width: 1200px;
-    margin: 40px auto;
-    padding: 0 20px;
-}
-
-/* HERO HEADER */
-.hero-header {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 32px 40px;
-    margin-bottom: 32px;
-    box-shadow: var(--shadow-xl);
-    animation: slideDown 0.5s ease-out;
-}
-
-@keyframes slideDown {
-    from { opacity: 0; transform: translateY(-30px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.hero-title {
-    font-size: 2rem;
-    font-weight: 800;
-    color: var(--gray-900);
-    margin: 0 0 8px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.hero-icon {
-    background: var(--primary);
-    width: 50px;
-    height: 50px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.3rem;
-}
-
-.hero-subtitle {
-    color: var(--gray-600);
-    font-size: 1rem;
-}
-
-/* FORM CARD */
-.form-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    box-shadow: var(--shadow-xl);
-    overflow: hidden;
-    animation: fadeInUp 0.6s ease-out;
-}
-
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.form-section {
-    padding: 40px;
-    border-bottom: 3px solid var(--gray-100);
-}
-
-.form-section:last-child {
-    border-bottom: none;
-}
-
-.section-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid var(--gray-100);
-}
-
-.section-header i {
-    background: var(--primary);
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-}
-
-.section-title {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--gray-900);
-    margin: 0;
-}
-
-/* FORM FIELDS */
-.form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    margin-bottom: 24px;
-}
-
-.form-group {
-    margin-bottom: 24px;
-}
-
-.form-label {
-    display: block;
-    font-weight: 600;
-    font-size: 0.95rem;
-    color: var(--gray-700);
-    margin-bottom: 8px;
-}
-
-.form-label i {
-    color: var(--primary-solid);
-    margin-right: 6px;
-}
-
-.form-control,
-select,
-textarea {
-    width: 100%;
-    padding: 14px 16px;
-    border: 2px solid var(--gray-200);
-    border-radius: 12px;
-    font-size: 1rem;
-    transition: all var(--transition);
-    font-family: inherit;
-}
-
-.form-control:focus,
-select:focus,
-textarea:focus {
-    outline: none;
-    border-color: var(--primary-solid);
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-}
-
-select {
-    cursor: pointer;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 16px center;
-    padding-right: 40px;
-}
-
-textarea {
-    resize: vertical;
-}
-
-.form-check {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px;
-    background: var(--gray-50);
-    border-radius: 10px;
-}
-
-.form-check-input {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-}
-
-/* CAMPOS PARA MAPEAR */
-.campos-list {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.campo-item {
-    background: white;
-    border: 2px solid var(--gray-200);
-    border-radius: 16px;
-    padding: 24px;
-    transition: all var(--transition);
-    animation: slideIn 0.4s ease-out;
-}
-
-@keyframes slideIn {
-    from { opacity: 0; transform: translateX(-20px); }
-    to { opacity: 1; transform: translateX(0); }
-}
-
-.campo-item:hover {
-    border-color: var(--primary-solid);
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-2px);
-}
-
-.campo-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 2px solid var(--gray-100);
-}
-
-.campo-name {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--gray-900);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.campo-badge {
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 8px;
-    text-transform: uppercase;
-}
-
-.badge-padrao {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
-
-.badge-personalizado {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    color: white;
-}
-
-.campo-tipo {
-    font-size: 0.85rem;
-    color: var(--gray-600);
-    background: var(--gray-100);
-    padding: 4px 10px;
-    border-radius: 6px;
-}
-
-.campo-descricao {
-    margin-top: 16px;
-}
-
-.campo-descricao textarea {
-    min-height: 100px;
-}
-
-.help-text {
-    font-size: 0.85rem;
-    color: var(--gray-600);
-    margin-top: 6px;
-    font-style: italic;
-}
-
-/* LOADING STATE */
-.loading-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--gray-600);
-}
-
-.spinner {
-    border: 4px solid var(--gray-200);
-    border-top: 4px solid var(--primary-solid);
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 20px;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--gray-600);
-}
-
-.empty-state i {
-    font-size: 4rem;
-    color: var(--gray-300);
-    margin-bottom: 16px;
-}
-
-/* FOOTER */
-.form-footer {
-    background: var(--gray-50);
-    padding: 28px 40px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-}
-
-.btn {
-    padding: 14px 32px;
-    border-radius: 12px;
-    border: none;
-    font-weight: 700;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all var(--transition);
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    text-decoration: none;
-    box-shadow: var(--shadow-lg);
-}
-
-.btn:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-xl);
-}
-
-.btn-primary {
-    background: var(--primary);
-    color: white;
-}
-
-.btn-secondary {
-    background: var(--gray-600);
-    color: white;
-}
-
-/* ALERTS */
-.alert {
-    padding: 16px 20px;
-    border-radius: 12px;
-    margin-bottom: 24px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-weight: 500;
-}
-
-.alert-info {
-    background: rgba(79, 172, 254, 0.1);
-    border: 2px solid #4facfe;
-    color: #0369a1;
-}
-
-.alert i {
-    font-size: 1.3rem;
-}
-
-/* RESPONSIVE */
-@media (max-width: 768px) {
-    .form-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .form-footer {
-        flex-direction: column;
-    }
-    
-    .btn {
-        width: 100%;
-        justify-content: center;
-    }
-}
-</style>
-{% endblock %}
+{% extends "base.html" %}
+{% load static %}
 
 {% block content %}
-<div class="container">
+<div style="max-width: 1000px; margin: 30px auto; padding: 20px;">
     
-    <!-- HERO HEADER -->
-    <div class="hero-header">
-        <h1 class="hero-title">
-            <div class="hero-icon">
-                <i class="fa-solid fa-robot"></i>
-            </div>
-            <span>
-                {% if modelo %}
-                    Editar Modelo de Análise
-                {% else %}
-                    Criar Novo Modelo de Análise
-                {% endif %}
-            </span>
+    <!-- CABEÇALHO -->
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; color: white; margin-bottom: 30px;">
+        <h1 style="margin: 0; font-size: 32px;">
+            {% if modelo %}
+                ✏️ Editar Modelo de Análise
+            {% else %}
+                ➕ Criar Novo Modelo de Análise
+            {% endif %}
         </h1>
-        <p class="hero-subtitle">
-            Configure como a IA deve extrair informações dos documentos
-        </p>
+        <p style="margin: 8px 0 0 0; opacity: 0.9;">Configure como a IA deve extrair informações dos documentos para Cliente e Produto específicos.</p>
     </div>
-    
-    <!-- FORM -->
-    <form method="POST" action="" id="form-modelo">
+
+    <!-- FORMULÁRIO -->
+    <form method="POST" style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
         {% csrf_token %}
-        
-        <div class="form-card">
-            
-            <!-- SEÇÃO 1: DADOS BÁSICOS -->
-            <div class="form-section">
-                <div class="section-header">
-                    <i class="fa-solid fa-circle-info"></i>
-                    <h2 class="section-title">Informações Básicas</h2>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fa-solid fa-tag"></i>
-                        Nome do Modelo
+
+        <!-- SEÇÃO 1: INFORMAÇÕES BÁSICAS -->
+        <div style="margin-bottom: 40px;">
+            <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                <span style="background: #667eea; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">1</span>
+                Informações Básicas
+            </h2>
+
+            <!-- Nome do Modelo -->
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #333;">
+                    📝 Nome do Modelo
+                </label>
+                <input 
+                    type="text" 
+                    name="nome" 
+                    value="{{ modelo.nome|default:'' }}"
+                    placeholder="Ex: Análise de Avisos de Ação"
+                    style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;"
+                    required
+                >
+            </div>
+
+            <!-- Descrição -->
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #333;">
+                    📄 Descrição
+                </label>
+                <textarea 
+                    name="descricao"
+                    placeholder="Descreva o propósito deste modelo..."
+                    style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; min-height: 100px; font-family: inherit;"
+                >{{ modelo.descricao|default:'' }}</textarea>
+            </div>
+
+            <!-- Cliente e Produto -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                <div>
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #333;">
+                        🏢 Cliente
                     </label>
-                    <input type="text" 
-                           name="nome" 
-                           class="form-control" 
-                           placeholder="Ex: Análise Sinistro RCG Padrão"
-                           value="{{ modelo.nome|default:'' }}"
-                           required>
+                    <select 
+                        name="cliente" 
+                        id="cliente_select"
+                        style="width: 100%; padding: 12px; border: 2px solid #667eea; border-radius: 8px; font-size: 14px;"
+                        required
+                    >
+                        <option value="">-- Selecione um cliente --</option>
+                        {% for cliente in clientes %}
+                            <option value="{{ cliente.id }}" {% if modelo.cliente.id == cliente.id %}selected{% endif %}>
+                                {{ cliente.nome }}
+                            </option>
+                        {% endfor %}
+                    </select>
                 </div>
-                
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fa-solid fa-align-left"></i>
-                        Descrição
+
+                <div>
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #333;">
+                        📦 Produto
                     </label>
-                    <textarea name="descricao" 
-                              class="form-control" 
-                              rows="2"
-                              placeholder="Breve descrição do que este modelo faz...">{{ modelo.descricao|default:'' }}</textarea>
-                </div>
-                
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fa-solid fa-building"></i>
-                            Cliente
-                        </label>
-                        <select name="cliente" 
-                                id="select-cliente" 
-                                class="form-control" 
-                                required>
-                            <option value="">Selecione o cliente...</option>
-                            {% for cliente in clientes %}
-                                <option value="{{ cliente.id }}"
-                                    {% if modelo and modelo.cliente.id == cliente.id %}selected{% endif %}>
-                                    {{ cliente.nome }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">
-                            <i class="fa-solid fa-box"></i>
-                            Produto
-                        </label>
-                        <select name="produto" 
-                                id="select-produto" 
-                                class="form-control" 
-                                required>
-                            <option value="">Selecione o produto...</option>
-                            {% for produto in produtos %}
-                                <option value="{{ produto.id }}"
-                                    {% if modelo and modelo.produto.id == produto.id %}selected{% endif %}>
-                                    {{ produto.nome }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="alert alert-info">
-                    <i class="fa-solid fa-lightbulb"></i>
-                    <span>Ao selecionar Cliente + Produto, o sistema carregará automaticamente todos os campos que você precisa mapear.</span>
+                    <select 
+                        name="produto" 
+                        id="produto_select"
+                        style="width: 100%; padding: 12px; border: 2px solid #667eea; border-radius: 8px; font-size: 14px;"
+                        required
+                    >
+                        <option value="">-- Selecione um produto --</option>
+                        {% for produto in produtos %}
+                            <option value="{{ produto.id }}" {% if modelo.produto.id == produto.id %}selected{% endif %}>
+                                {{ produto.nome }}
+                            </option>
+                        {% endfor %}
+                    </select>
                 </div>
             </div>
-            
-            <!-- SEÇÃO 2: INSTRUÇÕES GERAIS -->
-            <div class="form-section">
-                <div class="section-header">
-                    <i class="fa-solid fa-brain"></i>
-                    <h2 class="section-title">Instruções Gerais para a IA</h2>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">
-                        <i class="fa-solid fa-message"></i>
-                        Orientações Gerais
-                    </label>
-                    <textarea name="instrucoes_gerais" 
-                              class="form-control" 
-                              rows="4"
-                              placeholder="Ex: Seja preciso com datas e valores. Procure sempre nas primeiras páginas...">{{ modelo.instrucoes_gerais|default:"Você é um assistente especializado em análise de documentos jurídicos. Seja preciso e atencioso. Se não encontrar uma informação, retorne 'Não encontrado'." }}</textarea>
-                    <div class="help-text">
-                        Essas instruções se aplicam a todos os campos
-                    </div>
-                </div>
-                
-                <div class="form-check">
-                    <input type="checkbox" 
-                           name="gerar_resumo" 
-                           id="gerar_resumo" 
-                           class="form-check-input"
-                           {% if not modelo or modelo.gerar_resumo %}checked{% endif %}>
-                    <label for="gerar_resumo" class="form-label" style="margin: 0;">
-                        <i class="fa-solid fa-file-text"></i>
-                        Gerar resumo executivo do caso após análise
-                    </label>
-                </div>
+
+            <!-- Info Box -->
+            <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                <p style="margin: 0; color: #1565c0; font-size: 14px;">
+                    <strong>💡 Dica:</strong> Ao selecionar Cliente e Produto, o sistema carregará os campos que você precisa mapear.
+                </p>
             </div>
+        </div>
+
+        <!-- SEÇÃO 2: INSTRUÇÕES GERAIS -->
+        <div style="margin-bottom: 40px;">
+            <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                <span style="background: #667eea; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">2</span>
+                Instruções Gerais para a IA
+            </h2>
+
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #333;">
+                📋 Orientações Gerais
+            </label>
+            <textarea 
+                name="instrucoes_gerais"
+                placeholder="Ex: Você é um assistente especializado em análise de documentos jurídicos. Seja preciso e atencioso. Se não encontrar uma informação, retorne 'Não encontrado'."
+                style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; min-height: 120px; font-family: inherit;"
+            >{{ modelo.instrucoes_gerais|default:'' }}</textarea>
             
-            <!-- SEÇÃO 3: MAPEAMENTO DE CAMPOS -->
-            <div class="form-section" id="secao-campos" style="display: none;">
-                <div class="section-header">
-                    <i class="fa-solid fa-list-check"></i>
-                    <h2 class="section-title">Mapeamento de Campos</h2>
-                </div>
-                
-                <div class="alert alert-info">
-                    <i class="fa-solid fa-info-circle"></i>
-                    <span>Para cada campo abaixo, descreva COMO a IA deve encontrar essa informação no documento. Seja específico!</span>
-                </div>
-                
-                <div id="loading-campos" class="loading-state">
-                    <div class="spinner"></div>
-                    <p>Carregando campos...</p>
-                </div>
-                
-                <div id="campos-container" class="campos-list" style="display: none;">
-                    <!-- Campos serão carregados via JavaScript -->
-                </div>
-                
-                <div id="empty-campos" class="empty-state" style="display: none;">
-                    <i class="fa-solid fa-inbox"></i>
-                    <h3>Nenhum campo encontrado</h3>
-                    <p>Selecione um cliente e produto para carregar os campos</p>
-                </div>
+            <p style="font-size: 12px; color: #999; margin-top: 8px;">
+                ℹ️ Estas instruções se aplicam a todos os campos e são enviadas no início do prompt.
+            </p>
+
+            <!-- Checkbox: Gerar Resumo -->
+            <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input 
+                        type="checkbox" 
+                        name="gerar_resumo" 
+                        {% if modelo.gerar_resumo %}checked{% endif %}
+                        style="width: 18px; height: 18px; cursor: pointer;"
+                    >
+                    <span style="font-weight: 600; color: #333;">
+                        📝 Gerar resumo executivo do caso após análise
+                    </span>
+                </label>
             </div>
-            
-            <!-- FOOTER -->
-            <div class="form-footer">
-                <a href="{% url 'analyser:listar_modelos' %}" class="btn btn-secondary">
-                    <i class="fa-solid fa-times"></i>
-                    Cancelar
-                </a>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fa-solid fa-save"></i>
-                    {% if modelo %}Salvar Alterações{% else %}Criar Modelo{% endif %}
-                </button>
+        </div>
+
+        <!-- SEÇÃO 3: CAMPOS A EXTRAIR -->
+        <div style="margin-bottom: 40px;">
+            <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                <span style="background: #667eea; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">3</span>
+                Campos a Extrair
+            </h2>
+
+            <div id="campos_container" style="border: 2px dashed #e0e0e0; border-radius: 8px; padding: 20px; min-height: 100px;">
+                <p style="color: #999; text-align: center; margin: 0;">
+                    ⏳ Selecione um Cliente e Produto para ver os campos disponíveis...
+                </p>
             </div>
-            
+        </div>
+
+        <!-- BOTÕES -->
+        <div style="display: flex; gap: 15px; justify-content: flex-end;">
+            <a href="{% url 'analyser:listar_modelos' %}" class="btn" style="
+                padding: 12px 28px;
+                background: #e0e0e0;
+                color: #333;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 600;
+                text-decoration: none;
+                display: inline-block;
+            ">
+                ❌ Cancelar
+            </a>
+            <button type="submit" style="
+                padding: 12px 28px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 600;
+                font-size: 14px;
+            ">
+                {% if modelo %}
+                    💾 Atualizar Modelo
+                {% else %}
+                    ✅ Criar Modelo
+                {% endif %}
+            </button>
         </div>
     </form>
-    
-</div>
-{% endblock %}
 
-{% block extra_js %}
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    
-    const selectCliente = document.getElementById('select-cliente');
-    const selectProduto = document.getElementById('select-produto');
-    const secaoCampos = document.getElementById('secao-campos');
-    const loadingCampos = document.getElementById('loading-campos');
-    const camposContainer = document.getElementById('campos-container');
-    const emptyCampos = document.getElementById('empty-campos');
-    
-    // Se está editando, carrega campos
-    {% if modelo %}
-        carregarCampos({{ modelo.cliente.id }}, {{ modelo.produto.id }});
-    {% endif %}
-    
-    // Quando mudar PRODUTO, carrega campos
-    selectProduto.addEventListener('change', function() {
-        const produtoId = this.value;
-        const clienteId = selectCliente.value;
-        
-        if (produtoId && clienteId) {
-            carregarCampos(clienteId, produtoId);
-        } else {
-            secaoCampos.style.display = 'none';
+    const clienteSelect = document.getElementById('cliente_select');
+    const produtoSelect = document.getElementById('produto_select');
+    const camposContainer = document.getElementById('campos_container');
+
+    // Função para carregar campos
+    function carregarCampos() {
+        const cliente_id = clienteSelect.value;
+        const produto_id = produtoSelect.value;
+
+        if (!cliente_id || !produto_id) {
+            camposContainer.innerHTML = '<p style="color: #999; text-align: center; margin: 0;">⏳ Selecione um Cliente e Produto para ver os campos disponíveis...</p>';
+            return;
         }
-    });
-    
-    // Quando mudar CLIENTE, limpa produto
-    selectCliente.addEventListener('change', function() {
-        secaoCampos.style.display = 'none';
-        selectProduto.value = '';
-    });
-    
-    function carregarCampos(clienteId, produtoId) {
-        // Mostra loading
-        secaoCampos.style.display = 'block';
-        loadingCampos.style.display = 'block';
-        camposContainer.style.display = 'none';
-        emptyCampos.style.display = 'none';
-        
-        // Busca campos via AJAX
-        fetch(`{% url 'analyser:ajax_buscar_campos' %}?cliente_id=${clienteId}&produto_id=${produtoId}`)
+
+        // Faz requisição AJAX
+        fetch(`/analyser/ajax/campos/?cliente_id=${cliente_id}&produto_id=${produto_id}`)
             .then(response => response.json())
             .then(data => {
-                loadingCampos.style.display = 'none';
-                
-                if (data.campos && data.campos.length > 0) {
-                    renderizarCampos(data.campos);
-                    camposContainer.style.display = 'flex';
-                } else {
-                    emptyCampos.style.display = 'block';
+                if (data.campos.length === 0) {
+                    camposContainer.innerHTML = '<p style="color: #f44336; text-align: center; margin: 0;">❌ Nenhum campo disponível para esta combinação de Cliente e Produto.</p>';
+                    return;
                 }
+
+                // Renderiza os campos
+                let html = '<div style="display: grid; gap: 15px;">';
+                
+                data.campos.forEach(campo => {
+                    const descricaoAtual = document.querySelector(`textarea[name="descricao_${campo.nome_variavel}"]`)?.value || '';
+                    
+                    html += `
+                        <div style="border: 1px solid #e0e0e0; padding: 15px; border-radius: 8px; background: #fafafa;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                                <div>
+                                    <strong style="color: #333;">${campo.nome_campo}</strong>
+                                    <br>
+                                    <small style="color: #999;">Tipo: ${campo.tipo_campo}</small>
+                                </div>
+                                <div style="text-align: right;">
+                                    ${campo.is_padrao ? '<span style="background: #4caf50; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">📌 Padrão</span>' : '<span style="background: #2196f3; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">🎯 Personalizado</span>'}
+                                </div>
+                            </div>
+                            
+                            <label style="display: block; font-weight: 600; font-size: 12px; margin-bottom: 5px; color: #666;">
+                                📝 Instruções específicas para extração:
+                            </label>
+                            <textarea 
+                                name="descricao_${campo.nome_variavel}"
+                                placeholder="Digite instruções específicas para este campo (opcional)..."
+                                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; min-height: 60px; font-family: inherit;"
+                            >${descricaoAtual}</textarea>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                camposContainer.innerHTML = html;
             })
             .catch(error => {
-                console.error('Erro ao carregar campos:', error);
-                loadingCampos.style.display = 'none';
-                emptyCampos.style.display = 'block';
+                console.error('Erro:', error);
+                camposContainer.innerHTML = '<p style="color: #f44336; text-align: center; margin: 0;">❌ Erro ao carregar campos.</p>';
             });
     }
-    
-    function renderizarCampos(campos) {
-        let html = '';
-        campos.forEach(campo => {
-            // ✅ USA AS CHAVES CORRETAS: nome_campo, tipo_campo, nome_variavel
-            html += `
-                <div class="campo-item">
-                    <div class="campo-header">
-                        <span class="campo-nome">${campo.nome_campo}</span>
-                        <span class="badge ${campo.is_padrao ? 'badge-padrao' : 'badge-custom'}">
-                            ${campo.is_padrao ? 'Padrão' : 'Custom'}
-                        </span>
-                        <span class="badge badge-tipo">${campo.tipo_campo}</span>
-                    </div>
-                    <div class="form-group">
-                        <label for="descricao_${campo.nome_variavel}">Como a IA deve encontrar este campo?</label>
-                        <textarea id="descricao_${campo.nome_variavel}"
-                                  name="descricao_${campo.nome_variavel}"
-                                  class="form-control"
-                                  rows="3"
-                                  placeholder="Seja específico: onde procurar, como identificar, formato esperado, etc."></textarea>
-                    </div>
-                </div>
-            `;
-        });
-        camposContainer.innerHTML = html;
-    }
-    
-    function getPlaceholderPorTipo(tipo, label) {
-        const placeholders = {
-            'TEXTO': `Ex: O campo "${label}" geralmente está no cabeçalho do documento. Procure por palavras-chave relacionadas.`,
-            'DATA': `Ex: Procure por "data de", "em", "autuado em". O formato esperado é DD/MM/AAAA. Geralmente está nas primeiras páginas.`,
-            'MOEDA': `Ex: Procure por "valor de", "R$", "montante". O formato é R$ 0.000,00. Pode estar em tabelas.`,
-            'NUMERO_INT': `Ex: Procure por números inteiros relacionados a "${label}". Pode ter prefixos como "Nº", "#".`,
-            'NUMERO_DEC': `Ex: Procure por números decimais relacionados a "${label}".`,
-            'BOOLEANO': `Ex: Procure por informações que indiquem sim/não sobre "${label}".`,
-            'LISTA_UNICA': `Ex: Procure por "${label}" e retorne uma das opções disponíveis.`,
-            'LISTA_MULTIPLA': `Ex: Procure por "${label}" e retorne valores separados por vírgula.`,
-            'LISTA_USUARIOS': `Ex: Procure por nomes de pessoas responsáveis por "${label}".`,
-        };
-        
-        return placeholders[tipo] || `Descreva como encontrar o campo "${label}" no documento...`;
-    }
-    
-    // Validação antes de submeter
-    const form = document.getElementById('form-modelo');
-    form.addEventListener('submit', function(e) {
-        const nome = document.querySelector('input[name="nome"]').value;
-        const cliente = selectCliente.value;
-        const produto = selectProduto.value;
-        
-        if (!nome || !cliente || !produto) {
-            e.preventDefault();
-            alert('⚠️ Preencha todos os campos obrigatórios!');
-            return false;
-        }
-        
-        // Mostra loading no botão
-        const btnSubmit = this.querySelector('button[type="submit"]');
-        btnSubmit.disabled = true;
-        btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
-    });
-    
-    console.log('✅ Formulário de Modelo carregado!');
+
+    // Event listeners
+    clienteSelect.addEventListener('change', carregarCampos);
+    produtoSelect.addEventListener('change', carregarCampos);
+
+    // Carrega campos ao iniciar (se modelo existente)
+    carregarCampos();
 });
 </script>
+
 {% endblock %}

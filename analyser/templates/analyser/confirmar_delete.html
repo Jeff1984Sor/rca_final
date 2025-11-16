@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirmar Exclusão | Analyser{% endblock %}
+
+{% block extra_css %}
+<style>
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-attachment: fixed;
+}
+
+.container {
+    max-width: 600px;
+    margin: 100px auto;
+    padding: 0 20px;
+}
+
+.delete-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+.delete-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.delete-icon {
+    font-size: 3rem;
+    color: #f59e0b;
+    margin-bottom: 20px;
+    display: block;
+}
+
+.delete-title {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.delete-message {
+    color: #475569;
+    font-size: 1.1rem;
+    text-align: center;
+    margin-bottom: 30px;
+    line-height: 1.6;
+}
+
+.delete-warning {
+    color: #94a3b8;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.delete-footer {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+
+.btn {
+    padding: 12px 28px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+    font-size: 1rem;
+}
+
+.btn-cancel {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.btn-cancel:hover {
+    background: #cbd5e1;
+}
+
+.btn-confirm {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-confirm:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px rgba(239, 68, 68, 0.3);
+}
+
+strong {
+    color: #0f172a;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="delete-card">
+        <div class="delete-header">
+            <i class="fa-solid fa-exclamation-triangle delete-icon"></i>
+            <h1 class="delete-title">Confirmar Exclusão</h1>
+        </div>
+        
+        <p class="delete-message">
+            Tem certeza que deseja deletar o modelo <strong>"{{ modelo.nome }}"</strong>?
+        </p>
+        
+        <p class="delete-warning">
+            <i class="fa-solid fa-info-circle"></i> Esta ação não pode ser desfeita. Todos os resultados de análise associados também serão removidos.
+        </p>
+        
+        <div class="delete-footer">
+            <a href="{% url 'analyser:listar_modelos' %}" class="btn btn-cancel">
+                <i class="fa-solid fa-times"></i> Cancelar
+            </a>
+            
+            <form method="POST" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-confirm">
+                    <i class="fa-solid fa-trash"></i> Confirmar Exclusão
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

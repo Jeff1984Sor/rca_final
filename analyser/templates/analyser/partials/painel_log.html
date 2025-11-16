@@ -1,0 +1,27 @@
+{# analyser/templates/analyser/partials/painel_log.html #}
+
+<div class="main-card">
+    <div class="card-section" 
+         id="log-section-{{ resultado.id }}"
+         hx-get="{% url 'analyser:carregar_logs' resultado_id=resultado.id %}"
+         hx-trigger="load, every 3s"
+         hx-swap="innerHTML">
+        
+        <!-- Estado de carregamento inicial -->
+        <div class="section-header">
+            <i class="fa-solid fa-terminal"></i>
+            <h2 class="section-title">Log de Execução</h2>
+            <span class="status-badge status-processando" style="margin-left: auto;">
+                <i class="fa-solid fa-spinner fa-spin"></i> Processando
+            </span>
+        </div>
+        
+        <div class="log-container" style="background-color: #0f172a; color: #e2e8f0; font-family: 'Courier New', monospace; padding: 20px; border-radius: 12px;">
+            <div style="display: flex; gap: 12px; margin-bottom: 8px;">
+                <span style="color: #64748b; min-width: 80px;">[--:--:--]</span>
+                <span style="color: #3b82f6;">ℹ️</span>
+                <span><i class="fa-solid fa-spinner fa-spin"></i> Carregando logs...</span>
+            </div>
+        </div>
+    </div>
+</div>

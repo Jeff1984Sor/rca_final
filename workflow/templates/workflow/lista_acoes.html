@@ -3,705 +3,10 @@
 
 {% block title %}Painel de Ações | Sistema Jurídico{% endblock %}
 
-{% block extra_css %}
-<style>
-/* ==================================================================== */
-/* 🎨 DESIGN SYSTEM - LISTA DE AÇÕES */
-/* ==================================================================== */
-:root {
-    --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --primary-solid: #667eea;
-    --success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    --success-solid: #10b981;
-    --danger: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    --danger-solid: #ef4444;
-    --warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    --warning-solid: #f59e0b;
-    --info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    --info-solid: #0ea5e9;
-    
-    --gray-50: #f8fafc;
-    --gray-100: #f1f5f9;
-    --gray-200: #e2e8f0;
-    --gray-300: #cbd5e1;
-    --gray-400: #94a3b8;
-    --gray-500: #64748b;
-    --gray-600: #475569;
-    --gray-700: #334155;
-    --gray-800: #1e293b;
-    --gray-900: #0f172a;
-    
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    
-    --transition: 250ms ease-in-out;
-}
-
-body {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    background-attachment: fixed;
-    min-height: 100vh;
-}
-
-.lista-acoes-container {
-    max-width: 1400px;
-    margin: 40px auto;
-    padding: 0 20px;
-}
-
-/* ==================================================================== */
-/* 💎 HERO HEADER */
-/* ==================================================================== */
-.hero-header {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px) saturate(180%);
-    border-radius: 24px;
-    padding: 32px 40px;
-    margin-bottom: 32px;
-    box-shadow: var(--shadow-xl);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    position: relative;
-    overflow: hidden;
-    animation: slideDown 0.5s ease-out;
-}
-
-@keyframes slideDown {
-    from { opacity: 0; transform: translateY(-30px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.hero-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 5px;
-    background: var(--primary);
-    animation: shimmer 3s infinite;
-}
-
-@keyframes shimmer {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-.hero-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 24px;
-}
-
-.hero-title {
-    font-size: 2.25rem;
-    font-weight: 800;
-    color: var(--gray-900);
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.hero-title i {
-    background: var(--primary);
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.5rem;
-}
-
-.hero-subtitle {
-    font-size: 1rem;
-    color: var(--gray-600);
-    margin: 8px 0 0 72px;
-    font-weight: 500;
-}
-
-/* ==================================================================== */
-/* 📊 STATS CARDS */
-/* ==================================================================== */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 20px;
-    margin-bottom: 32px;
-    animation: fadeInUp 0.6s ease-out 0.1s both;
-}
-
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.stat-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    padding: 24px;
-    border-radius: 20px;
-    box-shadow: var(--shadow-md);
-    transition: all var(--transition);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    position: relative;
-    overflow: hidden;
-}
-
-.stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 5px;
-    height: 100%;
-    transition: width var(--transition);
-}
-
-.stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-xl);
-}
-
-.stat-card:hover::before {
-    width: 100%;
-    opacity: 0.05;
-}
-
-.stat-card.pendente::before { background: var(--warning-solid); }
-.stat-card.em-andamento::before { background: var(--info-solid); }
-.stat-card.concluida::before { background: var(--success-solid); }
-.stat-card.atrasada::before { background: var(--danger-solid); }
-
-.stat-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-}
-
-.stat-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.3rem;
-    color: white;
-}
-
-.stat-card.pendente .stat-icon { background: var(--warning); }
-.stat-card.em-andamento .stat-icon { background: var(--info); }
-.stat-card.concluida .stat-icon { background: var(--success); }
-.stat-card.atrasada .stat-icon { background: var(--danger); }
-
-.stat-value {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--gray-900);
-    line-height: 1;
-}
-
-.stat-label {
-    font-size: 0.85rem;
-    color: var(--gray-600);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 600;
-    margin-top: 8px;
-}
-
-.stat-trend {
-    font-size: 0.8rem;
-    margin-top: 8px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.stat-trend.up {
-    color: var(--success-solid);
-}
-
-.stat-trend.down {
-    color: var(--danger-solid);
-}
-
-/* ==================================================================== */
-/* 🔍 FILTROS CARD */
-/* ==================================================================== */
-.filtros-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 32px;
-    margin-bottom: 32px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    animation: fadeInUp 0.6s ease-out 0.2s both;
-}
-
-.filtros-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 3px solid var(--gray-100);
-}
-
-.filtros-header i {
-    background: var(--info);
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.1rem;
-}
-
-.filtros-title {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--gray-900);
-    margin: 0;
-}
-
-.filtros-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 20px;
-    margin-bottom: 24px;
-}
-
-.form-group {
-    margin: 0;
-}
-
-.form-label {
-    display: block;
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: var(--gray-700);
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.form-label i {
-    color: var(--primary-solid);
-    font-size: 0.85rem;
-}
-
-.form-control,
-.form-select {
-    width: 100%;
-    padding: 12px 14px;
-    border: 2px solid var(--gray-200);
-    border-radius: 12px;
-    font-size: 0.95rem;
-    transition: all var(--transition);
-    background: white;
-}
-
-.form-select {
-    cursor: pointer;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-    padding-right: 40px;
-}
-
-.form-control:focus,
-.form-select:focus {
-    outline: none;
-    border-color: var(--primary-solid);
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-}
-
-.filtros-actions {
-    display: flex;
-    gap: 12px;
-    padding-top: 8px;
-}
-
-/* ==================================================================== */
-/* 🎯 BOTÕES */
-/* ==================================================================== */
-.btn {
-    padding: 12px 24px;
-    border-radius: 12px;
-    border: none;
-    font-weight: 700;
-    font-size: 0.95rem;
-    cursor: pointer;
-    transition: all var(--transition);
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    text-decoration: none;
-    box-shadow: var(--shadow-md);
-}
-
-.btn:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-lg);
-}
-
-.btn-primary {
-    background: var(--primary);
-    color: white;
-}
-
-.btn-success {
-    background: var(--success);
-    color: white;
-}
-
-.btn-info {
-    background: var(--info);
-    color: white;
-}
-
-.btn-warning {
-    background: var(--warning);
-    color: white;
-}
-
-.btn-secondary {
-    background: var(--gray-100);
-    color: var(--gray-700);
-    border: 2px solid var(--gray-300);
-}
-
-.btn-sm {
-    padding: 8px 16px;
-    font-size: 0.85rem;
-}
-
-.btn i {
-    font-size: 1rem;
-}
-
-/* ==================================================================== */
-/* 📊 TABELA MODERNA */
-/* ==================================================================== */
-.table-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    overflow: hidden;
-    animation: fadeInUp 0.6s ease-out 0.3s both;
-}
-
-.table-header {
-    background: var(--gray-50);
-    padding: 24px 32px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 2px solid var(--gray-200);
-}
-
-.table-title {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--gray-900);
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.table-title i {
-    color: var(--primary-solid);
-}
-
-.table-responsive {
-    overflow-x: auto;
-}
-
-.modern-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.modern-table thead {
-    background: linear-gradient(135deg, var(--gray-800) 0%, var(--gray-700) 100%);
-}
-
-.modern-table thead th {
-    padding: 16px 20px;
-    text-align: left;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 700;
-    color: white;
-    border: none;
-}
-
-.modern-table tbody tr {
-    border-bottom: 1px solid var(--gray-100);
-    transition: all var(--transition);
-}
-
-.modern-table tbody tr:hover {
-    background: var(--gray-50);
-    transform: scale(1.01);
-    box-shadow: var(--shadow-sm);
-}
-
-.modern-table tbody td {
-    padding: 18px 20px;
-    color: var(--gray-800);
-    font-size: 0.95rem;
-}
-
-.modern-table tbody td a {
-    color: var(--primary-solid);
-    text-decoration: none;
-    font-weight: 600;
-    transition: all var(--transition);
-}
-
-.modern-table tbody td a:hover {
-    color: var(--info-solid);
-    text-decoration: underline;
-}
-
-/* ==================================================================== */
-/* 🏷️ BADGES */
-/* ==================================================================== */
-.badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border-radius: 10px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.badge-pendente {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    color: white;
-}
-
-.badge-em-andamento {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    color: white;
-}
-
-.badge-concluida {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    color: white;
-}
-
-.badge-atrasada {
-    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    color: white;
-}
-
-.badge i {
-    font-size: 0.7rem;
-}
-
-/* ==================================================================== */
-/* 📭 EMPTY STATE */
-/* ==================================================================== */
-.empty-state {
-    text-align: center;
-    padding: 80px 20px;
-    color: var(--gray-500);
-}
-
-.empty-state i {
-    font-size: 5rem;
-    color: var(--gray-300);
-    margin-bottom: 24px;
-    display: block;
-}
-
-.empty-state h3 {
-    font-size: 1.5rem;
-    color: var(--gray-700);
-    margin-bottom: 12px;
-    font-weight: 700;
-}
-
-.empty-state p {
-    font-size: 1.1rem;
-    color: var(--gray-500);
-    margin: 0;
-}
-
-/* ==================================================================== */
-/* ⏰ PRAZO INDICATOR */
-/* ==================================================================== */
-.prazo-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-
-.prazo-indicator.urgente {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--danger-solid);
-}
-
-.prazo-indicator.proximo {
-    background: rgba(245, 158, 11, 0.1);
-    color: var(--warning-solid);
-}
-
-.prazo-indicator.normal {
-    background: rgba(102, 126, 234, 0.1);
-    color: var(--primary-solid);
-}
-
-.prazo-indicator i {
-    font-size: 0.75rem;
-}
-
-/* ==================================================================== */
-/* 📱 RESPONSIVIDADE */
-/* ==================================================================== */
-@media (max-width: 1200px) {
-    .filtros-grid {
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    }
-    
-    .stats-grid {
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    }
-}
-
-@media (max-width: 768px) {
-    .hero-content {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .hero-subtitle {
-        margin-left: 0;
-    }
-    
-    .filtros-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .filtros-actions {
-        flex-direction: column;
-    }
-    
-    .filtros-actions .btn {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .table-header {
-        flex-direction: column;
-        gap: 16px;
-        align-items: flex-start;
-    }
-    
-    .modern-table {
-        font-size: 0.85rem;
-    }
-    
-    .modern-table thead th,
-    .modern-table tbody td {
-        padding: 12px 10px;
-    }
-}
-
-/* ==================================================================== */
-/* 🎨 SCROLLBAR */
-/* ==================================================================== */
-::-webkit-scrollbar {
-    width: 12px;
-    height: 12px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--gray-100);
-    border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--gray-300);
-    border-radius: 10px;
-    border: 3px solid var(--gray-100);
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--gray-400);
-}
-
-/* ==================================================================== */
-/* ✨ ANIMAÇÕES EXTRAS */
-/* ==================================================================== */
-@keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.7;
-    }
-}
-
-.pulse {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* ==================================================================== */
-/* 🎯 HOVER EFFECTS ESPECIAIS */
-/* ==================================================================== */
-.modern-table tbody tr {
-    cursor: pointer;
-}
-
-.modern-table tbody tr:active {
-    transform: scale(0.99);
-}
-
-.filtros-card:hover {
-    box-shadow: var(--shadow-xl);
-}
-
-.table-card:hover {
-    box-shadow: var(--shadow-xl);
-}
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="lista-acoes-container">
     
-    <!-- 💎 HERO HEADER -->
+    <!-- HERO HEADER -->
     <div class="hero-header">
         <div class="hero-content">
             <div>
@@ -709,57 +14,41 @@ body {
                     <i class="fa-solid fa-tasks"></i>
                     Painel de Ações
                 </h1>
-                <p class="hero-subtitle">
+                <p class="hero-subtitle text-muted">
                     Gerencie todas as ações do sistema em um só lugar
                 </p>
             </div>
         </div>
     </div>
     
-    <!-- 📊 CARDS DE ESTATÍSTICAS -->
+    <!-- CARDS DE ESTATÍSTICAS -->
     <div class="stats-grid">
         <div class="stat-card pendente">
-            <div class="stat-header">
-                <div class="stat-icon">
-                    <i class="fa-solid fa-clock"></i>
-                </div>
-            </div>
+            <div class="stat-header"><div class="stat-icon"><i class="fa-solid fa-clock"></i></div></div>
             <div class="stat-value" id="stat-pendente">-</div>
             <div class="stat-label">Pendentes</div>
         </div>
         
         <div class="stat-card em-andamento">
-            <div class="stat-header">
-                <div class="stat-icon">
-                    <i class="fa-solid fa-spinner"></i>
-                </div>
-            </div>
+            <div class="stat-header"><div class="stat-icon"><i class="fa-solid fa-spinner"></i></div></div>
             <div class="stat-value" id="stat-em-andamento">-</div>
             <div class="stat-label">Em Andamento</div>
         </div>
         
         <div class="stat-card concluida">
-            <div class="stat-header">
-                <div class="stat-icon">
-                    <i class="fa-solid fa-check-circle"></i>
-                </div>
-            </div>
+            <div class="stat-header"><div class="stat-icon"><i class="fa-solid fa-check-circle"></i></div></div>
             <div class="stat-value" id="stat-concluida">-</div>
             <div class="stat-label">Concluídas</div>
         </div>
         
         <div class="stat-card atrasada">
-            <div class="stat-header">
-                <div class="stat-icon">
-                    <i class="fa-solid fa-exclamation-triangle"></i>
-                </div>
-            </div>
+            <div class="stat-header"><div class="stat-icon"><i class="fa-solid fa-exclamation-triangle"></i></div></div>
             <div class="stat-value" id="stat-atrasada">-</div>
             <div class="stat-label">Atrasadas</div>
         </div>
     </div>
     
-    <!-- 🔍 FILTROS -->
+    <!-- FILTROS -->
     <div class="filtros-card">
         <div class="filtros-header">
             <i class="fa-solid fa-filter"></i>
@@ -767,15 +56,10 @@ body {
         </div>
         
         <form method="GET" action="{% url 'workflow:lista_todas_acoes' %}">
-            <div class="filtros-grid">
-                
-                <!-- Responsável -->
+            <div class="form-row">
                 <div class="form-group">
-                    <label for="id_filtro_responsavel" class="form-label">
-                        <i class="fa-solid fa-user"></i>
-                        Responsável
-                    </label>
-                    <select class="form-select" id="id_filtro_responsavel" name="filtro_responsavel">
+                    <label for="id_filtro_responsavel"><i class="fa-solid fa-user"></i> Responsável</label>
+                    <select class="form-control" id="id_filtro_responsavel" name="filtro_responsavel">
                         <option value="">Todos os Responsáveis</option>
                         {% for resp in todos_responsaveis %}
                             <option value="{{ resp.id }}" {% if valores_filtro.filtro_responsavel == resp.id|stringformat:"s" %}selected{% endif %}>
@@ -785,70 +69,38 @@ body {
                     </select>
                 </div>
                 
-                <!-- Status -->
                 <div class="form-group">
-                    <label for="id_filtro_status" class="form-label">
-                        <i class="fa-solid fa-flag"></i>
-                        Status
-                    </label>
-                    <select class="form-select" id="id_filtro_status" name="filtro_status">
+                    <label for="id_filtro_status"><i class="fa-solid fa-flag"></i> Status</label>
+                    <select class="form-control" id="id_filtro_status" name="filtro_status">
                         <option value="">Todos os Status</option>
                         {% for value, display in status_choices %}
-                            <option value="{{ value }}" {% if valores_filtro.filtro_status == value %}selected{% endif %}>
-                                {{ display }}
-                            </option>
+                            <option value="{{ value }}" {% if valores_filtro.filtro_status == value %}selected{% endif %}>{{ display }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 
-                <!-- Prazo De -->
                 <div class="form-group">
-                    <label for="id_prazo_de" class="form-label">
-                        <i class="fa-solid fa-calendar-day"></i>
-                        Prazo (de)
-                    </label>
-                    <input type="date" 
-                           class="form-control" 
-                           id="id_prazo_de" 
-                           name="filtro_prazo_de" 
-                           value="{{ valores_filtro.filtro_prazo_de }}">
+                    <label for="id_prazo_de"><i class="fa-solid fa-calendar-day"></i> Prazo (de)</label>
+                    <input type="date" class="form-control" id="id_prazo_de" name="filtro_prazo_de" value="{{ valores_filtro.filtro_prazo_de }}">
                 </div>
                 
-                <!-- Prazo Até -->
                 <div class="form-group">
-                    <label for="id_prazo_ate" class="form-label">
-                        <i class="fa-solid fa-calendar-check"></i>
-                        Prazo (até)
-                    </label>
-                    <input type="date" 
-                           class="form-control" 
-                           id="id_prazo_ate" 
-                           name="filtro_prazo_ate" 
-                           value="{{ valores_filtro.filtro_prazo_ate }}">
+                    <label for="id_prazo_ate"><i class="fa-solid fa-calendar-check"></i> Prazo (até)</label>
+                    <input type="date" class="form-control" id="id_prazo_ate" name="filtro_prazo_ate" value="{{ valores_filtro.filtro_prazo_ate }}">
                 </div>
-                
             </div>
             
             <div class="filtros-actions">
-                <button type="submit" class="btn btn-success">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    Filtrar Ações
-                </button>
-                <a href="{% url 'workflow:lista_todas_acoes' %}" class="btn btn-secondary">
-                    <i class="fa-solid fa-eraser"></i>
-                    Limpar Filtros
-                </a>
+                <button type="submit" class="btn btn-filter"><i class="fa-solid fa-magnifying-glass"></i> Filtrar Ações</button>
+                <a href="{% url 'workflow:lista_todas_acoes' %}" class="btn btn-clear"><i class="fa-solid fa-eraser"></i> Limpar Filtros</a>
             </div>
         </form>
     </div>
     
-    <!-- 📊 TABELA -->
+    <!-- TABELA -->
     <div class="table-card">
         <div class="table-header">
-            <h2 class="table-title">
-                <i class="fa-solid fa-list-check"></i>
-                Lista de Ações
-            </h2>
+            <h2 class="table-title"><i class="fa-solid fa-list-check"></i> Lista de Ações</h2>
         </div>
         
         <div class="table-responsive">
@@ -870,31 +122,29 @@ body {
                                 <strong>#{{ acao_inst.caso.id|stringformat:"05d" }}</strong> - {{ acao_inst.caso.titulo|truncatechars:40 }}
                             </a>
                         </td>
+                        <td><strong>{{ acao_inst.acao.titulo }}</strong></td>
                         <td>
-                            <strong>{{ acao_inst.acao.titulo }}</strong>
-                        </td>
-                        <td>
-                            <span class="badge badge-{{ acao_inst.status|lower }}">
-                                <i class="fa-solid fa-circle"></i>
+                            <span class="badge 
+                                {% if acao_inst.status == 'PENDENTE' %}bg-warning
+                                {% elif acao_inst.status == 'EM_ANDAMENTO' %}bg-info
+                                {% elif acao_inst.status == 'CONCLUIDA' %}bg-success
+                                {% elif acao_inst.status == 'ATRASADA' %}bg-danger
+                                {% else %}bg-secondary{% endif %}">
                                 {{ acao_inst.get_status_display }}
                             </span>
                         </td>
                         <td>
                             {% if acao_inst.responsavel %}
-                                <i class="fa-solid fa-user-circle"></i>
-                                {{ acao_inst.responsavel.get_full_name|default:acao_inst.responsavel.username }}
+                                <i class="fa-solid fa-user-circle"></i> {{ acao_inst.responsavel.get_full_name|default:acao_inst.responsavel.username }}
                             {% else %}
-                                <span style="color: var(--gray-400);">-</span>
+                                <span class="text-muted">-</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if acao_inst.data_prazo %}
-                                <span class="prazo-indicator normal" data-prazo="{{ acao_inst.data_prazo|date:'Y-m-d' }}">
-                                    <i class="fa-solid fa-calendar-alt"></i>
-                                    {{ acao_inst.data_prazo|date:"d/m/Y" }}
-                                </span>
+                                <span class="prazo-indicator" data-prazo="{{ acao_inst.data_prazo|date:'Y-m-d' }}">{{ acao_inst.data_prazo|date:"d/m/Y" }}</span>
                             {% else %}
-                                <span style="color: var(--gray-400);">-</span>
+                                <span class="text-muted">-</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -918,244 +168,5 @@ body {
 {% endblock %}
 
 {% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('✅ Painel de Ações carregado!');
-    
-    // 📊 CALCULAR ESTATÍSTICAS
-    const calcularStats = () => {
-        const stats = {
-            pendente: 0,
-            'em-andamento': 0,
-            concluida: 0,
-            atrasada: 0
-        };
-        
-        const badges = document.querySelectorAll('.badge');
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        
-        badges.forEach(badge => {
-            const status = badge.textContent.trim().toLowerCase();
-            const row = badge.closest('tr');
-            const prazoIndicator = row?.querySelector('.prazo-indicator');
-            
-            if (status.includes('pendente')) {
-                stats.pendente++;
-                
-                // Verificar se está atrasada
-                if (prazoIndicator) {
-                    const prazoDate = new Date(prazoIndicator.dataset.prazo);
-                    if (prazoDate < hoje) {
-                        stats.atrasada++;
-                    }
-                }
-            } else if (status.includes('andamento')) {
-                stats['em-andamento']++;
-            } else if (status.includes('conclu')) {
-                stats.concluida++;
-            }
-        });
-        
-        // Atualizar cards
-        document.getElementById('stat-pendente').textContent = stats.pendente;
-        document.getElementById('stat-em-andamento').textContent = stats['em-andamento'];
-        document.getElementById('stat-concluida').textContent = stats.concluida;
-        document.getElementById('stat-atrasada').textContent = stats.atrasada;
-        
-        // Adicionar pulso se houver atrasadas
-        if (stats.atrasada > 0) {
-            const atrasadaCard = document.querySelector('.stat-card.atrasada');
-            if (atrasadaCard) {
-                atrasadaCard.classList.add('pulse');
-            }
-        }
-    };
-    
-    calcularStats();
-    
-    // ⏰ COLORIR PRAZOS
-    const colorirPrazos = () => {
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        
-        const prazos = document.querySelectorAll('.prazo-indicator');
-        prazos.forEach(prazo => {
-            if (!prazo.dataset.prazo) return;
-            
-            const prazoDate = new Date(prazo.dataset.prazo);
-            prazoDate.setHours(0, 0, 0, 0);
-            
-            const diffTime = prazoDate - hoje;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            prazo.classList.remove('urgente', 'proximo', 'normal');
-            
-            if (diffDays < 0) {
-                prazo.classList.add('urgente');
-                prazo.innerHTML = `<i class="fa-solid fa-exclamation-circle"></i> ${prazo.textContent.trim()}`;
-            } else if (diffDays <= 3) {
-                prazo.classList.add('proximo');
-                prazo.innerHTML = `<i class="fa-solid fa-clock"></i> ${prazo.textContent.trim()}`;
-            } else {
-                prazo.classList.add('normal');
-                prazo.innerHTML = `<i class="fa-solid fa-calendar-alt"></i> ${prazo.textContent.trim()}`;
-            }
-        });
-    };
-    
-    colorirPrazos();
-    
-    // 🎨 ANIMAÇÃO DE ENTRADA DAS LINHAS
-    const rows = document.querySelectorAll('.modern-table tbody tr');
-    rows.forEach((row, index) => {
-        row.style.opacity = '0';
-        row.style.transform = 'translateX(-20px)';
-        
-        setTimeout(() => {
-            row.style.transition = 'all 0.3s ease-out';
-            row.style.opacity = '1';
-            row.style.transform = 'translateX(0)';
-        }, index * 50);
-    });
-    
-    // 🔍 HIGHLIGHT AO APLICAR FILTROS
-    const urlParams = new URLSearchParams(window.location.search);
-    const hasFiltros = Array.from(urlParams.keys()).some(key => key.startsWith('filtro_'));
-    
-    if (hasFiltros) {
-        const filtrosCard = document.querySelector('.filtros-card');
-        if (filtrosCard) {
-            filtrosCard.style.borderLeft = '5px solid var(--success-solid)';
-            
-            const badge = document.createElement('span');
-            badge.className = 'badge badge-concluida';
-            badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> Filtros Ativos';
-            badge.style.cssText = 'margin-left: auto;';
-            
-            const header = document.querySelector('.filtros-header');
-            if (header) {
-                header.style.display = 'flex';
-                header.appendChild(badge);
-            }
-        }
-    }
-    
-    // ⚡ ATALHOS DE TECLADO
-    document.addEventListener('keydown', function(e) {
-        if (e.target.matches('input, textarea, select')) return;
-        
-        // F = Focus no filtro de responsável
-        if (e.key === 'f' || e.key === 'F') {
-            e.preventDefault();
-            document.getElementById('id_filtro_responsavel')?.focus();
-        }
-        
-        // ESC = Limpar filtros
-        if (e.key === 'Escape' && hasFiltros) {
-            window.location.href = "{% url 'workflow:lista_todas_acoes' %}";
-        }
-    });
-    
-    // 📊 CONTADOR DE AÇÕES
-    const totalAcoes = {{ acoes|length }};
-    if (totalAcoes > 0) {
-        const tableTitle = document.querySelector('.table-title');
-        if (tableTitle) {
-            const counter = document.createElement('span');
-            counter.style.cssText = 'margin-left: auto; font-size: 0.9rem; color: var(--gray-600); font-weight: 600;';
-            counter.innerHTML = `<i class="fa-solid fa-list-ol"></i> ${totalAcoes} ação${totalAcoes > 1 ? 'ões' : ''}`;
-            
-            const headerDiv = document.querySelector('.table-header');
-            if (headerDiv) {
-                headerDiv.style.display = 'flex';
-                headerDiv.style.alignItems = 'center';
-                headerDiv.appendChild(counter);
-            }
-        }
-    }
-    
-    // ✨ FEEDBACK VISUAL AO CLICAR EM FILTRAR
-    const filterForm = document.querySelector('.filtros-card form');
-    const filterBtn = document.querySelector('.btn-success[type="submit"]');
-    
-    if (filterForm && filterBtn) {
-        filterForm.addEventListener('submit', function(e) {
-            filterBtn.disabled = true;
-            filterBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Filtrando...';
-        });
-    }
-    
-    // 🎭 ANIMAÇÃO NO EMPTY STATE
-    const emptyState = document.querySelector('.empty-state');
-    if (emptyState) {
-        emptyState.style.opacity = '0';
-        emptyState.style.transform = 'scale(0.9)';
-        
-        setTimeout(() => {
-            emptyState.style.transition = 'all 0.5s ease-out';
-            emptyState.style.opacity = '1';
-            emptyState.style.transform = 'scale(1)';
-        }, 200);
-    }
-    
-    // ⌨️ NAVEGAÇÃO POR TECLADO NA TABELA
-    let selectedRow = -1;
-    
-    document.addEventListener('keydown', function(e) {
-        if (e.target.matches('input, textarea, select')) return;
-        
-        const visibleRows = Array.from(rows).filter(row => 
-            row.style.display !== 'none' && !row.querySelector('.empty-state')
-        );
-        
-        if (visibleRows.length === 0) return;
-        
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            selectedRow = Math.min(selectedRow + 1, visibleRows.length - 1);
-            highlightRow(visibleRows);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            selectedRow = Math.max(selectedRow - 1, 0);
-            highlightRow(visibleRows);
-        } else if (e.key === 'Enter' && selectedRow >= 0) {
-            e.preventDefault();
-            visibleRows[selectedRow].click();
-        }
-    });
-    
-    function highlightRow(rows) {
-        rows.forEach((row, index) => {
-            if (index === selectedRow) {
-                row.style.outline = '3px solid var(--primary-solid)';
-                row.style.outlineOffset = '-3px';
-                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            } else {
-                row.style.outline = 'none';
-            }
-        });
-    }
-    
-    // 📱 RESPONSIVIDADE - MOBILE TABLE
-    function checkTableWidth() {
-        const table = document.querySelector('.modern-table');
-        const container = document.querySelector('.table-responsive');
-        
-        if (table && container && window.innerWidth < 768) {
-            container.style.overflowX = 'auto';
-            container.style.webkitOverflowScrolling = 'touch';
-        }
-    }
-    
-    checkTableWidth();
-    window.addEventListener('resize', checkTableWidth);
-    
-    console.log('💡 Dicas de uso:');
-    console.log('   - Pressione "F" para focar no filtro de responsável');
-    console.log('   - Use ↑/↓ para navegar na tabela');
-    console.log('   - Pressione Enter para abrir a ação selecionada');
-    console.log('   - Pressione ESC para limpar filtros');
-});
-</script>
+<script src="{% static 'js/painel_acoes.js' %}"></script>
 {% endblock %}

@@ -1,0 +1,14 @@
+<!-- templates/_form_field.html -->
+<div class="form-group {{ classes }}">
+    <label for="{{ field.id_for_label }}" class="form-label">
+        {% if icon %}<i class="fa-solid fa-{{ icon }}"></i> {% endif %}
+        {{ field.label }}
+    </label>
+    {{ field }}
+    {% if field.help_text %}
+        <small class="form-text-muted"><i class="fa-solid fa-circle-info"></i> {{ field.help_text|safe }}</small>
+    {% endif %}
+    {% for error in field.errors %}
+        <div class="error-message">{{ error }}</div>
+    {% endfor %}
+</div>

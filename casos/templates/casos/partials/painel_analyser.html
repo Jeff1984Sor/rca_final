@@ -1,0 +1,142 @@
+{% load file_icons humanize %}
+
+{% csrf_token %}
+
+<!-- Card 1: Modelo -->
+<div class="analyser-card">
+    <div class="analyser-card-header">
+        <i class="fa-solid fa-robot analyser-icon"></i>
+        1. Selecione o Modelo de Análise
+    </div>
+    
+    <div class="analyser-form-group">
+        <label class="analyser-label">Modelo de Análise *</label>
+        <select id="modelo-analyser" class="analyser-select" required>
+            <option value="">-- Escolha um modelo --</option>
+            {% for modelo in modelos %}
+                <option value="{{ modelo.id }}">{{ modelo.nome }}</option>
+            {% empty %}
+                <option value="" disabled>Nenhum modelo disponível</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<!-- Card 2: Arquivos (REUTILIZA O SISTEMA DOS ANEXOS) -->
+<div class="analyser-card">
+    <div class="analyser-card-header">
+        <i class="fa-solid fa-folder-tree analyser-icon"></i>
+        2. Selecione os Arquivos para Análise
+    </div>
+    
+    <p class="analyser-info">
+        <i class="fa-solid fa-info-circle"></i>
+        Navegue pelas pastas e marque os arquivos que deseja analisar.
+    </p>
+    
+    <!-- CONTAINER QUE VAI CARREGAR O NAVEGADOR DE ARQUIVOS -->
+    <div id="analyser-file-container"
+         hx-get="{% url 'casos:carregar_painel_anexos' pk=caso.pk %}?modo=analyser"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <div class="analyser-loading">
+            <div class="analyser-spinner"></div>
+            <p>Carregando arquivos...</p>
+        </div>
+    </div>
+    
+    <!-- Input hidden para armazenar IDs selecionados -->
+    <input type="hidden" id="arquivos-selecionados-analyser" value="[]">
+</div>
+
+<!-- Footer -->
+<div class="analyser-footer">
+    <div class="analyser-counter">
+        Arquivos selecionados: <strong id="contador-analyser">0</strong>
+    </div>
+    <div class="analyser-actions">
+        <button type="button" onclick="document.querySelector('[data-tab=detalhes]').click()" class="btn btn-outline-secondary">
+            <i class="fa-solid fa-times"></i> Cancelar
+        </button>
+        <button type="button" id="btn-iniciar-analise" class="btn btn-success" disabled onclick="iniciarAnaliseIA()">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Iniciar Análise
+        </button>
+    </div>
+</div>
+
+<script>
+// Atualizar contador de selecionados
+window.atualizarContadorAnalyser = function() {
+    const checkboxes = document.querySelectorAll('.analyser-file-checkbox:checked');
+    const arquivos = Array.from(checkboxes).map(cb => ({
+        id: cb.value,
+        name: cb.dataset.name
+    }));
+    
+    document.getElementById('arquivos-selecionados-analyser').value = JSON.stringify(arquivos);
+    document.getElementById('contador-analyser').textContent = arquivos.length;
+    document.getElementById('btn-iniciar-analise').disabled = arquivos.length === 0;
+};
+
+window.iniciarAnaliseIA = function() {
+    const modeloId = document.getElementById('modelo-analyser').value;
+    const arquivosJson = document.getElementById('arquivos-selecionados-analyser').value;
+    const arquivos = JSON.parse(arquivosJson);
+    
+    if (!modeloId) {
+        alert('⚠️ Selecione um modelo de análise!');
+        return;
+    }
+    
+    if (arquivos.length === 0) {
+        alert('⚠️ Selecione pelo menos um arquivo!');
+        return;
+    }
+    
+    // Desabilita botão
+    const btnAnalisar = document.getElementById('btn-iniciar-analise');
+    btnAnalisar.disabled = true;
+    btnAnalisar.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Iniciando...';
+    
+    // Cria FormData
+    const formData = new FormData();
+    formData.append('modelo_id', modeloId);
+    
+    // Adiciona cada arquivo
+    arquivos.forEach(arquivo => {
+        formData.append('arquivos_selecionados', arquivo.id);
+    });
+    
+    // Adiciona CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    // Faz requisição POST
+    fetch(`/analyser/analisar/{{ caso.id }}/iniciar/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken
+        },
+        body: formData
+    })
+    .then(response => {
+        if (response.redirected) {
+            window.location.href = response.url;
+        } else {
+            return response.json();
+        }
+    })
+    .then(data => {
+        if (data && data.error) {
+            alert('❌ ' + data.error);
+            btnAnalisar.disabled = false;
+            btnAnalisar.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Iniciar Análise';
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('❌ Erro ao iniciar análise: ' + error);
+        btnAnalisar.disabled = false;
+        btnAnalisar.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Iniciar Análise';
+    });
+};
+</script>

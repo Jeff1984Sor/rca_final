@@ -1,0 +1,59 @@
+{% load file_icons humanize %}
+
+<!-- Breadcrumb -->
+{% if folder_id != root_folder_id %}
+<div class="analyser-breadcrumb">
+    <button class="btn btn-sm btn-outline-primary"
+            hx-get="{% url 'casos:analyser_navegador' pk=caso.pk %}"
+            hx-target="#analyser-file-browser"
+            hx-swap="innerHTML">
+        <i class="fa-solid fa-home"></i> Raiz
+    </button>
+    <i class="fa-solid fa-chevron-right"></i>
+    <span>{{ folder_name }}</span>
+</div>
+{% endif %}
+
+<!-- Grid de Pastas e Arquivos -->
+<div class="analyser-file-grid">
+    {% for item in itens %}
+        <div class="analyser-grid-item">
+            {% if item.folder %}
+                {# PASTA - Navegável #}
+                <button class="analyser-folder-btn"
+                        hx-get="{% url 'casos:analyser_navegador_pasta' pk=caso.pk folder_id=item.id %}?root_folder_id={{ root_folder_id }}"
+                        hx-target="#analyser-file-browser"
+                        hx-swap="innerHTML"
+                        type="button">
+                    <div class="analyser-icon-wrapper analyser-folder-icon">
+                        <i class="fa-solid fa-folder"></i>
+                    </div>
+                    <span class="analyser-item-name" title="{{ item.name }}">{{ item.name }}</span>
+                </button>
+            {% else %}
+                {# ARQUIVO - Selecionável com Checkbox #}
+                <label class="analyser-file-label">
+                    <input type="checkbox" 
+                           class="analyser-file-checkbox"
+                           value="{{ item.id }}"
+                           data-name="{{ item.name }}"
+                           onchange="atualizarSelecionadosAnalyser()">
+                    
+                    <div class="analyser-file-content">
+                        <div class="analyser-icon-wrapper analyser-file-icon">
+                            {{ item.name|get_file_icon|safe }}
+                        </div>
+                        <span class="analyser-item-name" title="{{ item.name }}">{{ item.name }}</span>
+                        <span class="analyser-item-size">{{ item.size|filesizeformat }}</span>
+                    </div>
+                </label>
+            {% endif %}
+        </div>
+    {% empty %}
+        <div class="analyser-empty-state">
+            <i class="fa-solid fa-folder-open"></i>
+            <h3>Pasta Vazia</h3>
+            <p>Nenhum arquivo encontrado nesta pasta.</p>
+        </div>
+    {% endfor %}
+</div>

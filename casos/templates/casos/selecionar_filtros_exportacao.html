@@ -1,56 +1,84 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Exportação Dinâmica{% endblock %}
+{% block title %}Exportação Dinâmica | Sistema Jurídico{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Exportação Dinâmica de Casos</h4>
-                </div>
-                <div class="card-body">
-                    <p class="card-text">
-                        Selecione a combinação de Cliente e Produto para definir a estrutura (campos fixos + campos personalizados) dos dados que você deseja exportar.
-                    </p>
-                    <hr>
-
-                    <form method="post" action="{% url 'casos:selecionar_filtros_exportacao' %}">
-                        {% csrf_token %}
-                        
-                        <div class="row">
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="cliente-select" class="form-label required-label">Cliente</label>
-                                <select class="form-select" id="cliente-select" name="cliente" required>
-                                    <option value="">-- Selecione o Cliente --</option>
-                                    {% for cliente in clientes %}
-                                        <option value="{{ cliente.id }}">{{ cliente.nome }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="produto-select" class="form-label required-label">Produto</label>
-                                <select class="form-select" id="produto-select" name="produto" required>
-                                    <option value="">-- Selecione o Produto --</option>
-                                    {% for produto in produtos %}
-                                        <option value="{{ produto.id }}">{{ produto.nome }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-
-                        </div> <div class="d-flex justify-content-end mt-4">
-                            <button type="submit" class="btn btn-success btn-lg">
-                                <i class="fas fa-file-excel me-2"></i> Gerar Exportação
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+<div class="container" style="max-width: 900px;">
+    
+    <!-- HERO HEADER -->
+    <div class="hero-header">
+        <h1 class="hero-title"><i class="fa-solid fa-file-export"></i> Exportação Dinâmica</h1>
+        <p class="hero-subtitle text-muted">Selecione cliente e produto para exportar dados</p>
+    </div>
+    
+    <!-- INFO BOX -->
+    <div class="info-box">
+        <i class="fa-solid fa-circle-info info-box-icon"></i>
+        <div class="info-box-content">
+            <p><strong>Como Funciona:</strong> Selecione a combinação de Cliente e Produto para definir a estrutura (campos fixos + personalizados) dos dados que você deseja exportar em Excel.</p>
         </div>
     </div>
+    
+    <!-- FORM CARD -->
+    <div class="card">
+        <form method="post" action="{% url 'casos:selecionar_filtros_exportacao' %}">
+            {% csrf_token %}
+            
+            <div class="form-row">
+                <!-- Cliente -->
+                <div class="form-group">
+                    <label for="cliente-select" class="required-label"><i class="fa-solid fa-building"></i> Cliente</label>
+                    <select class="form-control" id="cliente-select" name="cliente" required>
+                        <option value="">Selecione o Cliente...</option>
+                        {% for cliente in clientes %}<option value="{{ cliente.id }}">{{ cliente.nome }}</option>{% endfor %}
+                    </select>
+                    <small class="form-text-muted">Selecione um cliente para começar</small>
+                </div>
+                
+                <!-- Produto -->
+                <div class="form-group">
+                    <label for="produto-select" class="required-label"><i class="fa-solid fa-box"></i> Produto</label>
+                    <select class="form-control" id="produto-select" name="produto" required>
+                        <option value="">Selecione o Produto...</option>
+                        {% for produto in produtos %}<option value="{{ produto.id }}">{{ produto.nome }}</option>{% endfor %}
+                    </select>
+                    <small class="form-text-muted">Selecione um produto para definir os campos</small>
+                </div>
+            </div>
+            
+            <!-- PREVIEW DE SELEÇÃO -->
+            <div id="preview" class="selection-preview-box" style="border-left-color: var(--success-solid);">
+                <div class="selection-preview-header" style="color: var(--success-solid);"><i class="fa-solid fa-circle-check"></i> Pronto para Exportar</div>
+                <div class="selection-preview-grid">
+                    <div>
+                        <div class="info-label"><i class="fa-solid fa-building"></i> Cliente</div>
+                        <div id="previewCliente" class="info-value">-</div>
+                    </div>
+                    <div>
+                        <div class="info-label"><i class="fa-solid fa-box"></i> Produto</div>
+                        <div id="previewProduto" class="info-value">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- BOTÕES -->
+            <div class="form-actions">
+                <a href="{% url 'casos:lista_casos' %}" class="btn btn-outline-secondary"><i class="fa-solid fa-times-circle"></i> Cancelar</a>
+                <button type="submit" class="btn btn-success" id="submitBtn" disabled><i class="fa-solid fa-file-excel"></i> Gerar Exportação</button>
+            </div>
+        </form>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/form_export_selecao.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        initFormExportSelecao({
+            cancelUrl: "{% url 'casos:lista_casos' %}"
+        });
+    });
+</script>
 {% endblock %}

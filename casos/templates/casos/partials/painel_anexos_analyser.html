@@ -1,0 +1,57 @@
+{% load file_icons humanize %}
+
+<!-- Breadcrumb (se estiver em subpasta) -->
+{% if folder_id != root_folder_id %}
+<div class="sp-breadcrumb">
+    <button class="btn btn-sm btn-outline-primary"
+            hx-get="{% url 'casos:carregar_painel_anexos' pk=caso.pk %}?modo=analyser"
+            hx-target="#analyser-file-container"
+            hx-swap="innerHTML">
+        <i class="fa-solid fa-home"></i> Voltar para Raiz
+    </button>
+    <i class="fa-solid fa-chevron-right"></i>
+    <span>{{ folder_name }}</span>
+</div>
+{% endif %}
+
+<!-- Grid de Arquivos -->
+<div class="sp-file-grid">
+    {% for item in itens %}
+        <div class="sp-grid-item">
+            {% if item.folder %}
+                {# PASTA - Clicável #}
+                <button class="sp-item-link sp-folder-item sp-folder-btn"
+                        hx-get="{% url 'casos:carregar_conteudo_pasta' folder_id=item.id %}?caso_pk={{ caso.pk }}&root_folder_id={{ root_folder_id }}&modo=analyser"
+                        hx-target="#analyser-file-container"
+                        hx-swap="innerHTML"
+                        type="button">
+                    <div class="sp-icon-container sp-folder-icon">
+                        <i class="fa-solid fa-folder"></i>
+                    </div>
+                    <span class="sp-item-name" title="{{ item.name }}">{{ item.name }}</span>
+                </button>
+            {% else %}
+                {# ARQUIVO - COM CHECKBOX #}
+                <label class="sp-file-card sp-file-selectable">
+                    <input type="checkbox" 
+                           class="analyser-file-checkbox"
+                           value="{{ item.id }}"
+                           data-name="{{ item.name }}"
+                           onchange="atualizarContadorAnalyser()">
+                    
+                    <div class="sp-file-icon-wrapper">
+                        {{ item.name|get_file_icon|safe }}
+                    </div>
+                    <span class="sp-item-name" title="{{ item.name }}">{{ item.name }}</span>
+                    <span class="sp-item-size">{{ item.size|filesizeformat }}</span>
+                </label>
+            {% endif %}
+        </div>
+    {% empty %}
+        <div class="sp-empty-state">
+            <i class="fa-solid fa-folder-open"></i>
+            <h3>Pasta Vazia</h3>
+            <p>Nenhum arquivo encontrado.</p>
+        </div>
+    {% endfor %}
+</div>

@@ -1,245 +1,411 @@
-{# analyser/templates/analyser/selecionar_arquivos.html #}
 {% extends 'base.html' %}
 
 {% block title %}Analisar Caso #{{ caso.id }} | Analyser{% endblock %}
 
 {% block extra_css %}
 <style>
-:root {
-    --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --primary-solid: #667eea;
-    --success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    --success-solid: #10b981;
-    --warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    --info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    --gray-50: #f8fafc;
-    --gray-100: #f1f5f9;
-    --gray-200: #e2e8f0;
-    --gray-600: #475569;
-    --gray-700: #334155;
-    --gray-900: #0f172a;
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-}
-body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); background-attachment: fixed; }
-.container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
-.hero-header { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border-radius: 24px; padding: 32px 40px; margin-bottom: 32px; box-shadow: var(--shadow-xl); }
-.hero-title { font-size: 2rem; font-weight: 800; color: var(--gray-900); margin: 0 0 12px; display: flex; align-items: center; gap: 12px; }
-.hero-icon { background: var(--primary); width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.3rem; }
-.caso-info { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 16px; }
-.info-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--gray-100); border-radius: 10px; font-weight: 600; color: var(--gray-700); }
-.info-badge i { color: var(--primary-solid); }
-.main-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); border-radius: 24px; box-shadow: var(--shadow-xl); overflow: hidden; margin-bottom: 32px; }
-.card-section { padding: 40px; border-bottom: 3px solid var(--gray-100); }
-.card-section:last-child { border-bottom: none; }
-.section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid var(--gray-100); }
-.section-header i { background: var(--primary); width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; }
-.section-title { font-size: 1.4rem; font-weight: 700; color: var(--gray-900); margin: 0; }
-.form-group { margin-bottom: 24px; }
-.form-label { display: block; font-weight: 600; font-size: 0.95rem; color: var(--gray-700); margin-bottom: 8px; }
-.form-control, select { width: 100%; padding: 14px 16px; border: 2px solid var(--gray-200); border-radius: 12px; font-size: 1rem; transition: all 0.3s; font-family: inherit; }
-select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
-.form-control:focus, select:focus { outline: none; border-color: var(--primary-solid); box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1); }
-.folder-tree { background: var(--gray-50); border: 2px solid var(--gray-200); border-radius: 16px; padding: 20px; max-height: 500px; overflow-y: auto; }
-.file-item { padding: 10px; margin: 4px 0; border-radius: 8px; transition: all 0.3s; display: flex; align-items: center; gap: 10px; }
-.file-item:hover { background: rgba(102, 126, 234, 0.05); }
-.file-checkbox { width: 20px; height: 20px; cursor: pointer; margin-right: 10px; }
-.file-icon { font-size: 1.2rem; }
-.file-name { color: var(--gray-700); flex: 1; cursor: pointer; }
-.file-label-wrapper { display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; padding: 5px; border-radius: 6px; }
-.file-label-wrapper:hover { background-color: var(--gray-200); }
-.selected-files { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
-.selected-file-tag { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--success); color: white; border-radius: 10px; font-size: 0.9rem; font-weight: 600; }
-.selected-file-tag i.fa-times { cursor: pointer; transition: transform 0.2s; }
-.selected-file-tag i.fa-times:hover { transform: scale(1.2); }
-.alert { padding: 16px 20px; border-radius: 12px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; font-weight: 500; }
-.alert-warning { background: rgba(245, 158, 11, 0.1); border: 2px solid #f59e0b; color: #92400e; }
-.alert-info { background: rgba(79, 172, 254, 0.1); border: 2px solid #4facfe; color: #0369a1; }
-.alert i { font-size: 1.3rem; }
-.form-footer { background: var(--gray-50); padding: 28px 40px; display: flex; justify-content: space-between; gap: 16px; }
-.btn { padding: 14px 32px; border-radius: 12px; border: none; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; gap: 10px; text-decoration: none; box-shadow: var(--shadow-lg); }
-.btn:hover { transform: translateY(-3px); box-shadow: var(--shadow-xl); }
-.btn:disabled { background: var(--gray-200); color: var(--gray-600); cursor: not-allowed; box-shadow: none; transform: none; }
-.btn-primary { background: var(--primary); color: white; }
-.btn-secondary { background: var(--gray-600); color: white; }
-.historico-list { display: flex; flex-direction: column; gap: 12px; }
-.historico-item { background: white; border: 2px solid var(--gray-200); border-radius: 12px; padding: 16px; transition: all 0.3s; }
-.historico-item:hover { border-color: var(--primary-solid); box-shadow: var(--shadow-lg); }
-.historico-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.historico-data { font-weight: 600; color: var(--gray-900); }
-.badge-success { background: var(--success); color: white; }
-.badge-error { background: #ef4444; color: white; }
-.badge-processing { background: #f59e0b; color: white; }
-.empty-state { text-align: center; padding: 40px; color: var(--gray-600); }
-.empty-state i { font-size: 3rem; color: var(--gray-200); margin-bottom: 12px; }
-.htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
-.htmx-request .htmx-indicator { opacity: 1; }
+    body { 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+        background-attachment: fixed; 
+    }
+    
+    .container { 
+        max-width: 1200px; 
+        margin: 40px auto; 
+        padding: 0 20px; 
+    }
+    
+    .hero-header { 
+        background: rgba(255, 255, 255, 0.95); 
+        backdrop-filter: blur(20px); 
+        border-radius: 24px; 
+        padding: 32px 40px; 
+        margin-bottom: 32px; 
+    }
+    
+    .hero-title { 
+        font-size: 2rem; 
+        font-weight: 800; 
+        color: #0f172a; 
+        margin: 0 0 12px; 
+        display: flex; 
+        align-items: center; 
+        gap: 12px; 
+    }
+    
+    .hero-icon { 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+        width: 50px; 
+        height: 50px; 
+        border-radius: 14px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        color: white; 
+        font-size: 1.3rem; 
+    }
+    
+    .info-badge { 
+        display: inline-flex; 
+        align-items: center; 
+        gap: 8px; 
+        padding: 8px 16px; 
+        background: #f1f5f9; 
+        border-radius: 10px; 
+        font-weight: 600; 
+        color: #334155; 
+    }
+    
+    .main-card { 
+        background: rgba(255, 255, 255, 0.95); 
+        backdrop-filter: blur(20px); 
+        border-radius: 24px; 
+        overflow: hidden; 
+    }
+    
+    .card-section { 
+        padding: 40px; 
+        border-bottom: 1px solid #f1f5f9; 
+    }
+    
+    .card-section:last-child { 
+        border-bottom: none; 
+    }
+    
+    .section-header { 
+        display: flex; 
+        align-items: center; 
+        gap: 12px; 
+        margin-bottom: 24px; 
+    }
+    
+    .section-header i { 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+        width: 40px; 
+        height: 40px; 
+        border-radius: 12px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        color: white; 
+    }
+    
+    .section-title { 
+        font-size: 1.4rem; 
+        font-weight: 700; 
+        color: #0f172a; 
+        margin: 0; 
+    }
+    
+    .form-label { 
+        display: block; 
+        font-weight: 600; 
+        font-size: 0.95rem; 
+        color: #334155; 
+        margin-bottom: 8px; 
+    }
+    
+    select, input { 
+        width: 100%; 
+        padding: 14px 16px; 
+        border: 2px solid #e2e8f0; 
+        border-radius: 12px; 
+        font-size: 1rem; 
+    }
+    
+    .form-group { 
+        margin-bottom: 24px; 
+    }
+    
+    .alert { 
+        padding: 16px 20px; 
+        border-radius: 12px; 
+        margin-bottom: 24px; 
+        display: flex; 
+        align-items: center; 
+        gap: 12px; 
+    }
+    
+    .alert-info { 
+        background: rgba(79, 172, 254, 0.1); 
+        border: 2px solid #4facfe; 
+        color: #0369a1; 
+    }
+    
+    .file-grid { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); 
+        gap: 16px; 
+        margin-top: 20px; 
+    }
+    
+    .grid-item, .grid-item-selectable { 
+        position: relative; 
+    }
+    
+    .grid-item-selectable input[type="checkbox"] { 
+        display: none; 
+    }
+    
+    .grid-item-link, .grid-item-selectable label { 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        padding: 20px 12px; 
+        background: white; 
+        border-radius: 16px; 
+        text-decoration: none; 
+        color: #1e293b; 
+        border: 2px solid #e2e8f0; 
+        transition: all 250ms ease-in-out; 
+        min-height: 140px; 
+        justify-content: center; 
+        cursor: pointer; 
+        width: 100%; 
+        height: 100%; 
+    }
+    
+    .grid-item-link:hover, .grid-item-selectable label:hover { 
+        border-color: #667eea; 
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
+        transform: translateY(-5px); 
+    }
+    
+    .grid-item-selectable input[type="checkbox"]:checked + label { 
+        border-color: #10b981; 
+        background-color: #f0fdf4; 
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2); 
+    }
+    
+    .icon-container { 
+        font-size: 2.5rem; 
+        margin-bottom: 12px; 
+        color: #667eea; 
+    }
+    
+    .item-name { 
+        font-size: 0.85rem; 
+        text-align: center; 
+        word-break: break-word; 
+    }
+    
+    .form-footer { 
+        background: #f8fafc; 
+        padding: 28px 40px; 
+        display: flex; 
+        justify-content: flex-end; 
+        gap: 16px; 
+    }
+    
+    .btn { 
+        padding: 14px 32px; 
+        border-radius: 12px; 
+        border: none; 
+        font-weight: 700; 
+        font-size: 1rem; 
+        cursor: pointer; 
+        text-decoration: none; 
+    }
+    
+    .btn-primary { 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+        color: white; 
+    }
+    
+    .btn-primary:hover { 
+        opacity: 0.9; 
+    }
+    
+    .btn-secondary { 
+        background: #e2e8f0; 
+        color: #475569; 
+    }
+    
+    .btn:disabled { 
+        background: #e2e8f0; 
+        color: #94a3b8; 
+        cursor: not-allowed; 
+    }
+    
+    .selected-count {
+        background: #10b981;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .htmx-request .htmx-indicator { 
+        display: inline-block; 
+    }
+    
+    .htmx-indicator { 
+        display: none; 
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container" 
-     x-data="{ 
-        arquivosSelecionados: [],
-        get arquivosIds() {
-            return this.arquivosSelecionados.map(f => f.id);
-        },
-        toggleSelecao(id, nome, icona, cor) {
-            const index = this.arquivosSelecionados.findIndex(f => f.id === id);
-            if (index > -1) {
-                this.arquivosSelecionados.splice(index, 1);
-            } else {
-                this.arquivosSelecionados.push({ id, nome, icona, cor });
-            }
-        },
-        remover(id) {
-            this.arquivosSelecionados = this.arquivosSelecionados.filter(f => f.id !== id);
-        }
-     }">
+<div class="container">
     
-    <!-- HERO HEADER -->
+    <!-- CABEÇALHO -->
     <div class="hero-header">
         <h1 class="hero-title">
             <div class="hero-icon"><i class="fa-solid fa-robot"></i></div>
             <span>Analisar Caso com IA</span>
         </h1>
-        <div class="caso-info">
-            <div class="info-badge"><i class="fa-solid fa-hashtag"></i> Caso #{{ caso.id }}</div>
-            <div class="info-badge"><i class="fa-solid fa-building"></i> {{ caso.cliente.nome }}</div>
-            <div class="info-badge"><i class="fa-solid fa-box"></i> {{ caso.produto.nome }}</div>
+        <div style="display: flex; gap: 12px;">
+            <div class="info-badge">#{{ caso.id }}</div>
+            <div class="info-badge">{{ caso.cliente.nome }}</div>
+            <div class="info-badge">{{ caso.produto.nome }}</div>
         </div>
     </div>
-    
-    <!-- FORMULÁRIO PRINCIPAL -->
-    <form method="POST" action="{% url 'analyser:iniciar_analise' caso_id=caso.id %}" id="form-analise">
-        {% csrf_token %}
-        <div class="main-card">
-            
-            <div class="card-section">
-                <div class="section-header">
-                    <i class="fa-solid fa-brain"></i>
-                    <h2 class="section-title">Selecione o Modelo de Análise</h2>
-                </div>
-                <div class="alert alert-info">
-                    <i class="fa-solid fa-info-circle"></i>
-                    <span>O modelo contém as instruções de como a IA deve extrair cada campo dos documentos.</span>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="select-modelo">Modelo de Análise</label>
-                    <select name="modelo_id" id="select-modelo" required>
-                        <option value="">Selecione um modelo...</option>
-                        {% for modelo in modelos %}
-                            <option value="{{ modelo.id }}">{{ modelo.nome }}</option>
-                        {% empty %}
-                            <option value="" disabled>Nenhum modelo disponível para este cliente/produto</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            
-            {% if tem_modelos %}
-            <div class="card-section">
-                <div class="section-header">
-                    <i class="fa-solid fa-folder-open"></i>
-                    <h2 class="section-title">Selecione os Arquivos</h2>
-                </div>
-                <div class="alert alert-info">
-                    <i class="fa-solid fa-info-circle"></i>
-                    <span>Selecione um ou mais arquivos do SharePoint que serão analisados pela IA.</span>
-                </div>
-                
-                <div id="folder-tree" class="folder-tree"
-                     hx-get="{% url 'analyser:carregar_arquivos' caso_id=caso.id %}"
-                     hx-trigger="load"
-                     hx-indicator="#loading-indicator">
-                    <div id="loading-indicator" class="empty-state htmx-indicator">
-                        <i class="fa-solid fa-spinner fa-spin"></i>
-                        <p>Carregando arquivos do SharePoint...</p>
-                    </div>
-                </div>
-                
-                <div id="selected-files-container" x-show="arquivosSelecionados.length > 0" x-transition>
-                    <h3 style="font-size: 1rem; font-weight: 700; margin: 24px 0 12px; color: var(--gray-700);">
-                        <i class="fa-solid fa-check-circle" style="color: var(--success-solid);"></i>
-                        Arquivos Selecionados (<span x-text="arquivosSelecionados.length"></span>)
-                    </h3>
-                    <div class="selected-files">
-                        <template x-for="arquivo in arquivosSelecionados" :key="arquivo.id">
-                            <div class="selected-file-tag">
-                                <i :class="arquivo.icona" :style="{ color: 'white' }"></i>
-                                <span x-text="arquivo.nome"></span>
-                                <i class="fa-solid fa-times" @click="remover(arquivo.id)"></i>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-                
-                <input type="hidden" name="arquivos_selecionados_ids" :value="JSON.stringify(arquivosSelecionados)">
 
-            </div>
-            {% endif %}
-            
-            {% if tem_modelos %}
-            <div class="form-footer">
-                <a href="{% url 'casos:detalhe_caso' pk=caso.id %}" class="btn btn-secondary">
-                    <i class="fa-solid fa-times"></i> Cancelar
-                </a>
-                <button type="submit" class="btn btn-primary" :disabled="arquivosSelecionados.length === 0">
-                    <i class="fa-solid fa-magic"></i> Iniciar Análise
-                </button>
-            </div>
-            {% endif %}
-        </div>
-    </form>
-    
-    <!-- HISTÓRICO -->
-    {% if analises_anteriores %}
-    <div class="main-card">
+    <!-- MENSAGENS -->
+    <div id="analyser-messages">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    <i class="fa-solid fa-exclamation-circle"></i>
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- FORMULÁRIO PRINCIPAL -->
+    <form id="analysis-form"
+          method="POST"
+          action="{% url 'analyser:iniciar_analise' caso_id=caso.id %}"
+          class="main-card">
+        
+        {% csrf_token %}
+
+        <!-- SEÇÃO 1: SELEÇÃO DO MODELO -->
         <div class="card-section">
             <div class="section-header">
-                <i class="fa-solid fa-clock-rotate-left"></i>
-                <h2 class="section-title">Análises Anteriores</h2>
+                <i class="fa-solid fa-brain"></i>
+                <h2 class="section-title">1. Selecione o Modelo de Análise</h2>
             </div>
-            <div class="historico-list">
-                {% for analise in analises_anteriores %}
-                    <div class="historico-item">
-                        <div class="historico-header">
-                            <div class="historico-data">
-                                <i class="fa-solid fa-calendar"></i>
-                                {{ analise.data_criacao|date:"d/m/Y H:i" }}
-                            </div>
-                            <span class="badge {% if analise.status == 'CONCLUIDO' %}badge-success{% elif analise.status == 'ERRO' %}badge-error{% else %}badge-processing{% endif %}">
-                                {{ analise.get_status_display }}
-                            </span>
-                        </div>
-                        <div style="font-size: 0.9rem; color: var(--gray-600);">
-                            Modelo: {{ analise.modelo_usado.nome }} • {{ analise.arquivos_analisados|length }} arquivo(s)
-                        </div>
-                        {% if analise.status == 'CONCLUIDO' %}
-                            <a href="{% url 'analyser:resultado_analise' resultado_id=analise.id %}" 
-                               style="color: var(--primary-solid); text-decoration: none; font-weight: 600; font-size: 0.9rem; margin-top: 8px; display: inline-block;">
-                                Ver Resultado →
-                            </a>
-                        {% endif %}
-                    </div>
-                {% endfor %}
+
+            <div class="form-group">
+                <label for="modelo_id" class="form-label">Modelo de Análise *</label>
+                <select id="modelo_id" name="modelo_id" required>
+                    <option value="">-- Escolha um modelo --</option>
+                    {% for modelo in modelos %}
+                        <option value="{{ modelo.id }}">{{ modelo.nome }}</option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
-    </div>
-    {% endif %}
-    
-</div>
-{% endblock %}
 
-{% block extra_js %}
-<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-{# O HTMX já deve estar no seu base.html #}
+        <!-- SEÇÃO 2: SELEÇÃO DE ARQUIVOS -->
+        <div class="card-section">
+            <div class="section-header">
+                <i class="fa-solid fa-file"></i>
+                <h2 class="section-title">2. Selecione os Arquivos</h2>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="fa-solid fa-info-circle"></i>
+                <span>Clique nos arquivos para selecioná-los. Você pode selecionar múltiplos arquivos.</span>
+            </div>
+
+            <!-- GRADE DE ARQUIVOS -->
+            <div class="file-grid" id="files-grid">
+                {% if itens %}
+                    {% for item in itens %}
+                        {% if item.folder %}
+                            <!-- PASTA - Navegação -->
+                            <div class="grid-item">
+                                <button type="button"
+                                        onclick="carregarSubpasta('{{ item.id }}')"
+                                        class="grid-item-link">
+                                    <div class="icon-container">
+                                        <i class="fa-solid fa-folder"></i>
+                                    </div>
+                                    <span class="item-name">{{ item.name }}</span>
+                                </button>
+                            </div>
+                        {% else %}
+                            <!-- ARQUIVO - Checkbox -->
+                            <div class="grid-item-selectable">
+                                <input type="checkbox"
+                                       id="file_{{ item.id }}"
+                                       name="arquivos_selecionados"
+                                       value="{{ item.id }}"
+                                       onchange="atualizarContagem()">
+                                <label for="file_{{ item.id }}">
+                                    <div class="icon-container">
+                                        {% if 'pdf' in item.file.mimeType %}
+                                            <i class="fa-solid fa-file-pdf" style="color: #ef4444;"></i>
+                                        {% elif 'word' in item.file.mimeType %}
+                                            <i class="fa-solid fa-file-word" style="color: #2563eb;"></i>
+                                        {% elif 'sheet' in item.file.mimeType %}
+                                            <i class="fa-solid fa-file-excel" style="color: #10b981;"></i>
+                                        {% else %}
+                                            <i class="fa-solid fa-file" style="color: #64748b;"></i>
+                                        {% endif %}
+                                    </div>
+                                    <span class="item-name">{{ item.name }}</span>
+                                </label>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 40px;">
+                        <i class="fa-solid fa-folder-open" style="font-size: 3rem; margin-bottom: 12px; display: block;"></i>
+                        <p>Nenhum arquivo encontrado nesta pasta</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- RODAPÉ COM BOTÕES -->
+        <div class="form-footer">
+            <div class="selected-count" id="selected-count" style="display: none;">
+                <span id="count-text">0 arquivo(s) selecionado(s)</span>
+            </div>
+            <a href="{% url 'casos:detalhe_caso' caso.id %}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary" id="submit-btn" disabled>
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Iniciar Análise
+            </button>
+        </div>
+    </form>
+
+</div>
 
 <script>
-    // Adicionado um evento para reinicializar o HTMX após o AlpineJS carregar
-    // Isso garante que o hx-get seja processado corretamente
-    document.addEventListener('alpine:init', () => {
-        htmx.process(document.body);
-    });
+function atualizarContagem() {
+    const checkboxes = document.querySelectorAll('input[name="arquivos_selecionados"]:checked');
+    const count = checkboxes.length;
+    const countElement = document.getElementById('selected-count');
+    const countText = document.getElementById('count-text');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    if (count > 0) {
+        countText.textContent = `${count} arquivo(s) selecionado(s)`;
+        countElement.style.display = 'inline-block';
+        submitBtn.disabled = false;
+    } else {
+        countElement.style.display = 'none';
+        submitBtn.disabled = true;
+    }
+}
+
+function carregarSubpasta(folderId) {
+    const caso_id = {{ caso.id }};
+    fetch(`/analyser/analisar/${caso_id}/arquivos/?folder_id=${folderId}`)
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('files-grid').innerHTML = html;
+        })
+        .catch(error => console.error('Erro:', error));
+}
+
+// Inicializar na carga da página
+document.addEventListener('DOMContentLoaded', atualizarContagem);
 </script>
+
 {% endblock %}

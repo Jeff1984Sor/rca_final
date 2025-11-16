@@ -25,7 +25,12 @@ class Caso(models.Model):
  
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ATIVO')
     sharepoint_folder_id = models.CharField(max_length=255, blank=True, null=True, editable=False)
-
+    resumo = models.TextField(
+        verbose_name="Resumo do Caso",
+        blank=True, 
+        null=True,
+        help_text="Um resumo executivo do caso, que pode ser gerado pela IA ou inserido manualmente."
+    )
     # --- CAMPOS PADRÃO OPCIONAIS ---
     titulo = models.CharField(max_length=255, blank=True)
     data_encerramento = models.DateField(verbose_name="Data de Encerramento", blank=True, null=True)

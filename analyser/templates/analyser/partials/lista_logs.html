@@ -1,0 +1,81 @@
+{# analyser/templates/analyser/partials/lista_logs.html #}
+
+<div class="section-header">
+    <i class="fa-solid fa-terminal"></i>
+    <h2 class="section-title">Log de Execução</h2>
+    <span class="status-badge" style="margin-left: auto;">
+        {% if resultado.status == 'CONCLUIDO' %}
+            <span style="background: #dcfce7; color: #15803d; padding: 6px 16px; border-radius: 20px; font-weight: 600; font-size: 0.9rem;">✅ Concluído</span>
+        {% elif resultado.status == 'ERRO' %}
+            <span style="background: #fee2e2; color: #991b1b; padding: 6px 16px; border-radius: 20px; font-weight: 600; font-size: 0.9rem;">❌ Erro</span>
+        {% else %}
+            <span style="background: #fef3c7; color: #b45309; padding: 6px 16px; border-radius: 20px; font-weight: 600; font-size: 0.9rem;"><i class="fa-solid fa-spinner fa-spin"></i> Processando</span>
+        {% endif %}
+    </span>
+</div>
+
+<div class="log-container" style="background-color: #0f172a; color: #e2e8f0; font-family: 'Courier New', monospace; padding: 20px; border-radius: 12px; max-height: 600px; overflow-y: auto;">
+    {% for log in logs %}
+        <div style="margin-bottom: 8px; display: flex; gap: 12px;">
+            <span style="color: #64748b; min-width: 80px;">[{{ log.timestamp|date:"H:i:s" }}]</span>
+            <span style="min-width: 30px;">
+                {% if log.nivel == 'SUCCESS' %}
+                    <span style="color: #22c55e;">✅</span>
+                {% elif log.nivel == 'INFO' %}
+                    <span style="color: #3b82f6;">ℹ️</span>
+                {% elif log.nivel == 'WARNING' %}
+                    <span style="color: #f59e0b;">⚠️</span>
+                {% elif log.nivel == 'ERROR' %}
+                    <span style="color: #ef4444;">❌</span>
+                {% endif %}
+            </span>
+            <span>{{ log.mensagem }}</span>
+        </div>
+    {% empty %}
+        <div style="color: #94a3b8;">Nenhum log disponível ainda...</div>
+    {% endfor %}
+</div>
+
+{% if resultado.status == 'CONCLUIDO' %}
+    <div style="margin-top: 20px; text-align: right;">
+        <button 
+            type="button"
+            onclick="aplicarDadosAoCaso({{ resultado.id }})"
+            class="btn btn-primary" 
+            style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 12px 28px; border-radius: 10px; color: white; border: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
+            <i class="fa-solid fa-save"></i> Aplicar Dados ao Caso
+        </button>
+    </div>
+
+    <script>
+    function aplicarDadosAoCaso(resultadoId) {
+        if (!confirm('Tem certeza que deseja aplicar os dados ao caso?')) {
+            return;
+        }
+        
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        
+        fetch(`/analyser/resultado/${resultadoId}/aplicar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ ' + data.message);
+                window.location.href = data.caso_url;
+            } else {
+                alert('❌ Erro: ' + (data.error || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('❌ Erro na requisição: ' + error);
+        });
+    }
+    </script>
+{% endif %}

@@ -4,246 +4,14 @@
 
 {% block title %}Workflows | Sistema Jurídico{% endblock %}
 
-{% block extra_css %}
-<style>
-:root {
-    --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --primary-solid: #667eea;
-    --success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    --danger: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    --warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    --info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    
-    --gray-50: #f8fafc;
-    --gray-100: #f1f5f9;
-    --gray-700: #334155;
-    --gray-900: #0f172a;
-    
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    --transition: 250ms ease-in-out;
-}
-
-body {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    background-attachment: fixed;
-}
-
-.workflows-container {
-    max-width: 1400px;
-    margin: 40px auto;
-    padding: 0 20px;
-}
-
-.hero-header {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 40px;
-    margin-bottom: 32px;
-    box-shadow: var(--shadow-xl);
-    animation: slideDown 0.5s ease-out;
-}
-
-@keyframes slideDown {
-    from { opacity: 0; transform: translateY(-30px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.hero-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.hero-title {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--gray-900);
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.hero-icon {
-    background: var(--primary);
-    width: 60px;
-    height: 60px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.8rem;
-}
-
-.workflows-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 24px;
-}
-
-.workflow-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 28px;
-    box-shadow: var(--shadow-lg);
-    transition: all var(--transition);
-    border-left: 5px solid var(--primary-solid);
-    animation: fadeInUp 0.6s ease-out both;
-    display: flex;
-    flex-direction: column;
-}
-
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.workflow-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-xl);
-}
-
-.workflow-header {
-    margin-bottom: 16px;
-}
-
-.workflow-nome {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--gray-900);
-    margin-bottom: 8px;
-}
-
-.workflow-meta {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
-}
-
-.badge {
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.badge-info {
-    background: var(--info);
-    color: white;
-}
-
-.badge-success {
-    background: var(--success);
-    color: white;
-}
-
-.workflow-details {
-    font-size: 0.95rem;
-    color: var(--gray-700);
-    margin-bottom: 24px;
-}
-
-.workflow-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: auto; /* Empurra as ações para o final do card */
-}
-
-.btn {
-    padding: 10px 20px;
-    border-radius: 10px;
-    border: none;
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: all var(--transition);
-    text-decoration: none;
-}
-
-.btn-primary {
-    background: var(--primary);
-    color: white;
-}
-
-.btn-warning {
-    background: var(--warning);
-    color: white;
-}
-
-.btn-info {
-    background: var(--info);
-    color: white;
-}
-
-.btn-danger {
-    background: var(--danger);
-    color: white;
-}
-
-.btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-}
-
-.empty-state {
-    text-align: center;
-    padding: 80px 20px;
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 20px;
-    box-shadow: var(--shadow-lg);
-}
-
-.empty-state i {
-    font-size: 5rem;
-    color: var(--primary-solid);
-    opacity: 0.5;
-    margin-bottom: 24px;
-}
-
-.empty-state h3 {
-    font-size: 1.8rem;
-    color: var(--gray-900);
-    margin-bottom: 12px;
-}
-
-.empty-state p {
-    font-size: 1.1rem;
-    color: var(--gray-700);
-}
-
-@media (max-width: 768px) {
-    .hero-content {
-        flex-direction: column;
-        gap: 20px;
-        align-items: flex-start;
-    }
-    
-    .workflows-grid {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="workflows-container">
     
+    {# Este componente de header já foi estilizado globalmente #}
     <div class="hero-header">
         <div class="hero-content">
             <h1 class="hero-title">
-                <div class="hero-icon">
+                <div class="hero-icon" style="background: var(--primary);"> {# Mantido o estilo aqui para sobrepor o tema laranja, já que essa página tinha um tema roxo #}
                     <i class="fa-solid fa-diagram-project"></i>
                 </div>
                 Meus Workflows
@@ -262,11 +30,12 @@ body {
                     <div class="workflow-header">
                         <div class="workflow-nome">{{ workflow.nome }}</div>
                         <div class="workflow-meta">
-                            <span class="badge badge-info">
+                            {# Usando as classes de badge globais #}
+                            <span class="badge bg-dark">
                                 <i class="fa-solid fa-layer-group"></i>
                                 {{ workflow.fases.count }} fase{{ workflow.fases.count|pluralize }}
                             </span>
-                            <span class="badge badge-success">
+                            <span class="badge bg-success">
                                 <i class="fa-solid fa-briefcase"></i>
                                 {{ workflow.casos_count }} caso{{ workflow.casos_count|pluralize }}
                             </span>
@@ -279,25 +48,16 @@ body {
                     </div>
                     
                     <div class="workflow-actions">
-                        {# ✅✅✅ CORREÇÃO APLICADA AQUI ✅✅✅ #}
-                        <a href="{% url 'workflow:workflow_builder_edit' workflow.id %}" 
-                           class="btn btn-warning">
-                            <i class="fa-solid fa-pen"></i>
-                            Editar
+                        <a href="{% url 'workflow:workflow_builder_edit' workflow.id %}" class="btn action-btn btn-edit">
+                            <i class="fa-solid fa-pen"></i> Editar
                         </a>
-                        <a href="{% url 'workflow:duplicar_workflow' workflow.id %}" 
-                           class="btn btn-info">
-                            <i class="fa-solid fa-copy"></i>
-                            Duplicar
+                        <a href="{% url 'workflow:duplicar_workflow' workflow.id %}" class="btn action-btn btn-info">
+                            <i class="fa-solid fa-copy"></i> Duplicar
                         </a>
-                        <form method="post" 
-                              action="{% url 'workflow:deletar_workflow' workflow.id %}" 
-                              style="display: inline;"
-                              onsubmit="return confirm('⚠️ Tem certeza? Esta ação não pode ser desfeita!');">
+                        <form method="post" action="{% url 'workflow:deletar_workflow' workflow.id %}" onsubmit="return confirm('⚠️ Tem certeza? Esta ação não pode ser desfeita!');">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-danger">
-                                <i class="fa-solid fa-trash"></i>
-                                Deletar
+                            <button type="submit" class="btn action-btn btn-delete">
+                                <i class="fa-solid fa-trash"></i> Deletar
                             </button>
                         </form>
                     </div>
@@ -305,11 +65,12 @@ body {
             {% endfor %}
         </div>
     {% else %}
+        {# Usando o componente .empty-state global #}
         <div class="empty-state">
             <i class="fa-solid fa-diagram-project"></i>
             <h3>Nenhum workflow criado</h3>
             <p>Comece criando seu primeiro workflow!</p>
-            <a href="{% url 'workflow:workflow_builder' %}" class="btn btn-primary" style="margin-top: 20px;">
+            <a href="{% url 'workflow:workflow_builder' %}" class="btn btn-primary mt-4">
                 <i class="fa-solid fa-plus-circle"></i>
                 Criar Primeiro Workflow
             </a>
