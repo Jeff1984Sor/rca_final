@@ -13,8 +13,6 @@ db.sqlite3
 .vscode/
 
 # Arquivos de Mídia e Estáticos
-/media/
-/static/
 
 # Arquivos de ambiente
 .env
