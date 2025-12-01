@@ -6,21 +6,147 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | Sistema Jurídico</title>
 
-    <!-- Fontes -->
+    <!-- Fontes e Ícones -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- Ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     
-    <!-- SEU CSS PRINCIPAL AQUI -->
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-</head>
+    <style>
+        /* ==================================================================== */
+        /* 🟧 CSS DE LOGIN - TEMA LARANJA */
+        /* ==================================================================== */
+        :root {
+            --primary: #f97316;
+            --primary-hover: #ea580c;
+        }
 
-<!-- Adicionei a classe 'login-body' para carregar o fundo laranja -->
-<body class="login-body">
-    
-    <!-- Decoração -->
-    <div class="login-bubble bubble-1"></div>
-    <div class="login-bubble bubble-2"></div>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            /* Fundo Laranja */
+            background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 50%, #fdba74 100%);
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        /* Container que centraliza tudo */
+        .login-container {
+            width: 100%;
+            max-width: 440px;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* O Cartão Branco */
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 25px 50px -12px rgba(249, 115, 22, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Linha laranja no topo */
+        .login-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 6px;
+            background: var(--primary);
+        }
+
+        /* Logo / Ícone */
+        .login-logo { text-align: center; margin-bottom: 30px; }
+        
+        .login-icon-box {
+            width: 80px; height: 80px;
+            background: var(--primary);
+            border-radius: 20px;
+            display: inline-flex; align-items: center; justify-content: center;
+            box-shadow: 0 10px 20px rgba(249, 115, 22, 0.3);
+            font-size: 2.5rem; color: white;
+        }
+
+        /* Textos */
+        .login-header { text-align: center; margin-bottom: 30px; }
+        .login-header h1 { font-size: 1.8rem; font-weight: 800; color: #111827; margin-bottom: 5px; }
+        .login-header p { color: #6b7280; font-size: 0.95rem; }
+
+        /* Inputs */
+        .form-group { margin-bottom: 20px; position: relative; }
+        
+        .form-label {
+            display: block; font-weight: 600; font-size: 0.85rem; color: #374151; margin-bottom: 8px;
+        }
+
+        .input-wrapper { position: relative; }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px 14px 44px; /* Espaço para o ícone */
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            font-size: 0.95rem;
+            background-color: #f9fafb;
+            transition: all 0.2s;
+            color: #111827;
+        }
+
+        .form-input:focus {
+            outline: none; background-color: white;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
+        }
+
+        .input-icon {
+            position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+            color: #9ca3af; font-size: 1rem; pointer-events: none;
+        }
+
+        .form-input:focus + .input-icon { color: var(--primary); }
+
+        /* Botão */
+        .btn-login {
+            width: 100%; padding: 14px; margin-top: 20px;
+            font-size: 1rem; font-weight: 700;
+            background: var(--primary);
+            color: white; border: none; border-radius: 12px;
+            cursor: pointer; transition: 0.3s;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            box-shadow: 0 4px 6px -1px rgba(249, 115, 22, 0.2);
+        }
+
+        .btn-login:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(249, 115, 22, 0.3);
+        }
+
+        /* Footer */
+        .login-footer {
+            margin-top: 30px; text-align: center; padding-top: 20px;
+            border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 0.85rem;
+        }
+
+        .forgot-link {
+            display: block; text-align: right; margin-top: 5px;
+            font-size: 0.85rem; color: var(--primary); text-decoration: none; font-weight: 500;
+        }
+        .forgot-link:hover { text-decoration: underline; }
+
+        /* Erro */
+        .error-msg {
+            background: #fef2f2; border: 1px solid #fee2e2; color: #991b1b;
+            padding: 12px; border-radius: 12px; margin-bottom: 20px;
+            font-size: 0.9rem; display: flex; align-items: center; gap: 8px;
+        }
+    </style>
+</head>
+<body>
 
     <div class="login-container">
         <div class="login-card">
@@ -37,85 +163,72 @@
             </div>
 
             {% if form.errors %}
-            <div class="login-error-msg">
+            <div class="error-msg">
                 <i class="fa-solid fa-circle-exclamation"></i>
-                <div><strong>Atenção:</strong> Usuário ou senha incorretos.</div>
+                <span>Usuário ou senha incorretos.</span>
             </div>
             {% endif %}
 
-            <form method="post" id="loginForm">
+            <form method="post">
                 {% csrf_token %}
                 
-                <div class="login-form-group">
-                    <label for="id_username" class="login-label">Usuário</label>
-                    <div class="login-input-wrapper">
-                        <input type="text" id="id_username" name="username" class="login-input" 
-                            placeholder="Seu usuário" required autofocus autocomplete="username">
-                        <i class="fa-solid fa-user login-input-icon"></i>
+                <!-- Usuário -->
+                <div class="form-group">
+                    <label for="id_username" class="form-label">Usuário</label>
+                    <div class="input-wrapper">
+                        <input type="text" name="username" class="form-input" 
+                            placeholder="Seu usuário" required autofocus id="id_username">
+                        <i class="fa-solid fa-user input-icon"></i>
                     </div>
                 </div>
 
-                <div class="login-form-group">
-                    <label for="id_password" class="login-label">Senha</label>
-                    <div class="login-input-wrapper">
-                        <input type="password" id="id_password" name="password" class="login-input" 
-                            placeholder="Sua senha" required autocomplete="current-password">
-                        <i class="fa-solid fa-lock login-input-icon"></i>
+                <!-- Senha -->
+                <div class="form-group">
+                    <label for="id_password" class="form-label">Senha</label>
+                    <div class="input-wrapper">
+                        <input type="password" name="password" class="form-input" 
+                            placeholder="Sua senha" required id="id_password">
+                        <i class="fa-solid fa-lock input-icon"></i>
                         
-                        <!-- Toggle de Senha (Script Inline Simples) -->
-                        <button type="button" onclick="togglePass()" style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #9ca3af;">
+                        <button type="button" onclick="togglePass()" 
+                            style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #9ca3af;">
                             <i class="fa-solid fa-eye" id="eyeIcon"></i>
                         </button>
                     </div>
+                    <!-- Link Esqueceu Senha -->
+                    <a href="{% url 'password_reset' %}" class="forgot-link">Esqueceu a senha?</a>
                 </div>
 
-                <button type="submit" class="btn-login-orange" id="submitBtn">
+                <button type="submit" class="btn-login" id="submitBtn">
                     <span>Acessar Sistema</span>
                     <i class="fa-solid fa-arrow-right"></i>
                 </button>
             </form>
 
-            <div style="margin-top: 32px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px; color: #6b7280; font-size: 0.85rem;">
+            <div class="login-footer">
                 <p>&copy; {% now "Y" %} Sistema Jurídico. Todos os direitos reservados.</p>
             </div>
+
         </div>
     </div>
 
-    <!-- Scripts de Funcionalidade -->
     <script>
-        // Função simples para mostrar/ocultar senha
         function togglePass() {
             const input = document.getElementById('id_password');
             const icon = document.getElementById('eyeIcon');
             if (input.type === "password") {
                 input.type = "text";
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
+                icon.className = "fa-solid fa-eye-slash";
             } else {
                 input.type = "password";
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
+                icon.className = "fa-solid fa-eye";
             }
         }
 
-        // Efeito 3D e Loading
-        document.addEventListener('DOMContentLoaded', function() {
-            // Loading no botão
-            document.getElementById('loginForm').addEventListener('submit', function() {
-                const btn = document.getElementById('submitBtn');
-                btn.style.opacity = '0.8';
-                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Entrando...';
-            });
-
-            // Efeito 3D (apenas Desktop)
-            if (window.innerWidth > 768) {
-                const card = document.querySelector('.login-card');
-                document.addEventListener('mousemove', (e) => {
-                    const x = (window.innerWidth / 2 - e.pageX) / 45;
-                    const y = (window.innerHeight / 2 - e.pageY) / 45;
-                    card.style.transform = `perspective(1000px) rotateY(${x}deg) rotateX(${y}deg)`;
-                });
-            }
+        document.querySelector('form').addEventListener('submit', function() {
+            const btn = document.getElementById('submitBtn');
+            btn.style.opacity = '0.7';
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Entrando...';
         });
     </script>
 </body>
