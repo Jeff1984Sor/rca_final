@@ -1,12 +1,8 @@
-# equipamentos/models.py
-
 from django.db import models
-from django.conf import settings # Para referenciar o modelo de usuário do seu projeto de forma segura
+from django.conf import settings 
 
 # ==============================================================================
-# Modelos de Apoio (As "Listas" que você pediu)
-# Eles servem para popular os campos de escolha no cadastro de Equipamento.
-# Você poderá adicionar/editar/remover itens em cada um deles pelo painel Admin.
+# Modelos de Apoio
 # ==============================================================================
 
 class TipoItem(models.Model):
@@ -56,12 +52,10 @@ class StatusItem(models.Model):
 
 # ==============================================================================
 # O Modelo Principal: Equipamento
-# Aqui está o cadastro de ativos que você pediu, com todos os campos.
 # ==============================================================================
 
 class Equipamento(models.Model):
     
-    # Opções para o campo "Pago por" (esta é uma lista mais fixa)
     OPCOES_PAGO_POR = [
         ('EMPRESA', 'Empresa'),
         ('SOCIO', 'Sócio'),
@@ -75,6 +69,8 @@ class Equipamento(models.Model):
     categoria_item = models.ForeignKey(CategoriaItem, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Categoria do Item")
     marca = models.ForeignKey(Marca, on_delete=models.SET_NULL, null=True, blank=True)
     modelo = models.CharField(max_length=100, blank=True)
+    
+    # Campo CRÍTICO: É por aqui que o script vai identificar o PC
     etiqueta_servico_dell = models.CharField("Etiqueta de Serviço Dell (S/N)", max_length=50, blank=True)
     hostname = models.CharField("Hostname (Nome na Rede)", max_length=100, blank=True)
 
@@ -95,11 +91,21 @@ class Equipamento(models.Model):
     telefone_usuario = models.CharField("Telefone do Usuário", max_length=20, blank=True, help_text="Telefone de contato direto do responsável.")
     anydesk = models.CharField("AnyDesk", max_length=50, blank=True)
     status = models.ForeignKey(StatusItem, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Status do Item")
+
+    # ==========================================================================
+    # NOVOS CAMPOS: Auditoria Automática (Hardware e Software)
+    # Estes campos serão preenchidos pelo script Python (agente)
+    # ==========================================================================
+    sistema_operacional = models.CharField("SO Instalado", max_length=150, blank=True, null=True)
+    processador = models.CharField("Processador (CPU)", max_length=150, blank=True, null=True)
+    memoria_ram = models.CharField("Memória RAM", max_length=100, blank=True, null=True)
+    espaco_disco = models.CharField("Espaço em Disco", max_length=100, blank=True, null=True)
     
-    # Nota sobre "Email de contato do Responsável":
-    # Este campo não é necessário! Ao escolher um 'responsavel', o Django já sabe
-    # o email dele. Podemos acessá-lo com `equipamento.responsavel.email`.
-    # Isso evita dados duplicados e inconsistentes.
+    # TextField permite texto ilimitado (ideal para lista longa de softwares)
+    softwares_instalados = models.TextField("Softwares Instalados", blank=True, null=True, help_text="Lista gerada automaticamente")
+    
+    # Para sabermos quando foi a última vez que o script rodou
+    ultima_auditoria = models.DateTimeField("Data da Última Leitura", blank=True, null=True)
 
     def __str__(self):
         return f"{self.nome_item} ({self.modelo or 'Sem modelo'})"

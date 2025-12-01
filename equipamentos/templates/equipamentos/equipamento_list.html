@@ -14,6 +14,10 @@
                 Gestão de Equipamentos
             </h1>
             <div class="hero-actions">
+                <!-- Botão Extra no Header também (Opcional) -->
+                <a href="{% static 'downloads/coletor.exe' %}" class="btn btn-outline-light mr-2" download title="Baixar Agente de Coleta">
+                    <i class="fa-solid fa-robot"></i> Agente
+                </a>
                 <a href="{% url 'equipamentos:equipamento_create' %}" class="btn btn-primary">
                     <i class="fa-solid fa-plus-circle"></i>
                     Novo Equipamento
@@ -28,6 +32,28 @@
         <div class="stat-card ativos"><div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div><div class="stat-content"><div class="stat-value" id="total-ativos">-</div><div class="stat-label">Ativos</div></div></div>
         <div class="stat-card manutencao"><div class="stat-icon"><i class="fa-solid fa-wrench"></i></div><div class="stat-content"><div class="stat-value" id="total-manutencao">-</div><div class="stat-label">Manutenção</div></div></div>
         <div class="stat-card inativos"><div class="stat-icon"><i class="fa-solid fa-circle-xmark"></i></div><div class="stat-content"><div class="stat-value" id="total-inativos">-</div><div class="stat-label">Inativos</div></div></div>
+    </div>
+
+    <!-- CARD DE AUTOMAÇÃO (NOVO) -->
+    <!-- Reutilizando o estilo de filtros-card mas com uma borda lateral para destaque -->
+    <div class="filtros-card" style="border-left: 5px solid #28a745; background: #f8fff9;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px;">
+            <div style="flex: 1; min-width: 300px;">
+                <h3 style="margin: 0; font-size: 1.2rem; color: #28a745;">
+                    <i class="fa-solid fa-microchip"></i> Auditoria Automática de Hardware
+                </h3>
+                <p style="margin: 5px 0 0; color: #666; font-size: 0.9rem;">
+                    Está neste computador agora? Baixe o agente para preencher automaticamente: 
+                    <strong>Processador, RAM, HD e Softwares Instalados</strong>.
+                </p>
+            </div>
+            <div style="margin-top: 10px;">
+                <a href="{% static 'downloads/coletor.exe' %}" class="btn btn-success" download style="display: flex; align-items: center; gap: 8px; padding: 10px 20px;">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Baixar Verificador (.exe)</span>
+                </a>
+            </div>
+        </div>
     </div>
     
     <!-- FILTROS -->
@@ -69,17 +95,29 @@
                 <thead>
                     <tr>
                         <th>Nome do Item</th>
+                        <th>Detalhes Técnicos</th> <!-- Coluna Nova para ver o que o robô pegou -->
                         <th>Responsável</th>
                         <th>Status</th>
-                        <th>Tipo</th>
-                        <th>Marca</th>
+                        <th>Tipo/Marca</th>
                         <th class="actions">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for equipamento in equipamentos %}
                     <tr>
-                        <td><strong>{{ equipamento.nome_item|truncatechars:40 }}</strong></td>
+                        <td>
+                            <strong>{{ equipamento.nome_item|truncatechars:30 }}</strong><br>
+                            <small class="text-muted">{{ equipamento.hostname }}</small>
+                        </td>
+                        <!-- Exibindo dados coletados pelo robô -->
+                        <td style="font-size: 0.85rem;">
+                            {% if equipamento.memoria_ram %}
+                                <i class="fa-solid fa-memory"></i> {{ equipamento.memoria_ram }} <br>
+                                <i class="fa-solid fa-hard-drive"></i> {{ equipamento.espaco_disco }}
+                            {% else %}
+                                <span class="text-muted">Requires Auditoria</span>
+                            {% endif %}
+                        </td>
                         <td>
                             {% if equipamento.responsavel %}<i class="fa-solid fa-user-circle"></i> {{ equipamento.responsavel.get_full_name }}
                             {% else %}<span class="text-muted">-</span>{% endif %}
@@ -89,8 +127,10 @@
                                 <span class="badge badge-{{ equipamento.status.nome|lower }}">{{ equipamento.status.nome }}</span>
                             {% else %}<span class="text-muted">-</span>{% endif %}
                         </td>
-                        <td>{{ equipamento.tipo_item.nome|default_if_none:"-" }}</td>
-                        <td>{{ equipamento.marca.nome|default_if_none:"-" }}</td>
+                        <td>
+                            {{ equipamento.tipo_item.nome|default:"-" }} / 
+                            {{ equipamento.marca.nome|default:"-" }}
+                        </td>
                         <td class="actions">
                             <div class="action-buttons">
                                 <a href="{% url 'equipamentos:equipamento_detail' pk=equipamento.pk %}" class="btn action-btn btn-info" title="Ver detalhes"><i class="fa-solid fa-eye"></i></a>
@@ -104,7 +144,7 @@
                             <div class="empty-state">
                                 <i class="fa-solid fa-laptop"></i>
                                 <h3>Nenhum equipamento cadastrado</h3>
-                                <p>Comece adicionando seu primeiro equipamento ao sistema.</p>
+                                <p>Comece adicionando seu primeiro equipamento ao sistema ou use o Agente de Auditoria.</p>
                                 <a href="{% url 'equipamentos:equipamento_create' %}" class="btn btn-primary mt-4"><i class="fa-solid fa-plus-circle"></i> Adicionar Equipamento</a>
                             </div>
                         </td>
@@ -122,9 +162,11 @@
 <script src="{% static 'js/lista_equipamentos.js' %}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        initListaEquipamentos({
-            createUrl: "{% url 'equipamentos:equipamento_create' %}"
-        });
+        if(typeof initListaEquipamentos === 'function') {
+            initListaEquipamentos({
+                createUrl: "{% url 'equipamentos:equipamento_create' %}"
+            });
+        }
     });
 </script>
 {% endblock %}

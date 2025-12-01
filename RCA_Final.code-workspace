@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../geracao_pdf"
+		}
+	],
+	"settings": {}
+}
