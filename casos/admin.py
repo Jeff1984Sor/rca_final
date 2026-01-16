@@ -1,16 +1,32 @@
 # casos/admin.py
 from django.contrib import admin
 from .models import Caso, ModeloAndamento, Andamento, Timesheet, Acordo, Parcela, Despesa, FluxoInterno, RegraPrazo
+from django import forms
+from django.contrib.auth import get_user_model
+
+class CasoAdminForm(forms.ModelForm):
+    class Meta:
+        model = Caso
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Isso aqui muda o texto que aparece na seleção do advogado
+        if 'advogado_responsavel' in self.fields:
+            self.fields['advogado_responsavel'].label_from_instance = lambda obj: f"{obj.get_full_name()} ({obj.username})" if obj.get_full_name() else obj.username
+
+
 
 @admin.register(Caso)
 class CasoAdmin(admin.ModelAdmin):
+    form = CasoAdminForm
     # --- SUA CONFIGURAÇÃO ORIGINAL, COM A NOVA COLUNA ADICIONADA ---
     list_display = (
         'id', 
         'cliente', 
         'produto', 
         'status', 
-        'advogado_responsavel', 
+        'exibir_advogado', 
         'data_entrada',
         'prazo_final_calculado'  # <-- NOVA COLUNA ADICIONADA AQUI
     )
@@ -18,6 +34,16 @@ class CasoAdmin(admin.ModelAdmin):
     list_filter = ('status', 'produto', 'advogado_responsavel')
     search_fields = ('titulo', 'cliente__nome')
     autocomplete_fields = ['cliente', 'advogado_responsavel']
+
+
+def exibir_advogado(self, obj):
+    if obj.advogado_responsavel:
+        # Se o usuário preencheu nome e sobrenome, mostra. Senão mostra o login.
+        return obj.advogado_responsavel.get_full_name() or obj.advogado_responsavel.username
+    return "-"
+
+exibir_advogado.short_description = 'Advogado Responsável' # Título da coluna
+exibir_advogado.admin_order_field = 'advogado_responsavel' # Permite ordenar
 
 @admin.register(ModeloAndamento)
 class ModeloAndamentoAdmin(admin.ModelAdmin):
