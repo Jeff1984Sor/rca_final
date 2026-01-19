@@ -6,8 +6,13 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.forms.widgets import HiddenInput
+from datetime import timedelta
+import re
 
-# Importa os modelos
+# --- IMPORTANTE: ADICIONE O 'Q' AQUI ---
+from django.db.models import Q 
+
+# Importa os modelos de campos customizados
 from campos_custom.models import (
     EstruturaDeCampos, 
     GrupoCampos, 
@@ -16,28 +21,27 @@ from campos_custom.models import (
     ValorCampoPersonalizado,
     OpcoesListaPersonalizada
 )
-from .models import Caso, Andamento, Timesheet, Acordo, Despesa
+
+# --- IMPORTANTE: ADICIONE 'ConfiguracaoTomador' AQUI ---
+from .models import (
+    Caso, Andamento, Timesheet, Acordo, Despesa, 
+    Tomador, ConfiguracaoTomador 
+)
 from clientes.models import Cliente
 from produtos.models import Produto
-from datetime import timedelta
-import re
 
 User = get_user_model()
 
 # ==============================================================================
-# FUNÇÃO AUXILIAR (SEM MUDANÇAS)
+# FUNÇÃO AUXILIAR
 # ==============================================================================
-
 def build_form_field(campo_obj: CampoPersonalizado, is_required=False, cliente=None, produto=None) -> forms.Field:
     """
-    ✅ FUNÇÃO CORRIGIDA
     Cria o campo de formulário Django apropriado com base no 'tipo_campo'.
     Busca opções customizadas se o tipo for LISTA.
     """
     tipo = campo_obj.tipo_campo
     label = campo_obj.nome_campo
-    
-    # Classe CSS padrão
     attrs = {'class': 'form-control'}
     
     if tipo in ['LISTA_UNICA', 'LISTA_MULTIPLA']:
@@ -52,12 +56,7 @@ def build_form_field(campo_obj: CampoPersonalizado, is_required=False, cliente=N
         
         except OpcoesListaPersonalizada.DoesNotExist:
             choices = []
-            help_text = (
-                f"⚠️ Opções não configuradas! "
-                f"Configure em: Admin > Opções de Lista > "
-                f"Campo '{campo_obj.nome_campo}' + Cliente '{cliente.nome if cliente else '?'}' + "
-                f"Produto '{produto.nome if produto else '?'}'"
-            )
+            help_text = f"⚠️ Opções não configuradas para '{label}'"
         else:
             help_text = None
         
@@ -69,7 +68,6 @@ def build_form_field(campo_obj: CampoPersonalizado, is_required=False, cliente=N
                 widget=forms.Select(attrs={'class': 'form-select'}),
                 help_text=help_text if not choices else None
             )
-        
         else:  # LISTA_MULTIPLA
             return forms.MultipleChoiceField(
                 label=label,
@@ -85,42 +83,53 @@ def build_form_field(campo_obj: CampoPersonalizado, is_required=False, cliente=N
             required=is_required,
             widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
         )
-    
     elif tipo == 'NUMERO_INT':
         return forms.IntegerField(
-            label=label,
-            required=is_required,
-            widget=forms.NumberInput(attrs={'class': 'form-control'})
+            label=label, required=is_required, widget=forms.NumberInput(attrs={'class': 'form-control'})
         )
-    
     elif tipo == 'NUMERO_DEC' or tipo == 'MOEDA':
         return forms.DecimalField(
-            label=label,
-            required=is_required,
-            decimal_places=2,
+            label=label, required=is_required, decimal_places=2, 
             widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
         )
-    
     elif tipo == 'LISTA_USUARIOS':
         return forms.ModelChoiceField(
-            queryset=User.objects.all(),
-            label=label,
-            required=is_required,
+            queryset=User.objects.all(), label=label, required=is_required, 
             widget=forms.Select(attrs={'class': 'form-select'})
         )
-    
-    else: # TEXTO
-        return forms.CharField(
-            label=label,
-            required=is_required,
-            widget=forms.TextInput(attrs={'class': 'form-control'})
+    elif tipo == 'BOOLEANO':
+        return forms.BooleanField(
+            label=label, required=False, 
+            widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
         )
+    else: # TEXTO e TEXTO_LONGO
+        widget = forms.Textarea(attrs={'class': 'form-control', 'rows': 3}) if tipo == 'TEXTO_LONGO' else forms.TextInput(attrs={'class': 'form-control'})
+        return forms.CharField(label=label, required=is_required, widget=widget)
 
 
 # ==============================================================================
-# FORMULÁRIO DINÂMICO DE CASO (COM A CORREÇÃO FINAL)
+# FORMULÁRIO DO TOMADOR
 # ==============================================================================
+class TomadorForm(forms.ModelForm):
+    class Meta:
+        model = Tomador
+        fields = ['nome', 'cpf_cnpj'] # Liste aqui os campos do Model Tomador
+        widgets = {
+            'nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome completo'}),
+            'cpf_cnpj': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000.000.000-00'}),
+        }
 
+    # Se você tiver um __init__ personalizado, lembre-se de manter o super()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # O Django UpdateView passa a 'instance' aqui automaticamente.
+        # Se este método estiver sobrescrevendo os dados sem chamar o super,
+        # os campos virão vazios.
+
+
+# ==============================================================================
+# FORMULÁRIO DINÂMICO DE CASO
+# ==============================================================================
 class CasoDinamicoForm(forms.ModelForm):
     """
     Formulário principal para criar/editar um Caso,
@@ -128,31 +137,59 @@ class CasoDinamicoForm(forms.ModelForm):
     """
     class Meta:
         model = Caso
-        fields = ['data_entrada', 'valor_apurado','data_encerramento', 'status', 'advogado_responsavel']
+        fields = ['data_entrada', 'valor_apurado', 'data_encerramento', 'status', 'advogado_responsavel', 'tomador']
         widgets = {
             'data_entrada': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
             'valor_apurado': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'data_encerramento': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
             'advogado_responsavel': forms.Select(attrs={'class': 'form-select'}),
+            'tomador': forms.Select(attrs={'class': 'form-select select2-tomador'}),
         }
 
- # /casos/forms.py -> Dentro da classe CasoDinamicoForm
-
-    # ... (Sua classe Meta continua aqui, sem mudanças) ...
-
-    # ==============================================================================
-    # MÉTODO __init__ (COM A CORREÇÃO FINAL)
-    # ==============================================================================
     def __init__(self, *args, **kwargs):
         self.cliente = kwargs.pop('cliente', None)
         self.produto = kwargs.pop('produto', None)
         super().__init__(*args, **kwargs)
 
         # --- USA NOMES DE VARIÁVEIS INTERNAS (com underscore) ---
-        self._campos_fixos_list = [self[field_name] for field_name in self.Meta.fields]
+        # Filtra apenas campos que realmente existem no form final
+        self._campos_fixos_list = [self[field_name] for field_name in self.Meta.fields if field_name in self.fields]
         self._campos_personalizados_simples_list = []
         self.campo_valor_apurado = None
+
+        # =========================================================
+        # LÓGICA DINÂMICA DO TOMADOR (VIA BANCO DE DADOS)
+        # =========================================================
+        mostrar_tomador = False
+
+        if self.produto:
+            # Busca regras no banco
+            # 1. Regra específica para este cliente
+            # 2. OU Regra geral (cliente vazio)
+            regras = ConfiguracaoTomador.objects.filter(
+                produto=self.produto,
+                habilitar_tomador=True
+            ).filter(
+                Q(cliente=self.cliente) | Q(cliente__isnull=True)
+            )
+            
+            # Se encontrar qualquer regra, habilita
+            if regras.exists():
+                mostrar_tomador = True
+
+        if mostrar_tomador:
+            # MOSTRA O CAMPO
+            self.fields['tomador'].queryset = Tomador.objects.all().order_by('nome')
+            self.fields['tomador'].widget.attrs.update({'class': 'form-select select2-tomador'})
+        else:
+            # ESCONDE O CAMPO
+            if 'tomador' in self.fields:
+                del self.fields['tomador']
+                # Remove também da lista de renderização visual
+                self._campos_fixos_list = [f for f in self._campos_fixos_list if f.name != 'tomador']
+
+        # =========================================================
 
         # Lógica para edição
         if self.instance and self.instance.pk:
@@ -187,6 +224,8 @@ class CasoDinamicoForm(forms.ModelForm):
                 if valor_salvo:
                     if campo.tipo_campo == 'LISTA_MULTIPLA' and valor_salvo.valor:
                         self.fields[field_name].initial = [v.strip() for v in valor_salvo.valor.split(',')]
+                    elif campo.tipo_campo == 'BOOLEANO':
+                        self.fields[field_name].initial = (valor_salvo.valor == 'True')
                     else:
                         self.fields[field_name].initial = valor_salvo.valor
             
@@ -203,7 +242,7 @@ class CasoDinamicoForm(forms.ModelForm):
                 widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Digite o título do caso'})
             )
 
-    # --- MÉTODOS AUXILIARES PARA O TEMPLATE (ATUALIZADOS) ---
+    # --- MÉTODOS AUXILIARES PARA O TEMPLATE ---
     @property
     def campos_fixos(self):
         return self._campos_fixos_list
@@ -217,7 +256,6 @@ class CasoDinamicoForm(forms.ModelForm):
             return []
         return self.estrutura.grupos_repetiveis.all()
     
-    # Este método não é mais necessário, mas o mantemos por segurança
     def get_campo_por_variavel_name(self, nome_variavel):
         if nome_variavel == 'valor_apurado':
             return self.campo_valor_apurado
@@ -225,9 +263,8 @@ class CasoDinamicoForm(forms.ModelForm):
 
 
 # ==============================================================================
-# FORMULÁRIO BASE PARA GRUPOS REPETÍVEIS (SEM MUDANÇAS)
+# FORMULÁRIO BASE PARA GRUPOS REPETÍVEIS
 # ==============================================================================
-
 class BaseGrupoForm(forms.Form):
     def __init__(self, *args, grupo_campos=None, cliente=None, produto=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -259,9 +296,8 @@ class BaseGrupoForm(forms.Form):
 
 
 # ==============================================================================
-# FORMULÁRIO DE VALOR (SEM MUDANÇAS)
+# FORMULÁRIO DE VALOR
 # ==============================================================================
-
 class ValorCampoPersonalizadoForm(forms.ModelForm):
     class Meta:
         model = ValorCampoPersonalizado
@@ -281,7 +317,7 @@ class ValorCampoPersonalizadoForm(forms.ModelForm):
 
 
 # ==============================================================================
-# OUTROS FORMULÁRIOS (SEM MUDANÇAS)
+# OUTROS FORMULÁRIOS
 # ==============================================================================
 
 class AndamentoForm(forms.ModelForm):
@@ -296,61 +332,37 @@ class AndamentoForm(forms.ModelForm):
 
 class TimesheetForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
-        # 1. Remove o argumento 'user' dos kwargs antes de chamar o pai
         user = kwargs.pop('user', None)
-        # 2. Chama o construtor original da classe pai
         super().__init__(*args, **kwargs)
-        # 3. Agora, usa o objeto 'user' para customizar o formulário
         if user:
-            # Define o usuário logado como o valor inicial do campo 'advogado'
             self.fields['advogado'].initial = user
-            # Limita as opções do dropdown para ser apenas o usuário logado
             self.fields['advogado'].queryset = User.objects.filter(id=user.id)
     class Meta:
-        # APONTA PARA O MODELO 'Timesheet' IMPORTADO
         model = Timesheet
-        # DEFINE OS CAMPOS DO FORMULÁRIO
         fields = ['data_execucao', 'advogado', 'tempo', 'descricao']
-        # DEFINE OS WIDGETS PARA CADA CAMPO
         widgets = {
             'data_execucao': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'advogado': forms.Select(attrs={'class': 'form-select'}),
             'descricao': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
-            
-            # AQUI ESTÁ A MUDANÇA PRINCIPAL: USA UM CAMPO DE TEXTO
             'tempo': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'HH:MM',
-                'pattern': r'\d{1,2}:\d{2}', # Validação básica no HTML5
+                'pattern': r'\d{1,2}:\d{2}',
                 'title': 'Use o formato HH:MM (ex: 01:30 para 1h e 30min)'
             })
         }
 
-    # MÉTODO DE VALIDAÇÃO PARA CONVERTER 'HH:MM' EM UM VALOR VÁLIDO
-    def clean_tempo_gasto(self):
+    def clean_tempo(self):
         tempo_str = self.cleaned_data.get('tempo')
-        
         if not tempo_str:
-            # Se o campo não for obrigatório e estiver vazio, não faz nada
             return None
-
-        # Regex para validar o formato HH:MM (horas e minutos)
         if not re.match(r'^\d{1,2}:\d{2}$', tempo_str):
             raise forms.ValidationError("Formato inválido. Use HH:MM (ex: 02:45).")
-            
         try:
             horas, minutos = map(int, tempo_str.split(':'))
             if minutos >= 60:
                 raise forms.ValidationError("Os minutos não podem ser 60 ou mais.")
-            
-            # Assumindo que seu modelo `Timesheet` tem um campo `tempo_gasto`
-            # do tipo `DurationField`, que é o ideal para armazenar durações.
             return timedelta(hours=horas, minutes=minutos)
-            
-            # --- Alternativa ---
-            # Se seu modelo armazena o tempo em minutos (IntegerField):
-            # return (horas * 60) + minutos
-
         except (ValueError, TypeError):
             raise forms.ValidationError("Valores inválidos para horas ou minutos.")
 
@@ -390,10 +402,10 @@ class DespesaForm(forms.ModelForm):
             'valor': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'advogado': forms.Select(attrs={'class': 'form-select'}),
         }
+
 class CasoInfoBasicasForm(forms.ModelForm):
     class Meta:
         model = Caso
-        # Apenas os campos que aparecem no primeiro card
         fields = ['status', 'data_entrada', 'valor_apurado', 'advogado_responsavel']
         widgets = {
             'data_entrada': forms.DateInput(attrs={'type': 'date'}),
@@ -401,14 +413,11 @@ class CasoInfoBasicasForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Aplica classes CSS globais para consistência
         for field_name, field in self.fields.items():
             field.widget.attrs['class'] = 'form-control'
             
-# --- FORMULÁRIO PARA O SEGUNDO MODAL ---
 class CasoDadosAdicionaisForm(forms.Form):
     def __init__(self, *args, **kwargs):
-        # A view vai passar os campos personalizados para o form
         campos_personalizados = kwargs.pop('campos_personalizados', [])
         super().__init__(*args, **kwargs)
 
@@ -416,17 +425,14 @@ class CasoDadosAdicionaisForm(forms.Form):
             campo = valor.campo
             field_name = f'campo_{campo.id}'
             
-            # Define o tipo de campo do formulário baseado no modelo
             if campo.tipo_campo == 'TEXTO_LONGO':
                 self.fields[field_name] = forms.CharField(label=campo.nome_campo, required=False, initial=valor.valor, widget=forms.Textarea(attrs={'rows': 3}))
             elif campo.tipo_campo == 'DATA':
                 self.fields[field_name] = forms.DateField(label=campo.nome_campo, required=False, initial=valor.valor, widget=forms.DateInput(attrs={'type': 'date'}))
             elif campo.tipo_campo == 'BOOLEANO':
                 self.fields[field_name] = forms.BooleanField(label=campo.nome_campo, required=False, initial=(valor.valor == 'True'))
-            # Adicione outros tipos de campo aqui (MOEDA, etc.)
             else:
                 self.fields[field_name] = forms.CharField(label=campo.nome_campo, required=False, initial=valor.valor)
         
-        # Aplica classes CSS globais
         for field_name, field in self.fields.items():
             field.widget.attrs.setdefault('class', 'form-control')

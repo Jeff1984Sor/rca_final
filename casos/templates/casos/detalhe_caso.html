@@ -33,7 +33,7 @@
 
     <!-- 🎯 NAVEGAÇÃO TABS -->
     <div class="tabs-container">
-        <button class="tab-btn" data-tab="detalhes"><i class="fa-solid fa-circle-info"></i> Detalhes</button>
+        <button class="tab-btn active" data-tab="detalhes"><i class="fa-solid fa-circle-info"></i> Detalhes</button>
         <button class="tab-btn" data-tab="acoes"><i class="fa-solid fa-list-check"></i> Ações</button>
         <button class="tab-btn" data-tab="workflow"><i class="fa-solid fa-diagram-project"></i> Workflow</button>
         <button class="tab-btn" data-tab="fluxo-interno"><i class="fa-solid fa-timeline"></i> Fluxo</button>
@@ -46,7 +46,9 @@
     </div>
 
     <!-- 📋 ABA: DETALHES -->
-    <div id="detalhes" class="tab-content">
+    <div id="detalhes" class="tab-content active">
+        
+        <!-- CARD 1: INFORMAÇÕES BÁSICAS -->
         <div class="card" id="card-info-basicas">
             <div class="card-header-with-edit">
                 <h2 class="card-title-icon card-title"><i class="fa-solid fa-circle-info"></i> Informações do Caso</h2>
@@ -62,12 +64,64 @@
                 </div>
             </div>
         </div>
+
+        <!-- CARD 2: TOMADOR (NOVO BLOCO ADICIONADO AQUI) -->
+        {% if caso.tomador %}
+        <div class="card mt-4" id="card-tomador">
+            <div class="card-header-with-edit">
+                <h2 class="card-title-icon card-title"><i class="fa-solid fa-user-tie"></i> Tomador / Interessado</h2>
+                <a href="{% url 'casos:editar_tomador' pk=caso.tomador.pk %}" class="btn btn-sm action-btn btn-edit">
+                    <i class="fa-solid fa-pen"></i> Editar Tomador
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="details-grid">
+                    <div class="detail-card">
+                        <div class="detail-label"><i class="fa-solid fa-user"></i> Nome</div>
+                        <div class="detail-value fw-bold">{{ caso.tomador.nome }}</div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="detail-label"><i class="fa-solid fa-id-card"></i> CPF/CNPJ</div>
+                        <div class="detail-value">{{ caso.tomador.cpf_cnpj|default:"-" }}</div>
+                    </div>
+                    
+                    <!-- E-MAILS -->
+                    <div class="detail-card" style="grid-column: span 2;">
+                        <div class="detail-label"><i class="fa-solid fa-envelope"></i> E-mails</div>
+                        <div class="detail-value">
+                            {% for email in caso.tomador.emails.all %}
+                                <span class="badge bg-light text-dark border me-1">{{ email.email }}</span>
+                            {% empty %}
+                                <span class="text-muted">-</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- TELEFONES -->
+                    <div class="detail-card" style="grid-column: span 2;">
+                        <div class="detail-label"><i class="fa-solid fa-phone"></i> Telefones</div>
+                        <div class="detail-value">
+                            {% for fone in caso.tomador.telefones.all %}
+                                <span class="badge bg-light text-dark border me-1">{{ fone.telefone }}</span>
+                            {% empty %}
+                                <span class="text-muted">-</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- CARD 3: DADOS ADICIONAIS -->
         {% if valores_personalizados %}
         <div class="card mt-4" id="card-dados-adicionais">
             <div class="card-header-with-edit"><h2 class="card-title-icon card-title"><i class="fa-solid fa-sliders"></i> Dados Adicionais</h2><button type="button" class="btn btn-sm action-btn btn-edit" onclick="openEditModal('dados-adicionais')"><i class="fa-solid fa-pen"></i> Editar</button></div>
             <div class="card-body"><div class="details-grid">{% for valor in valores_personalizados %}{% if not valor.instancia_grupo %}<div class="detail-card"><div class="detail-label"><i class="fa-solid fa-tag"></i> {{ valor.campo.nome_campo }}</div><div class="detail-value">{% if valor.campo.tipo_campo == 'BOOLEANO' %}{% if valor.valor == 'True' or valor.valor == '1' or valor.valor == 'true' %}<span class="bool-true"><i class="fa-solid fa-check-circle"></i> Sim</span>{% else %}<span class="bool-false"><i class="fa-solid fa-times-circle"></i> Não</span>{% endif %}{% else %}{{ valor.valor|format_dynamic_value:valor.campo.tipo_campo|default:"-" }}{% endif %}</div></div>{% endif %}{% endfor %}</div></div>
         </div>
         {% endif %}
+
+        <!-- CARD 4: GRUPOS REPETÍVEIS -->
         {% if grupos_de_valores_salvos %}{% for instancia in grupos_de_valores_salvos %}<div class="card mt-4"><div class="card-header-with-edit"><h2 class="card-title-icon card-title"><i class="fa-solid fa-layer-group"></i> {{ instancia.grupo.nome_grupo }} #{{ forloop.counter }}</h2><a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="btn btn-sm action-btn btn-edit"><i class="fa-solid fa-pen"></i> Editar</a></div><div class="card-body"><div class="details-grid">{% for valor in instancia.valores.all %}<div class="detail-card"><div class="detail-label"><i class="fa-solid fa-circle-dot"></i> {{ valor.campo.nome_campo }}</div><div class="detail-value">{{ valor.valor|format_dynamic_value:valor.campo.tipo_campo|default:"-" }}</div></div>{% endfor %}</div></div></div>{% endfor %}{% endif %}
     </div>
 
@@ -81,7 +135,6 @@
     <div id="fluxo-interno" class="tab-content"><div class="card"><h2 class="card-title"><i class="fa-solid fa-timeline"></i> Linha do Tempo Completa</h2><div class="timeline">{% for evento in fluxo_interno %}<div class="timeline-item"><div class="timeline-icon" style="background: {{ evento.tipo_evento|get_event_color }}; color: white; border: none;">{{ evento.tipo_evento|get_event_icon|safe }}</div><div class="timeline-content"><h3 class="timeline-title">{{ evento.get_tipo_evento_display }}</h3><p style="margin: 12px 0;">{{ evento.descricao|linebreaksbr }}</p><div class="timeline-meta"><span><i class="fa-solid fa-user"></i> {% if evento.autor %}{{ evento.autor.get_full_name|default:evento.autor.username }}{% else %}Sistema{% endif %}</span><span><i class="fa-solid fa-calendar"></i> {{ evento.data_evento|date:"d/m/Y H:i" }}</span></div></div></div>{% empty %}<div class="empty-state"><i class="fa-solid fa-timeline"></i><h3>Nenhum evento registrado</h3></div>{% endfor %}</div></div></div>
     
     <!-- ABA: ANDAMENTOS -->
-    <!-- ABA: ANDAMENTOS (CORRIGIDA) -->
     <div id="andamentos" class="tab-content">
         <div class="card">
             <h2 class="card-title"><i class="fa-solid fa-plus-circle"></i> Novo Andamento</h2>
@@ -95,25 +148,15 @@
         </div>
         
         <div class="card mt-4">
-            {# ✅ SEÇÃO ATUALIZADA AQUI ✅ #}
             <div class="card-header-with-edit">
-                <h2 class="card-title-icon card-title">
-                    <i class="fa-solid fa-file-lines"></i>
-                    Histórico
-                </h2>
-                <a href="{% url 'casos:exportar_andamentos_excel' pk=caso.pk %}" class="btn btn-sm btn-export">
-                    <i class="fa-solid fa-file-excel"></i>
-                    Exportar
-                </a>
+                <h2 class="card-title-icon card-title"><i class="fa-solid fa-file-lines"></i> Histórico</h2>
+                <a href="{% url 'casos:exportar_andamentos_excel' pk=caso.pk %}" class="btn btn-sm btn-export"><i class="fa-solid fa-file-excel"></i> Exportar</a>
             </div>
-            
             <div class="card-body">
                 <div class="timeline">
                     {% for andamento in andamentos %}
                         <div class="timeline-item">
-                            <div class="timeline-icon" style="background: var(--warning); color: white; border: none;">
-                                <i class="fa-solid fa-pencil"></i>
-                            </div>
+                            <div class="timeline-icon" style="background: var(--warning); color: white; border: none;"><i class="fa-solid fa-pencil"></i></div>
                             <div class="timeline-content">
                                 <h3 class="timeline-title">{{ andamento.data_andamento|date:"d/m/Y" }}</h3>
                                 <p style="margin: 12px 0; white-space: pre-wrap;">{{ andamento.descricao }}</p>
@@ -124,67 +167,37 @@
                             </div>
                         </div>
                     {% empty %}
-                        <div class="empty-state">
-                            <i class="fa-solid fa-file-lines"></i>
-                            <h3>Nenhum andamento</h3>
-                        </div>
+                        <div class="empty-state"><i class="fa-solid fa-file-lines"></i><h3>Nenhum andamento</h3></div>
                     {% endfor %}
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- ABA: TIMESHEET (CORRIGIDA) -->
+    <!-- ABA: TIMESHEET -->
     <div id="timesheet" class="tab-content">
         <div class="card">
             <h2 class="card-title"><i class="fa-solid fa-plus-circle"></i> Novo Lançamento</h2>
             <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
                 {% csrf_token %}
-                <div class="form-row">
-                    {% include "_form_field.html" with field=form_timesheet.data_execucao %}
-                    {% include "_form_field.html" with field=form_timesheet.tempo %}
-                </div>
+                <div class="form-row">{% include "_form_field.html" with field=form_timesheet.data_execucao %}{% include "_form_field.html" with field=form_timesheet.tempo %}</div>
                 {% include "_form_field.html" with field=form_timesheet.advogado classes="full-width" %}
                 {% include "_form_field.html" with field=form_timesheet.descricao classes="full-width" %}
                 <button type="submit" name="submit_timesheet" class="btn btn-primary mt-3"><i class="fa-solid fa-save"></i> Salvar</button>
             </form>
         </div>
-        
-        <div class="summary-grid">
-            <div class="summary-box animated-gradient">
-                <div class="summary-label"><i class="fa-solid fa-clock"></i> Tempo Total Gasto</div>
-                <div class="summary-value">{{ tempo_total|format_timedelta }}</div>
-            </div>
-        </div>
-        
+        <div class="summary-grid"><div class="summary-box animated-gradient"><div class="summary-label"><i class="fa-solid fa-clock"></i> Tempo Total Gasto</div><div class="summary-value">{{ tempo_total|format_timedelta }}</div></div></div>
         <div class="card mt-4">
-            {# ✅ SEÇÃO ATUALIZADA AQUI ✅ #}
             <div class="card-header-with-edit">
-                <h2 class="card-title-icon card-title">
-                    <i class="fa-solid fa-list"></i>
-                    Histórico
-                </h2>
+                <h2 class="card-title-icon card-title"><i class="fa-solid fa-list"></i> Histórico</h2>
                 <div class="d-flex gap-12">
-                    <a href="{% url 'casos:exportar_timesheet_excel' pk=caso.pk %}" class="btn btn-sm btn-export">
-                        <i class="fa-solid fa-file-excel"></i> Excel
-                    </a>
-                    <a href="{% url 'casos:exportar_timesheet_pdf' pk=caso.pk %}" class="btn btn-sm btn-pdf">
-                        <i class="fa-solid fa-file-pdf"></i> PDF
-                    </a>
+                    <a href="{% url 'casos:exportar_timesheet_excel' pk=caso.pk %}" class="btn btn-sm btn-export"><i class="fa-solid fa-file-excel"></i> Excel</a>
+                    <a href="{% url 'casos:exportar_timesheet_pdf' pk=caso.pk %}" class="btn btn-sm btn-pdf"><i class="fa-solid fa-file-pdf"></i> PDF</a>
                 </div>
             </div>
-
             <div class="card-body">
                 <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Tempo</th>
-                            <th>Advogado</th>
-                            <th>Descrição</th>
-                            <th class="text-right">Ações</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Data</th><th>Tempo</th><th>Advogado</th><th>Descrição</th><th class="text-right">Ações</th></tr></thead>
                     <tbody>
                         {% for ts in timesheets %}
                         <tr>
@@ -198,20 +211,14 @@
                             </td>
                         </tr>
                         {% empty %}
-                        <tr>
-                            <td colspan="5">
-                                <div class="empty-state">
-                                    <i class="fa-solid fa-clock"></i>
-                                    <h3>Nenhum lançamento</h3>
-                                </div>
-                            </td>
-                        </tr>
+                        <tr><td colspan="5"><div class="empty-state"><i class="fa-solid fa-clock"></i><h3>Nenhum lançamento</h3></div></td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
+
     <!-- ABA: ACORDOS -->
     <div id="acordos" class="tab-content"><div class="card"><h2 class="card-title"><i class="fa-solid fa-plus-circle"></i> Novo Acordo</h2><form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">{% csrf_token %}<div class="form-row">{% include "_form_field.html" with field=form_acordo.valor_total %}{% include "_form_field.html" with field=form_acordo.numero_parcelas %}</div><div class="form-row">{% include "_form_field.html" with field=form_acordo.data_primeira_parcela %}{% include "_form_field.html" with field=form_acordo.advogado_acordo %}</div><button type="submit" name="submit_acordo" class="btn btn-primary mt-3"><i class="fa-solid fa-save"></i> Salvar</button></form></div><div class="summary-grid"><div class="summary-box animated-gradient"><div class="summary-label"><i class="fa-solid fa-money-bill-wave"></i> Saldo Devedor</div><div class="summary-value">{{ saldo_devedor_total|currency|default:"R$ 0,00" }}</div></div></div><div class="card mt-4"><h2 class="card-title"><i class="fa-solid fa-handshake"></i> Acordos Registrados</h2>{% for acordo in acordos %}<div class="card mt-3"><div class="card-header d-flex justify-content-between align-items-center"><div><h3 class="h5">Acordo de {{ acordo.valor_total|currency }} em {{ acordo.numero_parcelas }}x</h3><p class="text-muted small m-0">Criado em {{ acordo.data_criacao|date:"d/m/Y" }} por {% if acordo.advogado_acordo %}{{ acordo.advogado_acordo.get_full_name|default:acordo.advogado_acordo.username }}{% else %}-{% endif %}</p></div><a href="{% url 'casos:editar_acordo' pk=acordo.pk %}" class="btn btn-sm action-btn btn-edit">Editar</a></div><div class="card-body"><table class="data-table"><thead><tr><th>Nº</th><th>Vencimento</th><th>Pagamento</th><th>Valor</th><th>Status</th></tr></thead><tbody>{% for p in acordo.parcelas.all %}{% include 'casos/partials/parcela_linha.html' with parcela=p %}{% endfor %}</tbody></table></div></div>{% empty %}<div class="empty-state"><i class="fa-solid fa-handshake"></i><h3>Nenhum acordo</h3></div>{% endfor %}</div></div>
     
@@ -222,31 +229,21 @@
     <div id="anexos" class="tab-content">
         <div class="card">
             <div class="card-header-with-edit">
-                <h2 class="card-title-icon card-title">
-                    <i class="fa-solid fa-paperclip"></i>
-                    Anexos do SharePoint
-                </h2>
+                <h2 class="card-title-icon card-title"><i class="fa-solid fa-paperclip"></i> Anexos do SharePoint</h2>
             </div>
             <div class="card-body">
-                {# 
-                Este container é o alvo da requisição HTMX. 
-                Ele começa com um estado de "loading".
-                #}
                 <div id="anexos-content">
-                    <div class="empty-state">
-                        <div class="spinner"></div> {# Usando a classe de spinner global #}
-                        <p class="text-muted mt-3">Carregando anexos...</p>
-                        <small>Isso pode levar alguns segundos na primeira vez.</small>
-                    </div>
+                    <div class="empty-state"><div class="spinner"></div><p class="text-muted mt-3">Carregando anexos...</p></div>
                 </div>
             </div>
         </div>
     </div>
+    
     <!-- ABA: ANALYSER (HTMX) -->
     <div id="analyser" class="tab-content"><div id="analyser-content"><div class="card"><div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i><p>Clique na aba "Analyser IA" para carregar.</p></div></div></div></div>
 
     <!-- ========================================
-         MODAIS DE EDIÇÃO (CORRIGIDOS)
+         MODAIS DE EDIÇÃO
          ======================================== -->
     <div id="modal-info-basicas" class="edit-modal-overlay" onclick="closeModalOnOverlay(event, 'info-basicas')">
         <div class="edit-modal-content" onclick="event.stopPropagation()">
@@ -303,15 +300,12 @@
         const modelosDataEl = document.getElementById('modelos-andamento-data');
         const modelosData = modelosDataEl ? JSON.parse(modelosDataEl.textContent) : {};
         
-        // Inicializa todas as funcionalidades da página
         initDetalheCaso({
             modelosAndamento: modelosData
         });
 
-        // Exibe mensagens do Django usando a função de toast global
         {% if messages %}
             {% for message in messages %}
-                // A tag 'success', 'error', 'info', 'warning' do Django é usada como tipo do toast
                 showToast('{{ message|escapejs }}', '{{ message.tags }}');
             {% endfor %}
         {% endif %}

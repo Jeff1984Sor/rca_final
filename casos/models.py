@@ -9,6 +9,46 @@ from dateutil.relativedelta import relativedelta
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
+# ==============================================================================
+# 1. MODELOS DE TOMADOR (ATUALIZADO)
+# ==============================================================================
+
+class Tomador(models.Model):
+    # REMOVIDO: cliente = models.ForeignKey(...) -> Agora é independente
+    
+    nome = models.CharField(max_length=255, verbose_name="Nome do Tomador")
+    cpf_cnpj = models.CharField(max_length=20, verbose_name="CNPJ/CPF", blank=True, null=True)
+    data_criacao = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['nome']
+        verbose_name = "Tomador"
+        verbose_name_plural = "Tomadores"
+        # REMOVIDO: unique_together = ('cliente', 'nome') -> Pois não tem mais cliente
+
+    def __str__(self):
+        return self.nome
+
+class TomadorEmail(models.Model):
+    """Tabela auxiliar para múltiplos e-mails por tomador"""
+    tomador = models.ForeignKey(Tomador, on_delete=models.CASCADE, related_name='emails')
+    email = models.EmailField(verbose_name="E-mail")
+
+    def __str__(self):
+        return self.email
+
+class TomadorTelefone(models.Model):
+    """Tabela auxiliar para múltiplos telefones por tomador"""
+    tomador = models.ForeignKey(Tomador, on_delete=models.CASCADE, related_name='telefones')
+    telefone = models.CharField(max_length=20, verbose_name="Telefone")
+
+    def __str__(self):
+        return self.telefone
+
+# ==============================================================================
+# 2. MODELO DE CASO (ATUALIZADO)
+# ==============================================================================
+
 class Caso(models.Model):
     # Definindo as opções para o campo 'status'
     STATUS_CHOICES = [
@@ -20,6 +60,17 @@ class Caso(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='casos')
     
     produto = models.ForeignKey('produtos.Produto', on_delete=models.PROTECT, related_name='casos')
+
+    # --- NOVO CAMPO: TOMADOR ---
+    tomador = models.ForeignKey(
+        Tomador, 
+        on_delete=models.PROTECT, 
+        related_name='casos',
+        verbose_name="Tomador",
+        null=True,  # Obrigatório ser null para casos antigos
+        blank=True
+    )
+    # ---------------------------
 
     data_entrada = models.DateField(verbose_name="Data de Entrada RCA")
  
@@ -298,3 +349,33 @@ class FluxoInterno(models.Model):
 
     def __str__(self):
         return f"{self.get_tipo_evento_display()} no Caso #{self.caso.id} em {self.data_evento.strftime('%d/%m/%Y')}"
+class ConfiguracaoTomador(models.Model):
+    produto = models.ForeignKey(
+        'produtos.Produto', 
+        on_delete=models.CASCADE, 
+        verbose_name="Produto"
+    )
+    
+    cliente = models.ForeignKey(
+        Cliente, 
+        on_delete=models.CASCADE, 
+        verbose_name="Cliente Específico",
+        null=True, 
+        blank=True,
+        help_text="Deixe em branco se quiser aplicar a TODOS os clientes deste produto."
+    )
+    
+    habilitar_tomador = models.BooleanField(
+        default=True, 
+        verbose_name="Habilitar Campo Tomador"
+    )
+
+    class Meta:
+        verbose_name = "Parametrização de Tomador"
+        verbose_name_plural = "Parametrizações de Tomador"
+        unique_together = ('produto', 'cliente') # Evita regras duplicadas
+
+    def __str__(self):
+        if self.cliente:
+            return f"{self.produto.nome} - {self.cliente.nome}"
+        return f"{self.produto.nome} - (Todos os Clientes)"

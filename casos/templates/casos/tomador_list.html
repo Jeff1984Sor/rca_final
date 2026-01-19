@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Gestão de Tomadores{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* --- DESIGN SYSTEM --- */
+    body { background-color: #fd7e14 !important; font-family: 'Inter', sans-serif; }
+    
+    .main-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        padding: 30px;
+        margin-top: 30px;
+        margin-bottom: 50px;
+    }
+
+    /* Cabeçalho da Página */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        border-bottom: 2px solid #f1f1f1;
+        padding-bottom: 20px;
+    }
+    .page-title {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #fd7e14;
+        margin: 0;
+    }
+
+    /* Botões */
+    .btn-orange {
+        background-color: #fd7e14;
+        color: white;
+        font-weight: 600;
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: none;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .btn-orange:hover { background-color: #e36902; color: white; transform: translateY(-2px); }
+
+    .btn-outline-orange {
+        border: 2px solid #fd7e14;
+        color: #fd7e14;
+        background: transparent;
+        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .btn-outline-orange:hover { background-color: #fd7e14; color: white; }
+
+    /* Barra de Busca */
+    .search-box {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 30px;
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+    }
+    .search-input {
+        flex-grow: 1;
+        border: 1px solid #dee2e6;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 1rem;
+    }
+
+    /* Tabela */
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .custom-table th {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 15px;
+        text-align: left;
+        font-weight: 700;
+        border-bottom: 2px solid #ffeeba;
+    }
+    .custom-table td {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+        vertical-align: middle;
+    }
+    .custom-table tr:hover { background-color: #fffbf2; }
+    
+    .tomador-name {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #333;
+        text-decoration: none;
+    }
+    .tomador-name:hover { color: #fd7e14; text-decoration: underline; }
+
+    .badge-count {
+        background: #6c757d;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="main-card">
+        
+        <!-- CABEÇALHO -->
+        <div class="page-header">
+            <h1 class="page-title"><i class="fa-solid fa-users"></i> Gestão de Tomadores</h1>
+            <a href="{% url 'casos:criar_tomador' %}" class="btn-orange">
+                <i class="fa-solid fa-plus"></i> Novo Tomador
+            </a>
+        </div>
+
+        <!-- BUSCA -->
+        <div class="search-box">
+            <form method="get" style="display: flex; width: 100%; gap: 10px;">
+                <input type="text" name="q" class="search-input" placeholder="Pesquisar por Nome ou CPF/CNPJ..." value="{{ request.GET.q }}">
+                <button type="submit" class="btn-orange">Buscar</button>
+                {% if request.GET.q %}
+                    <a href="{% url 'casos:lista_tomadores' %}" class="btn-outline-orange">Limpar</a>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- BOTÕES DE EXPORTAÇÃO (COM ESPAÇAMENTO EXTRA) -->
+        <div class="d-flex justify-content-end gap-2" style="margin-bottom: 30px;">
+            <a href="{% url 'casos:exportar_tomadores_excel' %}?q={{ request.GET.q }}" class="btn-outline-orange">
+                <i class="fa-solid fa-file-excel"></i> Excel
+            </a>
+            <a href="{% url 'casos:exportar_tomadores_pdf' %}?q={{ request.GET.q }}" class="btn-outline-orange">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+            </a>
+        </div>
+
+        <!-- TABELA -->
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>CPF / CNPJ</th>
+                        <th style="text-align: center;">Casos</th>
+                        <th style="text-align: right;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tomador in tomadores %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'casos:editar_tomador' tomador.pk %}" class="tomador-name">
+                                {{ tomador.nome }}
+                            </a>
+                            <div style="font-size: 0.85rem; color: #888; margin-top: 4px;">
+                                Cadastrado em: {{ tomador.data_criacao|date:"d/m/Y" }}
+                            </div>
+                        </td>
+                        <td>{{ tomador.cpf_cnpj|default:"-" }}</td>
+                        <td style="text-align: center;">
+                            <span class="badge-count">{{ tomador.casos.count }}</span>
+                        </td>
+                        <td style="text-align: right;">
+                            <a href="{% url 'casos:editar_tomador' tomador.pk %}" class="btn-outline-orange" style="padding: 5px 10px; font-size: 0.9rem;">
+                                <i class="fa-solid fa-pen"></i>
+                            </a>
+                            <a href="{% url 'casos:deletar_tomador' tomador.pk %}" class="btn-outline-orange" style="padding: 5px 10px; font-size: 0.9rem; border-color: #dc3545; color: #dc3545;">
+                                <i class="fa-solid fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 40px; color: #999;">
+                            <i class="fa-solid fa-folder-open fa-3x" style="margin-bottom: 15px; display: block;"></i>
+                            Nenhum tomador encontrado.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

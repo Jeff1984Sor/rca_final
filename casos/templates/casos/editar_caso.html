@@ -1,108 +1,311 @@
 {% extends "base.html" %}
 {% load static custom_tags %}
 
-{% block title %}Editar Caso #{{ caso.id }} | {{ caso.titulo }}{% endblock %}
+{% block title %}Editar Caso #{{ caso.id }}{% endblock %}
+
+{% block extra_css %}
+    <!-- CSS do Select2 e Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    
+    <style>
+        /* --- 1. FUNDO DA PÁGINA --- */
+        body {
+            background-color: #fd7e14 !important; /* Laranja */
+            min-height: 100vh;
+        }
+
+        /* --- 2. CABEÇALHO --- */
+        .hero-header {
+            background-color: #fd7e14;
+            color: #212529; /* Preto */
+            padding: 30px 0;
+        }
+        .hero-title { font-weight: 800; color: #000; margin-bottom: 5px; }
+        .hero-meta { display: flex; gap: 15px; font-size: 0.9rem; color: #333; }
+        .hero-meta i { color: #000; margin-right: 5px; }
+
+        /* --- 3. CARTÃO DO FORMULÁRIO --- */
+        .form-card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            padding: 40px;
+            margin-bottom: 50px;
+        }
+
+        /* --- 4. TÍTULOS INTERNOS --- */
+        h3.section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fd7e14;
+            border-bottom: 2px solid #fff3cd;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            margin-top: 30px;
+        }
+
+        /* --- 5. BOTÕES --- */
+        .btn-orange {
+            background-color: #fd7e14; border-color: #fd7e14; color: white; font-weight: bold;
+        }
+        .btn-orange:hover { background-color: #e36902; border-color: #e36902; color: white; }
+
+        /* Ajuste do Select2 */
+        .select2-container { width: 100% !important; }
+        .select2-selection--single {
+            height: 38px !important;
+            border: 1px solid #dee2e6 !important;
+            display: flex;
+            align-items: center;
+        }
+    </style>
+{% endblock %}
 
 {% block content %}
+<div class="container pb-5">
 
-    
     <!-- HERO HEADER -->
     <div class="hero-header">
-        <div class="hero-content">
-            <div class="hero-left">
-                <div class="case-badge"><i class="fa-solid fa-pen-to-square"></i> Editando Caso #{{ caso.id }}</div>
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <div class="badge bg-white text-dark border mb-2">
+                    <i class="fa-solid fa-pen-to-square"></i> Editando Caso #{{ caso.id }}
+                </div>
                 <h1 class="hero-title">{{ caso.titulo|default:"Caso sem título" }}</h1>
-                <div class="hero-meta">
-                    <div class="meta-item"><i class="fa-solid fa-building"></i> <strong>{{ caso.cliente.nome }}</strong></div>
-                    <div class="meta-item"><i class="fa-solid fa-box"></i> <strong>{{ caso.produto.nome }}</strong></div>
-                    <div class="meta-item"><i class="fa-solid fa-calendar"></i> {{ caso.data_entrada|date:"d/m/Y" }}</div>
+                <div class="hero-meta mt-2">
+                    <span><i class="fa-solid fa-building"></i> {{ caso.cliente.nome }}</span>
+                    <span><i class="fa-solid fa-box"></i> {{ caso.produto.nome }}</span>
+                    <span><i class="fa-solid fa-calendar"></i> {{ caso.data_entrada|date:"d/m/Y" }}</span>
                 </div>
             </div>
+            
             {% if caso.prazo_final_calculado %}
-            <div class="hero-prazo-card">
-                <div class="prazo-label"><i class="fa-solid fa-clock"></i> Prazo Final</div>
-                <div class="prazo-value">{{ caso.prazo_final_calculado|date:"d/m" }}</div>
-                <div class="prazo-status">{{ caso.prazo_final_calculado|date:"Y" }}</div>
+            <div class="bg-white p-3 rounded shadow-sm text-center border">
+                <div class="small text-muted fw-bold text-uppercase">Prazo Final</div>
+                <div class="fs-4 fw-bold text-danger">{{ caso.prazo_final_calculado|date:"d/m" }}</div>
+                <div class="small text-muted">{{ caso.prazo_final_calculado|date:"Y" }}</div>
             </div>
             {% endif %}
         </div>
     </div>
     
-    <!-- MENSAGENS -->
     {% include 'casos/partials/app_messages.html' %}
     
     <!-- FORM CARD -->
     <div class="form-card">
-        <form method="post" action="" class="needs-validation" novalidate>
+        <form method="post" id="formEditarCaso" novalidate>
             {% csrf_token %}
-            <div class="card-content">
-                <!-- DADOS PRINCIPAIS -->
-                <div class="form-section">
-                    <div class="section-header"><i class="fa-solid fa-circle-info"></i><h2 class="section-title">Dados Principais do Caso</h2></div>
-                    <div class="fields-grid">
-                        {% for field in form.campos_fixos %}{% include "_form_field.html" with field=field icon="tag" %}{% endfor %}
+            
+            <!-- 1. DADOS PRINCIPAIS -->
+            <h3 class="section-title"><i class="fa-solid fa-circle-info"></i> Dados Principais</h3>
+            <div class="row g-3">
+                {% for field in form.campos_fixos %}
+                    {% if field.name != 'tomador' %}
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}<div class="text-danger small">{{ field.errors.0 }}</div>{% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            
+            <!-- 2. DADOS ADICIONAIS -->
+            <h3 class="section-title"><i class="fa-solid fa-sliders"></i> Dados Adicionais</h3>
+            <div class="row g-3">
+                {% for field in form.campos_personalizados_simples %}
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">{{ field.label }}</label>
+                        {{ field }}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- 3. TOMADOR (SEPARADO) -->
+            {% if 'tomador' in form.fields %}
+            <h3 class="section-title"><i class="fa-solid fa-user-tie"></i> Tomador / Interessado</h3>
+            <div class="p-3 bg-light rounded border">
+                <div class="row">
+                    <div class="col-12 mb-2">
+                        <label class="form-label fw-bold">Selecione o Tomador:</label>
+                        {{ form.tomador }}
+                    </div>
+                    
+                    <!-- Painel de Detalhes -->
+                    <div class="col-12 mb-2" id="painelDetalhes" style="display:none;">
+                        <div class="card card-body bg-white border shadow-sm py-2">
+                            <div class="row text-muted small">
+                                <div class="col-md-4"><strong>CPF/CNPJ:</strong> <span id="lblCpf">-</span></div>
+                                <div class="col-md-4"><strong>Emails:</strong> <span id="lblEmails">-</span></div>
+                                <div class="col-md-4"><strong>Fones:</strong> <span id="lblFones">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-2">
+                        <button type="button" class="btn btn-sm btn-orange" data-bs-toggle="modal" data-bs-target="#modalNovoTomador">
+                            <i class="fa-solid fa-plus"></i> Cadastrar Novo Tomador
+                        </button>
                     </div>
                 </div>
-                <!-- DADOS ADICIONAIS -->
-                <div class="form-section">
-                    <div class="section-header"><i class="fa-solid fa-sliders"></i><h2 class="section-title">Dados Adicionais</h2></div>
-                    <div class="fields-grid">
-                        {% for field in form.campos_personalizados_simples %}{% include "_form_field.html" with field=field icon="circle-dot" %}{% endfor %}
-                    </div>
-                </div>
-                <!-- GRUPOS REPETÍVEIS -->
-                {% if grupo_formsets %}{% for grupo, formset in grupo_formsets %}
-                <div class="grupo-repetiveis-section">
-                    <div class="grupo-header">
-                        <h3 class="grupo-title"><i class="fa-solid fa-layer-group"></i> {{ grupo.nome_grupo }}</h3>
-                        <button type="button" class="btn btn-success add-grupo-btn" data-formset-prefix="{{ formset.prefix }}" data-grupo-id="{{ grupo.id }}"><i class="fa-solid fa-plus-circle"></i> Adicionar Item</button>
-                    </div>
+            </div>
+            {% endif %}
+            
+            <!-- 4. GRUPOS REPETÍVEIS -->
+            {% if grupo_formsets %}
+                {% for grupo, formset in grupo_formsets %}
+                    <h3 class="section-title">{{ grupo.nome_grupo }}</h3>
                     {{ formset.management_form }}
                     <div id="formset-container-{{ grupo.id }}">
-                        {% for form_grupo in formset %}<div class="grupo-item grupo-form">
-                            {% if formset.can_delete %}<div style="display: none;">{{ form_grupo.DELETE }}</div>{% endif %}
-                            <div class="grupo-item-header">
-                                <div class="grupo-item-number"><i class="fa-solid fa-hashtag"></i> Item {{ forloop.counter }}</div>
-                                <button type="button" class="btn btn-sm btn-danger delete-grupo-btn"><i class="fa-solid fa-trash-alt"></i> Remover</button>
+                        {% for form_grupo in formset %}
+                            <div class="card mb-3 border-light bg-light">
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        {% for field in form_grupo.visible_fields %}
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-bold">{{ field.label }}</label>
+                                                {{ field }}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
                             </div>
-                            <div class="fields-grid">
-                                {% for field in form_grupo.visible_fields %}{% include "_form_field.html" with field=field icon="circle-dot" %}{% endfor %}
-                            </div>
-                        </div>{% endfor %}
+                        {% endfor %}
                     </div>
-                    <div id="empty-form-{{ grupo.id }}" style="display:none;"><div class="grupo-item grupo-form">
-                        {% if formset.can_delete %}<div style="display: none;">{{ formset.empty_form.DELETE }}</div>{% endif %}
-                        <div class="grupo-item-header">
-                            <div class="grupo-item-number"><i class="fa-solid fa-hashtag"></i> Novo Item</div>
-                            <button type="button" class="btn btn-sm btn-danger delete-grupo-btn"><i class="fa-solid fa-trash-alt"></i> Remover</button>
-                        </div>
-                        <div class="fields-grid">
-                            {% for field in formset.empty_form.visible_fields %}{% include "_form_field.html" with field=field icon="circle-dot" %}{% endfor %}
-                        </div>
-                    </div></div>
-                </div>
-                {% endfor %}{% endif %}
-            </div>
-            <!-- FOOTER -->
-            <div class="form-footer">
-                <a href="{% url 'casos:detalhe_caso' pk=caso.pk %}" class="btn btn-outline-secondary"><i class="fa-solid fa-times-circle"></i> Cancelar</a>
-                <button type="submit" class="btn btn-primary" style="background: var(--warning);"><i class="fa-solid fa-save"></i> Salvar Alterações</button>
+                {% endfor %}
+            {% endif %}
+
+            <!-- BOTÕES -->
+            <div class="d-flex justify-content-end gap-2 mt-5 pt-3 border-top">
+                <a href="{% url 'casos:detalhe_caso' pk=caso.pk %}" class="btn btn-secondary px-4">Cancelar</a>
+                <button type="submit" class="btn btn-orange px-4">Salvar Alterações</button>
             </div>
         </form>
     </div>
-    
-    <!-- INDICADOR DE EDIÇÃO -->
-    <div class="editing-indicator"><i class="fa-solid fa-pen"></i> Modo de Edição</div>
+
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL DE NOVO TOMADOR -->
+<!-- ========================================== -->
+<div class="modal fade" id="modalNovoTomador" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-orange text-white">
+                <h5 class="modal-title">Novo Tomador</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formTomadorAjax">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Nome *</label>
+                        <input type="text" name="nome" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">CPF / CNPJ</label>
+                        <input type="text" name="cpf_cnpj" class="form-control">
+                    </div>
+                    <hr>
+                    <div class="mb-2">
+                        <label class="form-label">E-mails</label>
+                        <div id="divEmails">
+                            <input type="email" name="lista_emails" class="form-control mb-2" placeholder="Email principal">
+                        </div>
+                        <button type="button" class="btn btn-sm btn-light border" onclick="addEmail()">+ Outro</button>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Telefones</label>
+                        <div id="divFones">
+                            <input type="text" name="lista_telefones" class="form-control mb-2" placeholder="Telefone principal">
+                        </div>
+                        <button type="button" class="btn btn-sm btn-light border" onclick="addFone()">+ Outro</button>
+                    </div>
+                    <div id="msgErro" class="alert alert-danger d-none mt-3"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-orange" onclick="salvarTomador()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="{% static 'js/form_editar_caso.js' %}"></script>
+
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        initEditarCasoForm({
-            cancelUrl: "{% url 'casos:detalhe_caso' pk=caso.pk %}"
+    $(document).ready(function() {
+        // 1. SELECT2
+        $('.select2-tomador').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: 'Pesquise...',
+            allowClear: true
+        });
+
+        // 2. DETALHES DO TOMADOR (Ao carregar e ao mudar)
+        function carregarDetalhes(id) {
+            if(id) {
+                $.get('/casos/ajax/tomador/' + id + '/detalhes/', function(data) {
+                    if(data.success) {
+                        $('#lblCpf').text(data.cpf_cnpj || '-');
+                        $('#lblEmails').text(data.emails.join(', ') || '-');
+                        $('#lblFones').text(data.telefones.join(', ') || '-');
+                        $('#painelDetalhes').slideDown();
+                    }
+                });
+            } else {
+                $('#painelDetalhes').slideUp();
+            }
+        }
+
+        // Carrega se já tiver um selecionado (Edição)
+        var tomadorInicial = $('.select2-tomador').val();
+        if(tomadorInicial) carregarDetalhes(tomadorInicial);
+
+        // Carrega ao mudar
+        $('.select2-tomador').on('change', function() {
+            carregarDetalhes($(this).val());
         });
     });
+
+    // 3. FUNÇÕES DO MODAL
+    function addEmail() {
+        $('#divEmails').append('<input type="email" name="lista_emails" class="form-control mb-2" placeholder="Outro Email">');
+    }
+    function addFone() {
+        $('#divFones').append('<input type="text" name="lista_telefones" class="form-control mb-2" placeholder="Outro Telefone">');
+    }
+
+    function salvarTomador() {
+        $.ajax({
+            url: "{% url 'casos:ajax_criar_tomador' %}",
+            type: "POST",
+            data: $('#formTomadorAjax').serialize(),
+            success: function(resp) {
+                if(resp.success) {
+                    var newOption = new Option(resp.text, resp.id, true, true);
+                    $('.select2-tomador').append(newOption).trigger('change');
+                    
+                    var modalEl = document.getElementById('modalNovoTomador');
+                    var modal = bootstrap.Modal.getInstance(modalEl);
+                    modal.hide();
+                    
+                    $('#formTomadorAjax')[0].reset();
+                } else {
+                    $('#msgErro').text('Erro: ' + JSON.stringify(resp.errors)).removeClass('d-none');
+                }
+            }
+        });
+    }
 </script>
 {% endblock %}
