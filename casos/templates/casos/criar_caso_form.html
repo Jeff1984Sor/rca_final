@@ -274,32 +274,37 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
 
 <script>
-    // --- LÓGICA PARA ADICIONAR CAMPOS REPETÍVEIS (FORMSETS) ---
+    // --- FUNÇÃO PARA APLICAR MÁSCARA ---
+    function aplicarMascaras() {
+        // Isso vai procurar qualquer campo com a classe 'money' e aplicar a máscara
+        $('.money').mask('#.##0,00', {reverse: true});
+    }
+
+    // --- LÓGICA PARA ADICIONAR CAMPOS REPETÍVEIS (FORMSETS) ATUALIZADA ---
     function addFormsetRow(grupoId, prefix) {
-        // 1. Localizar o campo que controla o total de formulários
         const totalFormsInput = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
         const currentCount = parseInt(totalFormsInput.value);
-
-        // 2. Pegar o HTML do template vazio
         const templateHtml = document.getElementById(`empty-form-${grupoId}`).innerHTML;
-
-        // 3. Substituir o placeholder __prefix__ pelo número do índice atual
         const newRowHtml = templateHtml.replace(/__prefix__/g, currentCount);
 
-        // 4. Inserir o novo HTML no container
         const container = document.getElementById(`formset-container-${grupoId}`);
         const wrapper = document.createElement('div');
         wrapper.innerHTML = newRowHtml;
         container.appendChild(wrapper.firstElementChild);
 
-        // 5. Atualizar o contador do Django
         totalFormsInput.value = currentCount + 1;
+
+        // IMPORTANTE: Reaplica a máscara nos novos campos criados!
+        aplicarMascaras();
     }
 
-
     $(document).ready(function() {
+        // Inicializa as máscaras quando a página carrega
+        aplicarMascaras();
+
         // 1. SELECT2
         $('.select2-tomador').select2({
             theme: 'bootstrap-5',

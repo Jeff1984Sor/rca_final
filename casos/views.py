@@ -614,7 +614,17 @@ def criar_caso(request, cliente_id, produto_id):
         return redirect('casos:selecionar_produto_cliente')
 
     if request.method == 'POST':
-        form = CasoDinamicoForm(request.POST, cliente=cliente, produto=produto)
+        # --- TRATAMENTO PARA CAMPOS DECIMAIS (MÁSCARA DE DINHEIRO) ---
+        # Criamos uma cópia do POST para poder alterar os valores antes da validação
+        post_data = request.POST.copy()
+        
+        if 'valor_apurado' in post_data and post_data['valor_apurado']:
+            # Transforma "1.250,50" em "1250.50"
+            valor = post_data['valor_apurado']
+            valor = valor.replace('.', '').replace(',', '.')
+            post_data['valor_apurado'] = valor
+
+        form = CasoDinamicoForm(post_data, cliente=cliente, produto=produto)
     else:
         form = CasoDinamicoForm(cliente=cliente, produto=produto)
 
@@ -625,7 +635,8 @@ def criar_caso(request, cliente_id, produto_id):
         kwargs = {'grupo_campos': grupo, 'cliente': cliente, 'produto': produto}
         
         if request.method == 'POST':
-            formset = GrupoFormSet(request.POST, prefix=prefix, form_kwargs=kwargs)
+            # Usamos o post_data (já limpo) aqui também
+            formset = GrupoFormSet(post_data, prefix=prefix, form_kwargs=kwargs)
         else:
             formset = GrupoFormSet(prefix=prefix, form_kwargs=kwargs)
         grupo_formsets[grupo.id] = (grupo, formset)
@@ -713,7 +724,6 @@ def criar_caso(request, cliente_id, produto_id):
         'grupo_formsets': grupo_formsets.values(), 'estrutura': estrutura
     }
     return render(request, 'casos/criar_caso_form.html', context)
-
 
 @login_required
 def lista_casos(request):

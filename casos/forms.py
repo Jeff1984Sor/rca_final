@@ -151,6 +151,11 @@ class CasoDinamicoForm(forms.ModelForm):
         self.cliente = kwargs.pop('cliente', None)
         self.produto = kwargs.pop('produto', None)
         super().__init__(*args, **kwargs)
+        if 'valor_apurado' in self.fields:
+            self.fields['valor_apurado'].widget.attrs.update({
+                'class': 'form-control money',
+                'placeholder': '0,00'
+            })
 
         # --- USA NOMES DE VARIÁVEIS INTERNAS (com underscore) ---
         # Filtra apenas campos que realmente existem no form final
