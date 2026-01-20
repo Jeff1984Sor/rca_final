@@ -30,19 +30,13 @@
             font-weight: 800;
         }
 
-        /* Badges (Etiquetas) com fundo branco semitransparente e letra preta */
         .hero-header .badge {
             background-color: rgba(255, 255, 255, 0.6) !important;
             border: 1px solid rgba(0, 0, 0, 0.1);
-            color: #000000 !important; /* Texto Preto */
+            color: #000000 !important;
             font-size: 0.9rem;
         }
         
-        /* Ícone de seta entre os badges */
-        .hero-header i.fa-chevron-right {
-            color: rgba(0, 0, 0, 0.5) !important;
-        }
-
         /* --- 3. CARTÃO DO FORMULÁRIO (BRANCO) --- */
         .form-card {
             background-color: #ffffff !important;
@@ -75,21 +69,26 @@
             border-color: #e36902 !important;
         }
 
-        /* Ajuste do Select2 */
-        .select2-container { width: 100% !important; }
-        .select2-selection--single {
-            height: 38px !important;
-            border: 1px solid #dee2e6 !important;
-            display: flex;
-            align-items: center;
+        /* Estilo para o botão de adicionar item (mais sutil) */
+        .btn-add-item {
+            color: #fd7e14;
+            border: 1px dashed #fd7e14;
+            background: transparent;
+            font-weight: 600;
+            transition: all 0.3s;
         }
+        .btn-add-item:hover {
+            background-color: #fff3cd;
+            color: #e36902;
+        }
+
+        .select2-container { width: 100% !important; }
     </style>
 {% endblock %}
 
 {% block content %}
 <div class="container pb-5">
 
-    <!-- CABEÇALHO (Fundo Laranja, Texto Preto) -->
     <div class="hero-header d-flex justify-content-between align-items-center mt-2 mb-3">
         <div>
             <h2 class="mb-0"><i class="fa-solid fa-folder-plus"></i> Criar Novo Caso</h2>
@@ -103,7 +102,6 @@
     
     {% include 'casos/partials/app_messages.html' %}
     
-    <!-- FORMULÁRIO (Cartão Branco) -->
     <div class="form-card">
         <form method="post" id="formCaso" novalidate>
             {% csrf_token %}
@@ -112,7 +110,6 @@
             <h3 class="section-title"><i class="fa-solid fa-info-circle"></i> Dados Principais</h3>
             <div class="row g-3">
                 {% for field in form.campos_fixos %}
-                    <!-- Removemos tomador e titulo_manual daqui -->
                     {% if field.name != 'tomador' and field.name != 'titulo_manual' %}
                         <div class="col-md-6">
                             <label class="form-label fw-bold">{{ field.label }}</label>
@@ -144,7 +141,6 @@
                         {{ form.tomador }}
                     </div>
                     
-                    <!-- Painel de Detalhes -->
                     <div class="col-12 mb-2" id="painelDetalhes" style="display:none;">
                         <div class="card card-body bg-white border shadow-sm py-2">
                             <div class="row text-muted small">
@@ -156,7 +152,6 @@
                     </div>
 
                     <div class="col-12 mt-2">
-                        <!-- BOTÃO LARANJA SÓLIDO -->
                         <button type="button" class="btn btn-sm btn-orange" data-bs-toggle="modal" data-bs-target="#modalNovoTomador">
                             <i class="fa-solid fa-plus"></i> Cadastrar Novo Tomador
                         </button>
@@ -165,11 +160,14 @@
             </div>
             {% endif %}
             
-            <!-- 4. GRUPOS REPETÍVEIS -->
+            <!-- 4. GRUPOS REPETÍVEIS (FORMSETS) -->
             {% if grupo_formsets %}
                 {% for grupo, formset in grupo_formsets %}
-                    <h3 class="section-title">{{ grupo.nome_grupo }}</h3>
+                    <h3 class="section-title"><i class="fa-solid fa-layer-group"></i> {{ grupo.nome_grupo }}</h3>
+                    
+                    <!-- Management Form: Crucial para o Django saber quantos itens existem -->
                     {{ formset.management_form }}
+                    
                     <div id="formset-container-{{ grupo.id }}">
                         {% for form_grupo in formset %}
                             <div class="card mb-3 border-light bg-light">
@@ -181,10 +179,36 @@
                                                 {{ field }}
                                             </div>
                                         {% endfor %}
+                                        <!-- Campos ocultos como ID e DELETE (se houver) -->
+                                        {% for hidden in form_grupo.hidden_fields %}
+                                            {{ hidden }}
+                                        {% endfor %}
                                     </div>
                                 </div>
                             </div>
                         {% endfor %}
+                    </div>
+
+                    <!-- Botão Incluir Novo Item para este grupo -->
+                    <button type="button" class="btn btn-sm btn-add-item mb-4" 
+                            onclick="addFormsetRow('{{ grupo.id }}', '{{ formset.prefix }}')">
+                        <i class="fa-solid fa-plus-circle"></i> Incluir novo em {{ grupo.nome_grupo }}
+                    </button>
+
+                    <!-- Template Vazio (Escondido) para ser usado pelo JavaScript -->
+                    <div id="empty-form-{{ grupo.id }}" style="display:none;">
+                        <div class="card mb-3 border-light bg-light shadow-sm">
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    {% for field in formset.empty_form.visible_fields %}
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-bold">{{ field.label }}</label>
+                                            {{ field }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 {% endfor %}
             {% endif %}
@@ -197,16 +221,13 @@
         </form>
     </div>
 
-</div> <!-- Fim Container -->
+</div>
 
-<!-- ========================================== -->
-<!-- MODAL (LARANJA) -->
-<!-- ========================================== -->
+<!-- MODAL NOVO TOMADOR -->
 <div class="modal fade" id="modalNovoTomador" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <!-- HEADER LARANJA -->
-            <div class="modal-header bg-orange text-white">
+            <div class="modal-header bg-orange text-white" style="background-color: #fd7e14;">
                 <h5 class="modal-title">Novo Tomador</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -253,9 +274,31 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="{% static 'js/form_criar_caso.js' %}"></script>
 
 <script>
+    // --- LÓGICA PARA ADICIONAR CAMPOS REPETÍVEIS (FORMSETS) ---
+    function addFormsetRow(grupoId, prefix) {
+        // 1. Localizar o campo que controla o total de formulários
+        const totalFormsInput = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
+        const currentCount = parseInt(totalFormsInput.value);
+
+        // 2. Pegar o HTML do template vazio
+        const templateHtml = document.getElementById(`empty-form-${grupoId}`).innerHTML;
+
+        // 3. Substituir o placeholder __prefix__ pelo número do índice atual
+        const newRowHtml = templateHtml.replace(/__prefix__/g, currentCount);
+
+        // 4. Inserir o novo HTML no container
+        const container = document.getElementById(`formset-container-${grupoId}`);
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = newRowHtml;
+        container.appendChild(wrapper.firstElementChild);
+
+        // 5. Atualizar o contador do Django
+        totalFormsInput.value = currentCount + 1;
+    }
+
+
     $(document).ready(function() {
         // 1. SELECT2
         $('.select2-tomador').select2({
