@@ -11,78 +11,27 @@
     
     <style>
         /* --- 1. FUNDO DA PÁGINA --- */
-        body {
-            background-color: #fd7e14 !important; /* Laranja */
-            min-height: 100vh;
-        }
+        body { background-color: #fd7e14 !important; min-height: 100vh; }
 
-        /* --- 2. CABEÇALHO (TEXTO PRETO) --- */
-        .hero-header {
-            background-color: #fd7e14; /* Fundo Laranja */
-            color: #212529; /* Letra Preta */
-            padding-top: 20px;
-            padding-bottom: 20px;
-        }
+        /* --- 2. CABEÇALHO --- */
+        .hero-header { background-color: #fd7e14; color: #212529; padding-top: 20px; padding-bottom: 20px; }
+        .hero-header h2, .hero-header i { color: #000000 !important; font-weight: 800; }
+        .hero-header .badge { background-color: rgba(255, 255, 255, 0.6) !important; color: #000000 !important; font-size: 0.9rem; }
         
-        .hero-header h2, 
-        .hero-header i {
-            color: #000000 !important; /* Preto Forte */
-            font-weight: 800;
-        }
+        /* --- 3. CARTÃO DO FORMULÁRIO --- */
+        .form-card { background-color: #ffffff !important; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); padding: 40px; margin-bottom: 50px; }
 
-        .hero-header .badge {
-            background-color: rgba(255, 255, 255, 0.6) !important;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            color: #000000 !important;
-            font-size: 0.9rem;
-        }
-        
-        /* --- 3. CARTÃO DO FORMULÁRIO (BRANCO) --- */
-        .form-card {
-            background-color: #ffffff !important;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-            padding: 40px;
-            margin-bottom: 50px;
-        }
-
-        /* --- 4. TÍTULOS INTERNOS (LARANJA) --- */
-        h3.section-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #fd7e14;
-            border-bottom: 2px solid #fff3cd;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-            margin-top: 30px;
-        }
+        /* --- 4. TÍTULOS INTERNOS --- */
+        h3.section-title { font-size: 1.1rem; font-weight: 700; color: #fd7e14; border-bottom: 2px solid #fff3cd; padding-bottom: 10px; margin-bottom: 20px; margin-top: 30px; }
 
         /* --- 5. BOTÕES --- */
-        .btn-orange {
-            background-color: #fd7e14 !important;
-            border-color: #fd7e14 !important;
-            color: white !important;
-            font-weight: bold;
-        }
-        .btn-orange:hover {
-            background-color: #e36902 !important;
-            border-color: #e36902 !important;
-        }
-
-        /* Estilo para o botão de adicionar item (mais sutil) */
-        .btn-add-item {
-            color: #fd7e14;
-            border: 1px dashed #fd7e14;
-            background: transparent;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        .btn-add-item:hover {
-            background-color: #fff3cd;
-            color: #e36902;
-        }
+        .btn-orange { background-color: #fd7e14 !important; border-color: #fd7e14 !important; color: white !important; font-weight: bold; }
+        .btn-orange:hover { background-color: #e36902 !important; }
+        .btn-add-item { color: #fd7e14; border: 1px dashed #fd7e14; background: transparent; font-weight: 600; transition: all 0.3s; }
+        .btn-add-item:hover { background-color: #fff3cd; color: #e36902; }
 
         .select2-container { width: 100% !important; }
+        textarea.form-control { min-height: 100px; } /* Ajuste para Texto Longo */
     </style>
 {% endblock %}
 
@@ -124,7 +73,8 @@
             <h3 class="section-title"><i class="fa-solid fa-list-check"></i> Dados Adicionais</h3>
             <div class="row g-3">
                 {% for field in form.campos_personalizados_simples %}
-                    <div class="col-md-6">
+                    <!-- Se for Textarea (Texto Longo), ocupa col-12, senão col-md-6 -->
+                    <div class="{% if 'textarea' in field.field.widget.attrs.class %}col-12{% else %}col-md-6{% endif %}">
                         <label class="form-label fw-bold">{{ field.label }}</label>
                         {{ field }}
                     </div>
@@ -160,48 +110,40 @@
             </div>
             {% endif %}
             
-            <!-- 4. GRUPOS REPETÍVEIS (FORMSETS) -->
+            <!-- 4. GRUPOS REPETÍVEIS -->
             {% if grupo_formsets %}
                 {% for grupo, formset in grupo_formsets %}
                     <h3 class="section-title"><i class="fa-solid fa-layer-group"></i> {{ grupo.nome_grupo }}</h3>
-                    
-                    <!-- Management Form: Crucial para o Django saber quantos itens existem -->
                     {{ formset.management_form }}
-                    
                     <div id="formset-container-{{ grupo.id }}">
                         {% for form_grupo in formset %}
                             <div class="card mb-3 border-light bg-light">
                                 <div class="card-body">
                                     <div class="row g-3">
                                         {% for field in form_grupo.visible_fields %}
-                                            <div class="col-md-6">
+                                            <div class="{% if 'textarea' in field.field.widget.attrs.class %}col-12{% else %}col-md-6{% endif %}">
                                                 <label class="form-label small fw-bold">{{ field.label }}</label>
                                                 {{ field }}
                                             </div>
                                         {% endfor %}
-                                        <!-- Campos ocultos como ID e DELETE (se houver) -->
-                                        {% for hidden in form_grupo.hidden_fields %}
-                                            {{ hidden }}
-                                        {% endfor %}
+                                        {% for hidden in form_grupo.hidden_fields %}{{ hidden }}{% endfor %}
                                     </div>
                                 </div>
                             </div>
                         {% endfor %}
                     </div>
 
-                    <!-- Botão Incluir Novo Item para este grupo -->
-                    <button type="button" class="btn btn-sm btn-add-item mb-4" 
-                            onclick="addFormsetRow('{{ grupo.id }}', '{{ formset.prefix }}')">
+                    <button type="button" class="btn btn-sm btn-add-item mb-4" onclick="addFormsetRow('{{ grupo.id }}', '{{ formset.prefix }}')">
                         <i class="fa-solid fa-plus-circle"></i> Incluir novo em {{ grupo.nome_grupo }}
                     </button>
 
-                    <!-- Template Vazio (Escondido) para ser usado pelo JavaScript -->
+                    <!-- Template Vazio (Escondido) -->
                     <div id="empty-form-{{ grupo.id }}" style="display:none;">
                         <div class="card mb-3 border-light bg-light shadow-sm">
                             <div class="card-body">
                                 <div class="row g-3">
                                     {% for field in formset.empty_form.visible_fields %}
-                                        <div class="col-md-6">
+                                        <div class="{% if 'textarea' in field.field.widget.attrs.class %}col-12{% else %}col-md-6{% endif %}">
                                             <label class="form-label small fw-bold">{{ field.label }}</label>
                                             {{ field }}
                                         </div>
@@ -213,14 +155,12 @@
                 {% endfor %}
             {% endif %}
 
-            <!-- BOTÕES DE AÇÃO -->
             <div class="d-flex justify-content-end gap-2 mt-5 pt-3 border-top">
                 <a href="{% url 'casos:selecionar_produto_cliente' %}" class="btn btn-secondary px-4">Cancelar</a>
                 <button type="submit" class="btn btn-orange px-4">Criar Caso</button>
             </div>
         </form>
     </div>
-
 </div>
 
 <!-- MODAL NOVO TOMADOR -->
@@ -240,7 +180,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">CPF / CNPJ</label>
-                        <input type="text" name="cpf_cnpj" class="form-control">
+                        <input type="text" name="cpf_cnpj" class="form-control custom-mask" data-mask="000.000.000-00">
                     </div>
                     <hr>
                     <div class="mb-2">
@@ -277,13 +217,18 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
 
 <script>
-    // --- FUNÇÃO PARA APLICAR MÁSCARA ---
+    // --- FUNÇÕES DE MÁSCARA ---
     function aplicarMascaras() {
-        // Isso vai procurar qualquer campo com a classe 'money' e aplicar a máscara
+        // Moeda: O '#' permite números infinitos antes da vírgula (corrige o bug de 2 dígitos)
         $('.money').mask('#.##0,00', {reverse: true});
+
+        // Máscaras Dinâmicas do Admin (data-mask)
+        $('.custom-mask').each(function() {
+            var m = $(this).attr('data-mask');
+            if(m) $(this).mask(m);
+        });
     }
 
-    // --- LÓGICA PARA ADICIONAR CAMPOS REPETÍVEIS (FORMSETS) ATUALIZADA ---
     function addFormsetRow(grupoId, prefix) {
         const totalFormsInput = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
         const currentCount = parseInt(totalFormsInput.value);
@@ -296,24 +241,14 @@
         container.appendChild(wrapper.firstElementChild);
 
         totalFormsInput.value = currentCount + 1;
-
-        // IMPORTANTE: Reaplica a máscara nos novos campos criados!
-        aplicarMascaras();
+        aplicarMascaras(); // Reaplica máscaras na linha nova
     }
 
     $(document).ready(function() {
-        // Inicializa as máscaras quando a página carrega
         aplicarMascaras();
 
-        // 1. SELECT2
-        $('.select2-tomador').select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            placeholder: 'Pesquise...',
-            allowClear: true
-        });
+        $('.select2-tomador').select2({ theme: 'bootstrap-5', width: '100%', placeholder: 'Pesquise...', allowClear: true });
 
-        // 2. DETALHES DO TOMADOR
         $('.select2-tomador').on('change', function() {
             var id = $(this).val();
             if(id) {
@@ -325,19 +260,12 @@
                         $('#painelDetalhes').slideDown();
                     }
                 });
-            } else {
-                $('#painelDetalhes').slideUp();
-            }
+            } else { $('#painelDetalhes').slideUp(); }
         });
     });
 
-    // 3. FUNÇÕES DO MODAL
-    function addEmail() {
-        $('#divEmails').append('<input type="email" name="lista_emails" class="form-control mb-2" placeholder="Outro Email">');
-    }
-    function addFone() {
-        $('#divFones').append('<input type="text" name="lista_telefones" class="form-control mb-2" placeholder="Outro Telefone">');
-    }
+    function addEmail() { $('#divEmails').append('<input type="email" name="lista_emails" class="form-control mb-2" placeholder="Outro Email">'); }
+    function addFone() { $('#divFones').append('<input type="text" name="lista_telefones" class="form-control mb-2" placeholder="Outro Telefone">'); }
 
     function salvarTomador() {
         $.ajax({
@@ -348,15 +276,9 @@
                 if(resp.success) {
                     var newOption = new Option(resp.text, resp.id, true, true);
                     $('.select2-tomador').append(newOption).trigger('change');
-                    
-                    var modalEl = document.getElementById('modalNovoTomador');
-                    var modal = bootstrap.Modal.getInstance(modalEl);
-                    modal.hide();
-                    
+                    bootstrap.Modal.getInstance(document.getElementById('modalNovoTomador')).hide();
                     $('#formTomadorAjax')[0].reset();
-                } else {
-                    $('#msgErro').text('Erro: ' + JSON.stringify(resp.errors)).removeClass('d-none');
-                }
+                } else { $('#msgErro').text('Erro: ' + JSON.stringify(resp.errors)).removeClass('d-none'); }
             }
         });
     }

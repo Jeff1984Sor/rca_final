@@ -1,36 +1,42 @@
 # campos_custom/admin.py
 
 from django.contrib import admin
-# Importa os novos modelos
+import nested_admin
+
 from .models import (
     CampoPersonalizado, 
-    EstruturaDeCampos, EstruturaCampoOrdenado,
-    GrupoCampos, GrupoCampoOrdenado, 
+    EstruturaDeCampos, 
+    EstruturaCampoOrdenado,
+    GrupoCampos, 
+    GrupoCampoOrdenado, 
     ValorCampoPersonalizado,
-    # <<< CORRETO >>>
     OpcoesListaPersonalizada, 
     InstanciaGrupoValor 
 )
-import nested_admin
-
-# ... (restante dos imports) ...
-
-# --- ADMIN DA BIBLIOTECA DE CAMPOS ---
-# ... (CampoPersonalizadoAdmin) ...
 
 # ==========================================================
-# 1. ADMIN DE LISTAS (OpcoesListaPersonalizada)
+# 1. ADMIN DA BIBLIOTECA DE CAMPOS
 # ==========================================================
 
-# A OpçõesListaPersonalizadaAdmin já é o local onde se define as opções de lista
-# por Cliente/Produto. Você não precisa de um Inline para ela.
-# Se você quer adicionar as LISTAS na tela do CAMPO PERSONALIZADO,
-# a lógica deve ser diferente.
+@admin.register(CampoPersonalizado)
+class CampoPersonalizadoAdmin(admin.ModelAdmin):
+    # Adicionado 'mascara' no display e na edição
+    list_display = ('nome_campo', 'nome_variavel', 'tipo_campo', 'mascara')
+    search_fields = ('nome_campo', 'nome_variavel')
+    ordering = ('nome_campo',)
+    list_filter = ('tipo_campo',)
+    
+    fieldsets = (
+        (None, {
+            'fields': ('nome_campo', 'nome_variavel', 'tipo_campo', 'mascara')
+        }),
+    )
 
-# Vamos assumir que o erro está no Inline que foi copiado por engano:
+# ==========================================================
+# 2. INLINES PARA ESTRUTURA MESTRE (NESTED ADMIN)
+# ==========================================================
 
-# --- INLINE NÍVEL 2 (Campos dentro do Grupo) ---
-# ESTE INLINE ESTÁ LIGADO A OUTRO MODELO E JÁ DEVE ESTAR CORRETO.
+# Nível 2: Campos dentro de um Grupo Repetível
 class GrupoCampoOrdenadoInline(nested_admin.NestedTabularInline):
     model = GrupoCampoOrdenado
     extra = 1
@@ -40,26 +46,29 @@ class GrupoCampoOrdenadoInline(nested_admin.NestedTabularInline):
     verbose_name_plural = "Campos do Grupo"
     fk_name = 'grupo'
 
-# --- INLINE NÍVEL 1 (Grupo Repetível) ---
+# Nível 1 (A): O Grupo em si
 class GrupoCamposInline(nested_admin.NestedStackedInline):
     model = GrupoCampos
     extra = 0
     inlines = [GrupoCampoOrdenadoInline]
     verbose_name = "Grupo Repetível"
-    verbose_name_plural = "Grupos Repetíveis (Ex: Vigências, Envolvidos)"
+    verbose_name_plural = "Grupos Repetíveis (Ex: Itens do Sinistro, Envolvidos)"
     fk_name = 'estrutura'
 
-# --- INLINE NÍVEL 1 (B) - Campos Simples ---
+# Nível 1 (B): Campos Simples (Não-repetíveis)
 class EstruturaCampoOrdenadoInline(nested_admin.NestedTabularInline):
     model = EstruturaCampoOrdenado
     extra = 1
     autocomplete_fields = ['campo']
     sortable_field_name = "order"
-    verbose_name = "Campo Não-Repetível"
-    verbose_name_plural = "Campos Não-Repetíveis (Simples)"
+    verbose_name = "Campo Simples"
+    verbose_name_plural = "Campos Simples (Não-Repetíveis)"
     fk_name = 'estrutura'
 
-# --- ADMIN PRINCIPAL DA ESTRUTURA DE CAMPOS ---
+# ==========================================================
+# 3. ADMIN DA ESTRUTURA DE CAMPOS (TELA MESTRE)
+# ==========================================================
+
 @admin.register(EstruturaDeCampos)
 class EstruturaDeCamposAdmin(nested_admin.NestedModelAdmin):
     list_display = ('__str__', 'cliente', 'produto')
@@ -71,44 +80,39 @@ class EstruturaDeCamposAdmin(nested_admin.NestedModelAdmin):
         GrupoCamposInline
     ]
 
-# --- ADMIN DE CONSULTA PARA VALORES ---
-@admin.register(ValorCampoPersonalizado)
-class ValorCampoAdmin(admin.ModelAdmin):
-    # ... (Seu código) ...
-    pass
-    
-# --- CORRIGIR O BLOCO QUE CAUSOU O ERRO ---
-# O modelo 'OpcaoCampoPersonalizado' não existe. Removemos o bloco inline
-# que causou o erro e garantimos que o CampoPersonalizadoAdmin não o use.
+# ==========================================================
+# 4. ADMIN DE LISTAS E VALORES
+# ==========================================================
 
-# O CampoPersonalizadoAdmin DEVE SER SIMPLIFICADO:
-@admin.register(CampoPersonalizado)
-class CampoPersonalizadoAdmin(admin.ModelAdmin):
-    list_display = ('nome_campo', 'nome_variavel', 'tipo_campo')
-    search_fields = ('nome_campo', 'nome_variavel')
-    ordering = ('nome_campo',)
-    list_filter = ('tipo_campo',)
-    
-    # REMOVE A REFERÊNCIA AO INLINE INEXISTENTE
-    # inlines = [OpcaoCampoPersonalizadoInline] 
-    
-    fieldsets = (
-        (None, {
-            'fields': ('nome_campo', 'nome_variavel', 'tipo_campo')
-        }),
-    )
-
-# --- REGISTRO DO MODELO CORRETO DE LISTAS ---
 @admin.register(OpcoesListaPersonalizada)
 class OpcoesListaPersonalizadaAdmin(admin.ModelAdmin):
     list_display = ('campo', 'cliente', 'produto', 'opcoes_lista')
     list_filter = ('cliente', 'produto', 'campo')
     search_fields = ('campo__nome_campo', 'opcoes_lista')
     autocomplete_fields = ['campo', 'cliente', 'produto']
+
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """Filtra para mostrar apenas campos que são do tipo LISTA no dropdown"""
         if db_field.name == "campo":
-            from .models import CampoPersonalizado
             kwargs["queryset"] = CampoPersonalizado.objects.filter(
                 tipo_campo__in=['LISTA_UNICA', 'LISTA_MULTIPLA']
             )
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+@admin.register(ValorCampoPersonalizado)
+class ValorCampoAdmin(admin.ModelAdmin):
+    list_display = ('get_caso_id', 'campo', 'valor', 'instancia_grupo')
+    list_filter = ('campo', 'caso__cliente')
+    search_fields = ('valor', 'caso__id', 'campo__nome_campo')
+    readonly_fields = ('campo', 'caso', 'instancia_grupo')
+
+    def get_caso_id(self, obj):
+        if obj.caso:
+            return f"Caso #{obj.caso.id}"
+        return f"Caso #{obj.instancia_grupo.caso.id} (Grupo)"
+    get_caso_id.short_description = 'Vínculo'
+
+@admin.register(InstanciaGrupoValor)
+class InstanciaGrupoValorAdmin(admin.ModelAdmin):
+    list_display = ('caso', 'grupo', 'ordem_instancia')
+    list_filter = ('grupo', 'caso__cliente')
