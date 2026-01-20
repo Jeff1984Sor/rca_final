@@ -1,152 +1,175 @@
 {% extends 'base.html' %}
 {% load custom_tags static %}
 
-{% block title %}Dashboard {{ ano_selecionado }} | Sistema Jurídico{% endblock %}
+{% block title %}Dashboard Executivo | Sistema Jurídico{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilização moderna para o Dashboard */
+    .dashboard-container { padding: 20px; background-color: #f8f9fa; min-height: 100vh; }
+    
+    .hero-header { 
+        background: linear-gradient(135deg, #fd7e14 0%, #ff922b 100%); 
+        color: white; padding: 40px; border-radius: 15px; margin-bottom: 30px;
+        box-shadow: 0 4px 15px rgba(253, 126, 20, 0.2);
+    }
+
+    .hero-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+    .hero-title { font-weight: 800; margin: 0; font-size: 2rem; }
+    .hero-subtitle { color: rgba(255,255,255,0.8) !important; margin: 0; }
+
+    /* Filtro de Ano Elegante */
+    .year-filter-form { background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 50px; backdrop-filter: blur(5px); display: flex; align-items: center; gap: 10px; }
+    .year-filter-form select { background: transparent; border: none; color: white; font-weight: bold; cursor: pointer; outline: none; }
+    .year-filter-form select option { color: #333; }
+
+    /* Stat Cards (Indicadores Rápidos) */
+    .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .stat-card { background: white; padding: 25px; border-radius: 12px; border-left: 5px solid #fd7e14; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s; }
+    .stat-card:hover { transform: translateY(-5px); }
+    .stat-card h6 { color: #888; text-transform: uppercase; font-size: 0.75rem; font-weight: 700; margin-bottom: 10px; }
+    .stat-card .number { font-size: 1.8rem; font-weight: 800; color: #333; }
+
+    /* Estilo das Tabelas */
+    .card { border: none; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden; margin-bottom: 30px; }
+    .card-header { background-color: white; border-bottom: 1px solid #f1f1f1; padding: 20px; font-weight: bold; }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th { background-color: #fcfcfc; padding: 15px; color: #999; font-size: 0.8rem; text-transform: uppercase; }
+    .data-table td { padding: 15px; border-bottom: 1px solid #f8f8f8; }
+    
+    .badge-pill { border-radius: 50px; padding: 5px 15px; font-weight: 600; font-size: 0.75rem; }
+    
+    .filtros-form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="dashboard-container">
     
-    <!-- HERO HEADER -->
+    <!-- HERO HEADER COM FILTRO DE ANO -->
     <div class="hero-header">
         <div class="hero-content">
             <div>
-                <h1 class="hero-title"><i class="fa-solid fa-chart-line"></i> Dashboard Executivo</h1>
-                <p class="hero-subtitle text-muted">Visão geral do desempenho e ações pendentes</p>
+                <h1 class="hero-title"><i class="fa-solid fa-chart-pie me-2"></i> Dashboard Executivo</h1>
+                <p class="hero-subtitle">Gestão Jurídica Inteligente</p>
             </div>
-            <div class="year-badge"><i class="fa-solid fa-calendar"></i> {{ ano_selecionado }}</div>
+            
+            <!-- FORMULÁRIO DE FILTRO DE ANO -->
+            <form method="get" class="year-filter-form" id="yearForm">
+                <i class="fa-solid fa-calendar-check"></i>
+                <label for="ano" class="mb-0 me-1">Exercício:</label>
+                <select name="ano" id="ano" onchange="document.getElementById('yearForm').submit();">
+                    {% for a in anos_disponiveis %}
+                        <option value="{{ a }}" {% if a|slugify == ano_selecionado|slugify %}selected{% endif %}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    </div>
+
+    <!-- ROW DE INDICADORES (KPIs) -->
+    <div class="stat-row">
+        <div class="stat-card">
+            <h6>Total de Casos</h6>
+            <div class="number">{{ total_casos_ano|default:"0" }}</div>
+        </div>
+        <div class="stat-card" style="border-left-color: #28a745;">
+            <h6>Casos Ativos</h6>
+            <div class="number">{{ casos_ativos|default:"0" }}</div>
+        </div>
+        <div class="stat-card" style="border-left-color: #ffc107;">
+            <h6>Ações Pendentes</h6>
+            <div class="number">{{ acoes_filtradas.count|default:"0" }}</div>
+        </div>
+        <div class="stat-card" style="border-left-color: #007bff;">
+            <h6>Performance Média</h6>
+            <div class="number">{% if total_casos_ano > 0 %}{{ performance_media }}%{% else %}-{% endif %}</div>
         </div>
     </div>
     
-    <!-- DASHBOARD GRID -->
-    <div class="dashboard-grid">
-        
-        <!-- SUAS AÇÕES COM FILTROS -->
-        <div class="grid-col-span-12">
+    <div class="row">
+        <!-- COLUNA ESQUERDA: SUAS AÇÕES -->
+        <div class="col-lg-8">
             <div class="card">
-                <div class="card-header filtros-header">
-                    <h5><i class="fa-solid fa-list-check"></i> Suas Ações</h5>
-                    <form method="get" action="" class="filtros-form">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fa-solid fa-list-check text-orange me-2"></i> Minhas Ações Pendentes</span>
+                    
+                    <form method="get" class="filtros-form">
+                        <!-- Mantém o ano selecionado ao filtrar datas -->
+                        <input type="hidden" name="ano" value="{{ ano_selecionado }}">
                         <div class="btn-group btn-group-sm">
-                            <a href="?periodo=hoje" class="btn {% if valores_filtro.periodo == 'hoje' or not valores_filtro.periodo and not valores_filtro.data_inicio %}btn-primary{% else %}btn-outline-secondary{% endif %}"><i class="fa-solid fa-calendar-day"></i> Hoje</a>
-                            <a href="?periodo=semana" class="btn {% if valores_filtro.periodo == 'semana' %}btn-primary{% else %}btn-outline-secondary{% endif %}"><i class="fa-solid fa-calendar-week"></i> Semana</a>
-                            <a href="?periodo=mes" class="btn {% if valores_filtro.periodo == 'mes' %}btn-primary{% else %}btn-outline-secondary{% endif %}"><i class="fa-solid fa-calendar-alt"></i> Mês</a>
+                            <button name="periodo" value="hoje" class="btn {% if periodo == 'hoje' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Hoje</button>
+                            <button name="periodo" value="semana" class="btn {% if periodo == 'semana' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Semana</button>
+                            <button name="periodo" value="mes" class="btn {% if periodo == 'mes' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Mês</button>
                         </div>
-                        <input type="date" name="data_inicio" class="form-control form-control-sm" value="{{ valores_filtro.data_inicio }}" placeholder="Data início">
-                        <span class="text-muted">até</span>
-                        <input type="date" name="data_fim" class="form-control form-control-sm" value="{{ valores_filtro.data_fim }}" placeholder="Data fim">
-                        <button type="submit" class="btn btn-sm btn-outline-primary" title="Filtrar por data"><i class="fa-solid fa-filter"></i> Filtrar</button>
                     </form>
                 </div>
-                <div class="data-table-container">
+                
+                <div class="table-responsive">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Caso</th>
+                                <th>Caso / Referência</th>
                                 <th>Ação</th>
                                 <th class="text-center">Prazo</th>
-                                <th class="text-right">Acessar</th>
+                                <th class="text-end">Link</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for acao_inst in acoes_filtradas %}
                             <tr>
-                                <td class="caso-details-cell">
-                                    <strong>#{{ acao_inst.caso.id|stringformat:"05d" }}</strong>
-                                    <small>{{ acao_inst.caso.cliente.nome }} | {{ acao_inst.caso.produto.nome }}</small>
+                                <td>
+                                    <div class="fw-bold text-dark">#{{ acao_inst.caso.id|stringformat:"05d" }}</div>
+                                    <div class="small text-muted">{{ acao_inst.caso.cliente.nome|truncatechars:20 }}</div>
                                 </td>
                                 <td>{{ acao_inst.acao.titulo|truncatechars:40 }}</td>
                                 <td class="text-center">
                                     {% with prazo=acao_inst.data_prazo %}
-                                        {% if prazo %}{% with dias_restantes=prazo|days_until %}
-                                            <span class="badge {% if dias_restantes < 0 %}bg-dark{% elif dias_restantes == 0 %}bg-danger{% elif dias_restantes < 7 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
-                                                <i class="fa-solid fa-calendar-check"></i> {{ prazo|date:"d/m/Y" }}
+                                        {% if prazo %}{% with dias=prazo|days_until %}
+                                            <span class="badge badge-pill {% if dias < 0 %}bg-dark{% elif dias == 0 %}bg-danger{% elif dias < 7 %}bg-warning text-dark{% else %}bg-light text-muted border{% endif %}">
+                                                {{ prazo|date:"d/m/Y" }}
                                             </span>
                                         {% endwith %}{% endif %}
                                     {% endwith %}
                                 </td>
-                                <td class="text-right">
-                                    <a href="{% url 'casos:detalhe_caso' pk=acao_inst.caso.pk %}?aba=acoes" class="btn action-btn btn-info btn-sm"><i class="fa-solid fa-arrow-right"></i> Ir</a>
+                                <td class="text-end">
+                                    <a href="{% url 'casos:detalhe_caso' pk=acao_inst.caso.pk %}?aba=acoes" class="btn btn-sm btn-light border"><i class="fa-solid fa-external-link"></i></a>
                                 </td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="4"><div class="empty-state"><i class="fa-solid fa-check-circle"></i><p>🎉 Nenhuma ação encontrada para o período selecionado.</p></div></td></tr>
+                            <tr><td colspan="4" class="text-center py-5 text-muted">Nenhuma ação pendente.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
-        
-        <!-- TABELA DE PERFORMANCE -->
-        <div class="grid-col-span-12">
+
+        <!-- COLUNA DIREITA: PERFORMANCE -->
+        <div class="col-lg-4">
+            <h5 class="mb-3 fw-bold"><i class="fa-solid fa-trophy text-warning me-2"></i> Performance p/ Advogado</h5>
+            
             {% for advogado, registros in tabela_performance.items %}
-                <div class="card mt-4">
-                    <h3 class="section-title"><i class="fa-solid fa-user-tie"></i> Casos por: <strong>{{ advogado }}</strong></h3>
-                    <div class="data-table-container">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Cliente</th>
-                                    <th>Produto</th>
-                                    <th>Status</th>
-                                    <th class="text-right">Qtd. Casos</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for registro in registros %}
-                                <tr>
-                                    <td>{{ registro.cliente }}</td>
-                                    <td>{{ registro.produto }}</td>
-                                    <td><span class="badge {% if registro.status == 'ATIVO' %}bg-success{% elif registro.status == 'ENCERRADO' %}bg-secondary{% else %}bg-warning{% endif %}">{{ registro.status }}</span></td>
-                                    <td class="text-right"><strong>{{ registro.total }}</strong></td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                <div class="card mb-3">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold">{{ advogado }}</span>
+                            <span class="badge bg-orange rounded-pill">{{ registros|length }} Grupos</span>
+                        </div>
+                        <div class="small">
+                            {% for reg in registros %}
+                                <div class="d-flex justify-content-between border-bottom py-1">
+                                    <span class="text-muted">{{ reg.produto|truncatechars:15 }}</span>
+                                    <span class="fw-bold">{{ reg.total }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
             {% empty %}
-                <div class="card grid-col-span-12"><div class="empty-state"><i class="fa-solid fa-chart-bar"></i><p>Nenhum dado de performance encontrado.</p></div></div>
+                <p class="text-muted small text-center">Dados insuficientes para este ano.</p>
             {% endfor %}
         </div>
-        
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-{# Dependência externa para o gráfico #}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-{# Passando dados do Django para o JavaScript de forma segura #}
-{% if dados_grafico_pizza %}
-    {{ pizza_labels|json_script:"chart-pizza-labels" }}
-    {{ pizza_data|json_script:"chart-pizza-data" }}
-{% endif %}
-
-{# Nosso script customizado da página #}
-<script src="{% static 'js/dashboard.js' %}"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Coleta os dados do gráfico do DOM
-        const labelsEl = document.getElementById('chart-pizza-labels');
-        const dataEl = document.getElementById('chart-pizza-data');
-        const chartData = (labelsEl && dataEl) ? {
-            labels: JSON.parse(labelsEl.textContent),
-            data: JSON.parse(dataEl.textContent)
-        } : null;
-
-        // Inicializa o script do dashboard
-        initDashboard({
-            chartData: chartData,
-            urls: {
-                periods: {
-                    hoje: "?periodo=hoje",
-                    semana: "?periodo=semana",
-                    mes: "?periodo=mes"
-                }
-            }
-        });
-    });
-</script>
 {% endblock %}

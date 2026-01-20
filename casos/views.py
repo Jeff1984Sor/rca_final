@@ -726,6 +726,43 @@ def criar_caso(request, cliente_id, produto_id):
     return render(request, 'casos/criar_caso_form.html', context)
 
 @login_required
+def dashboard_view(request):
+    # 1. Lógica do Ano
+    ano_atual = timezone.now().year
+    # Cria uma lista de anos (ex: do ano atual até 3 anos atrás)
+    anos_disponiveis = list(range(ano_atual, ano_atual - 5, -1))
+    
+    # Pega o ano da URL, se não houver, usa o atual
+    ano_selecionado = request.GET.get('ano', str(ano_atual))
+    
+    # 2. Filtragem de dados por Ano
+    # Supondo que seu modelo 'Caso' tenha um campo 'data_entrada' ou 'data_criacao'
+    casos_do_ano = Caso.objects.filter(data_entrada__year=ano_selecionado)
+    
+    total_casos_ano = casos_do_ano.count()
+    casos_ativos = casos_do_ano.filter(status='ATIVO').count()
+    
+    # 3. Lógica de Ações Pendentes (Suas Ações)
+    periodo = request.GET.get('periodo', 'hoje')
+    acoes_filtradas = AcaoPendente.objects.filter(responsavel=request.user, status='PENDENTE')
+    
+    # Aqui você aplica os filtros de data que já tinha...
+    # if periodo == 'hoje': ...
+    
+    # 4. Contexto
+    context = {
+        'ano_selecionado': ano_selecionado,
+        'anos_disponiveis': anos_disponiveis,
+        'total_casos_ano': total_casos_ano,
+        'casos_ativos': casos_ativos,
+        'acoes_filtradas': acoes_filtradas,
+        'periodo': periodo,
+        # ... outros dados (tabela_performance, etc)
+    }
+    
+    return render(request, 'seu_app/dashboard.html', context)
+
+@login_required
 def lista_casos(request):
     casos_list = Caso.objects.select_related(
         'cliente', 'produto', 'advogado_responsavel'
