@@ -1,6 +1,30 @@
 {% extends "base.html" %}
 
-{% block title %}{{ titulo }}{% endblock %}
+{% block title %}{{ titulo }}    <script>
+        function toggleDocumentoFields(tipo) {
+            const cpfField = document.getElementById('cpfField');
+            const cnpjField = document.getElementById('cnpjField');
+            if (!cpfField || !cnpjField) return;
+            if (tipo === 'PJ') {
+                cpfField.style.display = 'none';
+                cnpjField.style.display = '';
+            } else {
+                cnpjField.style.display = 'none';
+                cpfField.style.display = '';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const tipoSelect = document.getElementById('id_tipo');
+            if (tipoSelect) {
+                toggleDocumentoFields(tipoSelect.value);
+                tipoSelect.addEventListener('change', function() {
+                    toggleDocumentoFields(this.value);
+                });
+            }
+        });
+    </script>
+{% endblock %}
 
 {% block extra_css %}
 <!-- CDNs de Suporte -->
@@ -172,6 +196,30 @@
     .table-clean td:last-child { border-radius: 0 10px 10px 0; }
 
 </style>
+    <script>
+        function toggleDocumentoFields(tipo) {
+            const cpfField = document.getElementById('cpfField');
+            const cnpjField = document.getElementById('cnpjField');
+            if (!cpfField || !cnpjField) return;
+            if (tipo === 'PJ') {
+                cpfField.style.display = 'none';
+                cnpjField.style.display = '';
+            } else {
+                cnpjField.style.display = 'none';
+                cpfField.style.display = '';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const tipoSelect = document.getElementById('id_tipo');
+            if (tipoSelect) {
+                toggleDocumentoFields(tipoSelect.value);
+                tipoSelect.addEventListener('change', function() {
+                    toggleDocumentoFields(this.value);
+                });
+            }
+        });
+    </script>
 {% endblock %}
 
 {% block content %}
@@ -217,8 +265,18 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Documento (CPF / CNPJ)</label>
-                        {{ form.cpf_cnpj }}
+                        <label class="form-label">Tipo</label>
+                        {{ form.tipo }}
+                    </div>
+
+                    <div class="form-group" id="cpfField">
+                        <label class="form-label">CPF</label>
+                        {{ form.cpf }}
+                    </div>
+
+                    <div class="form-group" id="cnpjField" style="display:none;">
+                        <label class="form-label">CNPJ</label>
+                        {{ form.cnpj }}
                     </div>
 
                     <!-- 2. CONTATOS -->
@@ -351,11 +409,36 @@
 </div>
 {% endif %}
 
+    <script>
+        function toggleDocumentoFields(tipo) {
+            const cpfField = document.getElementById('cpfField');
+            const cnpjField = document.getElementById('cnpjField');
+            if (!cpfField || !cnpjField) return;
+            if (tipo === 'PJ') {
+                cpfField.style.display = 'none';
+                cnpjField.style.display = '';
+            } else {
+                cnpjField.style.display = 'none';
+                cpfField.style.display = '';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const tipoSelect = document.getElementById('id_tipo');
+            if (tipoSelect) {
+                toggleDocumentoFields(tipoSelect.value);
+                tipoSelect.addEventListener('change', function() {
+                    toggleDocumentoFields(this.value);
+                });
+            }
+        });
+    </script>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
 <script>
     function addEmail() { 
         $('#divEmails').append('<input type="email" name="lista_emails" class="form-control mb-2" placeholder="Outro e-mail">'); 
@@ -372,6 +455,34 @@
     // Adiciona classe form-control automaticamente aos campos do Django
     $(document).ready(function() {
         $('input[type="text"], input[type="email"], select').addClass('form-control');
+        $('.custom-mask').each(function() {
+            var m = $(this).attr('data-mask');
+            if (m) $(this).mask(m);
+        });
     });
 </script>
+    <script>
+        function toggleDocumentoFields(tipo) {
+            const cpfField = document.getElementById('cpfField');
+            const cnpjField = document.getElementById('cnpjField');
+            if (!cpfField || !cnpjField) return;
+            if (tipo === 'PJ') {
+                cpfField.style.display = 'none';
+                cnpjField.style.display = '';
+            } else {
+                cnpjField.style.display = 'none';
+                cpfField.style.display = '';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const tipoSelect = document.getElementById('id_tipo');
+            if (tipoSelect) {
+                toggleDocumentoFields(tipoSelect.value);
+                tipoSelect.addEventListener('change', function() {
+                    toggleDocumentoFields(this.value);
+                });
+            }
+        });
+    </script>
 {% endblock %}

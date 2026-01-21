@@ -179,8 +179,19 @@
                         <input type="text" name="nome" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">CPF / CNPJ</label>
-                        <input type="text" name="cpf_cnpj" class="form-control custom-mask" data-mask="000.000.000-00">
+                        <label class="form-label">Tipo</label>
+                        <select name="tipo" class="form-select">
+                            <option value="PF" selected>Pessoa Fisica</option>
+                            <option value="PJ">Pessoa Juridica</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="cpfField">
+                        <label class="form-label">CPF</label>
+                        <input type="text" name="cpf" class="form-control custom-mask" data-mask="000.000.000-00">
+                    </div>
+                    <div class="mb-3" id="cnpjField" style="display:none;">
+                        <label class="form-label">CNPJ</label>
+                        <input type="text" name="cnpj" class="form-control custom-mask" data-mask="00.000.000/0000-00">
                     </div>
                     <hr>
                     <div class="mb-2">
@@ -249,12 +260,28 @@
 
         $('.select2-tomador').select2({ theme: 'bootstrap-5', width: '100%', placeholder: 'Pesquise...', allowClear: true });
 
+        const toggleDocumentoFields = (tipo) => {
+            if (tipo === 'PJ') {
+                $('#cpfField').hide();
+                $('#cnpjField').show();
+            } else {
+                $('#cnpjField').hide();
+                $('#cpfField').show();
+            }
+        };
+
+        toggleDocumentoFields($('select[name="tipo"]').val());
+        $('select[name="tipo"]').on('change', function() {
+            toggleDocumentoFields($(this).val());
+            aplicarMascaras();
+        });
+
         $('.select2-tomador').on('change', function() {
             var id = $(this).val();
             if(id) {
                 $.get('/casos/ajax/tomador/' + id + '/detalhes/', function(data) {
                     if(data.success) {
-                        $('#lblCpf').text(data.cpf_cnpj || '-');
+                        $('#lblCpf').text(data.documento || '-');
                         $('#lblEmails').text(data.emails.join(', ') || '-');
                         $('#lblFones').text(data.telefones.join(', ') || '-');
                         $('#painelDetalhes').slideDown();

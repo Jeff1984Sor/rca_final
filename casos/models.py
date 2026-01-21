@@ -14,10 +14,17 @@ from decimal import Decimal, InvalidOperation
 # ==============================================================================
 
 class Tomador(models.Model):
-    # REMOVIDO: cliente = models.ForeignKey(...) -> Agora é independente
+    # REMOVIDO: cliente = models.ForeignKey(...) -> Agora independente
     
+    TIPO_PESSOA_CHOICES = [
+        ('PF', 'Pessoa Fisica'),
+        ('PJ', 'Pessoa Juridica'),
+    ]
+
     nome = models.CharField(max_length=255, verbose_name="Nome do Tomador")
-    cpf_cnpj = models.CharField(max_length=20, verbose_name="CNPJ/CPF", blank=True, null=True)
+    tipo = models.CharField(max_length=2, choices=TIPO_PESSOA_CHOICES, verbose_name="Tipo", default="PF")
+    cpf = models.CharField(max_length=14, verbose_name="CPF", blank=True, null=True)
+    cnpj = models.CharField(max_length=18, verbose_name="CNPJ", blank=True, null=True)
     data_criacao = models.DateTimeField(auto_now_add=True)
 
     class Meta:

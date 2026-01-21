@@ -173,7 +173,7 @@
                                 Cadastrado em: {{ tomador.data_criacao|date:"d/m/Y" }}
                             </div>
                         </td>
-                        <td>{{ tomador.cpf_cnpj|default:"-" }}</td>
+                        <td>{{ tomador.cpf|default:tomador.cnpj|default:"-" }}</td>
                         <td style="text-align: center;">
                             <span class="badge-count">{{ tomador.casos.count }}</span>
                         </td>

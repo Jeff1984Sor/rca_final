@@ -123,7 +123,9 @@ def exportar_tomadores_excel(request):
     queryset = Tomador.objects.prefetch_related('casos__cliente', 'casos__produto')
     q = request.GET.get('q')
     if q:
-        queryset = queryset.filter(Q(nome__icontains=q) | Q(cpf_cnpj__icontains=q))
+        queryset = queryset.filter(
+            Q(nome__icontains=q) | Q(cpf__icontains=q) | Q(cnpj__icontains=q)
+        )
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -136,14 +138,14 @@ def exportar_tomadores_excel(request):
         if casos.exists():
             for caso in casos:
                 ws.append([
-                    tomador.nome, tomador.cpf_cnpj or "-",
+                    tomador.nome, tomador.cpf or tomador.cnpj or "-",
                     caso.cliente.nome if caso.cliente else "-",
                     caso.produto.nome if caso.produto else "-",
                     caso.titulo or f"Caso #{caso.id}",
                     caso.get_status_display()
                 ])
         else:
-            ws.append([tomador.nome, tomador.cpf_cnpj or "-", "-", "-", "-", "Sem casos"])
+            ws.append([tomador.nome, tomador.cpf or tomador.cnpj or "-", "-", "-", "-", "Sem casos"])
 
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename="relatorio_tomadores.xlsx"'
@@ -155,7 +157,9 @@ def exportar_tomadores_pdf(request):
     queryset = Tomador.objects.prefetch_related('casos__cliente', 'casos__produto')
     q = request.GET.get('q')
     if q:
-        queryset = queryset.filter(Q(nome__icontains=q) | Q(cpf_cnpj__icontains=q))
+        queryset = queryset.filter(
+            Q(nome__icontains=q) | Q(cpf__icontains=q) | Q(cnpj__icontains=q)
+        )
 
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="relatorio_tomadores.pdf"'
@@ -224,7 +228,10 @@ class TomadorListView(ListView):
     def get_queryset(self):
         queryset = super().get_queryset()
         q = self.request.GET.get('q')
-        if q: queryset = queryset.filter(Q(nome__icontains=q) | Q(cpf_cnpj__icontains=q))
+        if q:
+            queryset = queryset.filter(
+                Q(nome__icontains=q) | Q(cpf__icontains=q) | Q(cnpj__icontains=q)
+            )
         return queryset
 
 class TomadorCreateView(CreateView):
@@ -1423,7 +1430,10 @@ def obter_detalhes_tomador(request, pk):
         
         return JsonResponse({
             'success': True,
-            'cpf_cnpj': tomador.cpf_cnpj,
+            'tipo': tomador.tipo,
+            'cpf': tomador.cpf,
+            'cnpj': tomador.cnpj,
+            'documento': tomador.cpf if tomador.tipo == 'PF' else tomador.cnpj,
             'emails': emails,
             'telefones': telefones
         })

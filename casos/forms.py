@@ -121,10 +121,12 @@ def build_form_field(campo_obj: CampoPersonalizado, is_required=False, cliente=N
 class TomadorForm(forms.ModelForm):
     class Meta:
         model = Tomador
-        fields = ['nome', 'cpf_cnpj']
+        fields = ['nome', 'tipo', 'cpf', 'cnpj']
         widgets = {
             'nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome completo'}),
-            'cpf_cnpj': forms.TextInput(attrs={'class': 'form-control money-cnpj', 'placeholder': '000.000.000-00', 'data-mask': '000.000.000-00'}),
+            'tipo': forms.Select(attrs={'class': 'form-select'}),
+            'cpf': forms.TextInput(attrs={'class': 'form-control custom-mask', 'placeholder': '000.000.000-00', 'data-mask': '000.000.000-00'}),
+            'cnpj': forms.TextInput(attrs={'class': 'form-control custom-mask', 'placeholder': '00.000.000/0000-00', 'data-mask': '00.000.000/0000-00'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -366,6 +368,22 @@ class CasoInfoBasicasForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned = super().clean()
+        tipo = cleaned.get('tipo')
+        cpf = cleaned.get('cpf')
+        cnpj = cleaned.get('cnpj')
+
+        if tipo == 'PF':
+            if not cpf:
+                self.add_error('cpf', 'CPF é obrigatório para pessoa física.')
+            cleaned['cnpj'] = None
+        elif tipo == 'PJ':
+            if not cnpj:
+                self.add_error('cnpj', 'CNPJ é obrigatório para pessoa jurídica.')
+            cleaned['cpf'] = None
+        return cleaned
         for field_name, field in self.fields.items():
             existing_classes = field.widget.attrs.get('class', '').strip()
             if not existing_classes:
