@@ -1061,6 +1061,22 @@ def upload_arquivo_sharepoint(request, caso_pk):
         return carregar_painel_anexos(request, caso_pk)
     return JsonResponse({'error': 'Falha no upload'}, status=400)
 
+@require_POST
+@login_required
+def criar_pasta_raiz_sharepoint(request):
+    try:
+        nome_nova_pasta = request.POST.get('nome_pasta')
+        if not nome_nova_pasta:
+            return HttpResponse("<p style='color: red;'>Nome da pasta nao pode ser vazio.</p>", status=400)
+        sp = SharePoint()
+        sp.criar_pasta_caso(nome_nova_pasta)
+    except Exception as e:
+        logger.error(f"Erro ao criar pasta na raiz: {e}", exc_info=True)
+        return HttpResponse(f"<p style='color: red;'>Erro ao criar pasta: {e}</p>", status=500)
+    response = HttpResponse(status=200)
+    response['HX-Refresh'] = 'true'
+    return response
+
 # ==============================================================================
 # LISTA DE CASOS E FILTROS
 # ==============================================================================
