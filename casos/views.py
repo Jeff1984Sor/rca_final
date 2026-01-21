@@ -1378,6 +1378,12 @@ def editar_timesheet(request, pk):
 
 @login_required
 def selecionar_produto_cliente(request):
+    if request.method == 'POST':
+        cliente_id = request.POST.get('cliente')
+        produto_id = request.POST.get('produto')
+        if cliente_id and produto_id:
+            return redirect('casos:criar_caso', cliente_id=cliente_id, produto_id=produto_id)
+        messages.error(request, "Selecione um cliente e um produto.")
     clientes = Cliente.objects.all().order_by('nome')
     produtos = Produto.objects.all().order_by('nome')
     return render(request, 'casos/selecionar_produto_cliente.html', {'clientes': clientes, 'produtos': produtos})
