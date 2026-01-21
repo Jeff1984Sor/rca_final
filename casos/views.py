@@ -253,6 +253,22 @@ class TomadorUpdateView(UpdateView):
                 if fone.strip(): TomadorTelefone.objects.create(tomador=self.object, telefone=fone.strip())
         return redirect(self.get_success_url())
 
+class TomadorDeleteView(DeleteView):
+    model = Tomador
+    template_name = 'casos/tomador_confirm_delete.html'
+    success_url = reverse_lazy('casos:lista_tomadores')
+
+    def post(self, request, *args, **kwargs):
+        try:
+            return super().post(request, *args, **kwargs)
+        except ProtectedError:
+            self.object = self.get_object()
+            messages.error(
+                request,
+                f"Nao e possivel excluir o tomador '{self.object.nome}' pois existem casos vinculados."
+            )
+            return redirect('casos:editar_tomador', pk=self.object.pk)
+
 @require_POST
 @login_required
 def criar_tomador_ajax(request):
