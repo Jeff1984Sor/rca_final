@@ -336,8 +336,7 @@ def criar_caso(request, cliente_id, produto_id):
     return render(request, 'casos/criar_caso_form.html', {
         'cliente': cliente, 'produto': produto, 'form': form,
         'grupo_formsets': grupo_formsets.values(), 'estrutura': estrutura
-    }
-    return render(request, 'casos/criar_caso_form.html', context)
+    })
 
 
 @login_required
