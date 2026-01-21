@@ -139,8 +139,11 @@ class CasoDinamicoForm(forms.ModelForm):
         fields = ['data_entrada', 'valor_apurado', 'data_encerramento', 'status', 'advogado_responsavel', 'tomador']
         widgets = {
             'data_entrada': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
-            'valor_apurado': forms.TextInput(attrs={'class': 'form-control money', 'placeholder': '0,00'}),
-
+            'valor_apurado': forms.TextInput(attrs={
+                'class': 'form-control js-moeda',
+                'inputmode': 'decimal',
+                'placeholder': 'R$ 0,00'
+            }),
             'data_encerramento': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
             'advogado_responsavel': forms.Select(attrs={'class': 'form-select'}),
@@ -352,7 +355,21 @@ class CasoInfoBasicasForm(forms.ModelForm):
         fields = ['status', 'data_entrada', 'valor_apurado', 'advogado_responsavel']
         widgets = {
             'data_entrada': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'valor_apurado': forms.TextInput(attrs={'class': 'form-control money'}),
+            'valor_apurado': forms.TextInput(attrs={
+                'class': 'form-control js-moeda',
+                'inputmode': 'decimal',
+                'placeholder': 'R$ 0,00'
+            }),
             'status': forms.Select(attrs={'class': 'form-select'}),
             'advogado_responsavel': forms.Select(attrs={'class': 'form-select'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            existing_classes = field.widget.attrs.get('class', '').strip()
+            if not existing_classes:
+                field.widget.attrs['class'] = 'form-control'
+
+
+

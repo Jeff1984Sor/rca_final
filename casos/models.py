@@ -106,7 +106,7 @@ class Caso(models.Model):
     data_criacao = models.DateTimeField(auto_now_add=True)
 
     valor_apurado = models.DecimalField(
-        max_digits=12, decimal_places=2, verbose_name="Valor Apurado",
+        max_digits=18, decimal_places=2, verbose_name="Valor Apurado",
         null=True, blank=True
     )
 
@@ -156,8 +156,8 @@ class Caso(models.Model):
 class RegraPrazo(models.Model):
     cliente = models.ForeignKey('clientes.Cliente', on_delete=models.CASCADE, verbose_name="Cliente")
     produto = models.ForeignKey('produtos.Produto', on_delete=models.CASCADE, verbose_name="Produto")
-    valor_minimo = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Valor Mínimo Apurado")
-    valor_maximo = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Valor Máximo Apurado")
+    valor_minimo = models.DecimalField(max_digits=18, decimal_places=2, verbose_name="Valor Mínimo Apurado")
+    valor_maximo = models.DecimalField(max_digits=18, decimal_places=2, verbose_name="Valor Máximo Apurado")
     prazo_em_dias = models.PositiveIntegerField(verbose_name="Prazo (em dias)")
 
     class Meta:

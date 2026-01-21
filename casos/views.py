@@ -85,6 +85,7 @@ from reportlab.lib.units import inch
 logger = logging.getLogger('casos_app')
 User = get_user_model()
 
+# Importa funções auxiliares (com fallback)
 try:
     from .utils import get_cabecalho_exportacao
 except ImportError:
@@ -273,21 +274,7 @@ def criar_caso(request, cliente_id, produto_id):
         return redirect('casos:selecionar_produto_cliente')
 
     if request.method == 'POST':
-        # --- LIMPEZA DE MOEDA PARA VALORES ALTOS ---
-        post_data = request.POST.copy()
-        
-        # Limpa o campo fixo valor_apurado
-        if post_data.get('valor_apurado'):
-            val_limpo = post_data['valor_apurado'].replace('.', '').replace(',', '.')
-            post_data['valor_apurado'] = val_limpo
-
-        # Limpa campos dinâmicos que possam ser moeda/decimal
-        for key, value in post_data.items():
-            if 'campo_personalizado' in key and value and isinstance(value, str):
-                if ',' in value: # Provável valor mascarado do Brasil
-                    post_data[key] = value.replace('.', '').replace(',', '.')
-
-        form = CasoDinamicoForm(post_data, cliente=cliente, produto=produto)
+        form = CasoDinamicoForm(request.POST, cliente=cliente, produto=produto)
     else:
         form = CasoDinamicoForm(cliente=cliente, produto=produto)
 
@@ -349,7 +336,43 @@ def criar_caso(request, cliente_id, produto_id):
     return render(request, 'casos/criar_caso_form.html', {
         'cliente': cliente, 'produto': produto, 'form': form,
         'grupo_formsets': grupo_formsets.values(), 'estrutura': estrutura
-    })
+    }
+    return render(request, 'casos/criar_caso_form.html', context)
+
+
+@login_required
+def lista_casos(request):
+    casos_list = Caso.objects.select_related(
+        'cliente', 'produto', 'advogado_responsavel'
+    ).all().order_by('-id')
+    
+    filtro_titulo = request.GET.get('filtro_titulo', '')
+    filtro_cliente = request.GET.get('filtro_cliente', '')
+    filtro_produto = request.GET.get('filtro_produto', '')
+    filtro_status = request.GET.get('filtro_status', '')
+    filtro_advogado = request.GET.get('filtro_advogado', '')
+
+    if filtro_titulo:
+        casos_list = casos_list.filter(titulo__icontains=filtro_titulo)
+    if filtro_cliente:
+        casos_list = casos_list.filter(cliente_id=filtro_cliente)
+    if filtro_produto:
+        casos_list = casos_list.filter(produto_id=filtro_produto)
+    if filtro_status:
+        casos_list = casos_list.filter(status=filtro_status)
+    if filtro_advogado:
+        casos_list = casos_list.filter(advogado_responsavel_id=filtro_advogado)
+
+    context = {
+        'casos': casos_list,
+        'valores_filtro': request.GET,
+        'todos_clientes': Cliente.objects.all().order_by('nome'),
+        'todos_produtos': Produto.objects.all().order_by('nome'),
+        'todos_advogados': User.objects.all().order_by('first_name', 'username'),
+        'status_choices': Caso.STATUS_CHOICES,
+    }
+    return render(request, 'casos/lista_casos.html', context)
+
 
 # ==============================================================================
 # DETALHE DO CASO
@@ -362,22 +385,33 @@ def detalhe_caso(request, pk):
         edit_modal = request.POST.get('edit_modal')
         
         if edit_modal == 'info-basicas':
-            # --- LIMPEZA DE MOEDA NO EDITAR ---
-            post_data = request.POST.copy()
-            valor_bruto = post_data.get('valor_apurado', '')
-            if valor_bruto:
-                val_limpo = valor_bruto.replace('R$', '').replace('.', '').replace(',', '.').strip()
-                caso.valor_apurado = Decimal(val_limpo)
-            
-            caso.status = post_data.get('status', caso.status)
-            if post_data.get('data_entrada'): caso.data_entrada = post_data.get('data_entrada')
-            
-            adv_id = post_data.get('advogado_responsavel')
-            caso.advogado_responsavel_id = adv_id if adv_id else None
-            caso.save()
-            messages.success(request, '✅ Informações atualizadas!')
-            return redirect('casos:detalhe_caso', pk=pk)
-
+            try:
+                caso.status = request.POST.get('status', caso.status)
+                data_entrada = request.POST.get('data_entrada')
+                if data_entrada:
+                    caso.data_entrada = data_entrada
+                
+                valor_apurado = request.POST.get('valor_apurado', '').strip()
+                if valor_apurado:
+                    valor_apurado = valor_apurado.replace('R$', '').replace('.', '').replace(',', '.').strip()
+                    caso.valor_apurado = Decimal(valor_apurado)
+                
+                advogado_id = request.POST.get('advogado_responsavel')
+                if advogado_id:
+                    caso.advogado_responsavel_id = advogado_id
+                else:
+                    caso.advogado_responsavel = None
+                
+                caso.save()
+                FluxoInterno.objects.create(
+                    caso=caso, tipo_evento='EDICAO', descricao='Informações básicas do caso foram atualizadas.', autor=request.user
+                )
+                messages.success(request, '✅ Informações básicas atualizadas com sucesso!')
+                return redirect('casos:detalhe_caso', pk=caso.pk)
+            except Exception as e:
+                messages.error(request, f'❌ Erro ao atualizar: {str(e)}')
+                return redirect('casos:detalhe_caso', pk=caso.pk)
+        
         elif edit_modal == 'dados-adicionais':
             # Atualiza campos personalizados dinâmicos
             for key, value in request.POST.items():
@@ -439,9 +473,448 @@ def dashboard_view(request):
 @login_required
 def carregar_painel_anexos(request, pk):
     caso = get_object_or_404(Caso, pk=pk)
-    if not caso.sharepoint_folder_id:
-        return render(request, 'casos/partials/painel_anexos_criar.html', {'caso': caso})
+    andamentos = caso.andamentos.select_related('autor').order_by('data_andamento')
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = f'Andamentos Caso #{caso.id}'
+    headers = ['Data do Andamento', 'Descrição', 'Criado por', 'Data de Criação']
+    sheet.append(headers)
+    for andamento in andamentos:
+        autor_nome = '-'
+        if andamento.autor:
+            autor_nome = andamento.autor.get_full_name() or andamento.autor.username
+        data_andamento_formatada = andamento.data_andamento.strftime('%d/%m/%Y')
+        data_criacao_formatada = timezone.localtime(andamento.data_criacao).strftime('%d/%m/%Y %H:%M')
+        sheet.append([data_andamento_formatada, andamento.descricao, autor_nome, data_criacao_formatada])
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="andamentos_caso_{caso.id}.xlsx"'
+    workbook.save(response)
+    return response
+
+
+@login_required
+def exportar_timesheet_excel(request, pk):
+    caso = get_object_or_404(Caso, pk=pk)
+    timesheets = caso.timesheets.select_related('advogado').order_by('data_execucao')
+    soma_total_obj = timesheets.aggregate(total_tempo=Sum('tempo'))
+    tempo_total = soma_total_obj['total_tempo'] or timedelta(0)
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = f'Timesheet Caso #{caso.id}'
+    headers = ['Data da Execução', 'Advogado', 'Descrição', 'Tempo Gasto']
+    sheet.append(headers)
+    for ts in timesheets:
+        advogado_nome = ts.advogado.get_full_name() or ts.advogado.username if ts.advogado else '-'
+        tempo_str = str(ts.tempo)
+        sheet.append([ts.data_execucao.strftime('%d/%m/%Y'), advogado_nome, ts.descricao, tempo_str])
+    sheet.append([])
+    from openpyxl.styles import Font
+    bold_font = Font(bold=True)
+    linha_total = ['', '', 'Total:', str(tempo_total)]
+    sheet.append(linha_total)
+    sheet['C' + str(sheet.max_row)].font = bold_font
+    sheet['D' + str(sheet.max_row)].font = bold_font
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="timesheet_caso_{caso.id}.xlsx"'
+    workbook.save(response)
+    return response
+
+
+@login_required
+def exportar_timesheet_pdf(request, pk):
+    caso = get_object_or_404(Caso, pk=pk)
+    timesheets = caso.timesheets.select_related('advogado').order_by('data_execucao')
+    soma_total_obj = timesheets.aggregate(total_tempo=Sum('tempo'))
+    tempo_total = soma_total_obj['total_tempo'] or timedelta(0)
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=inch/2, leftMargin=inch/2, topMargin=inch/2, bottomMargin=inch/2)
+    styles = getSampleStyleSheet()
+    story = []
+    story.append(Paragraph(f"Relatório de Timesheet - Caso #{caso.id}", styles['h1']))
+    story.append(Paragraph(f"<b>Cliente:</b> {caso.cliente.nome}", styles['Normal']))
+    story.append(Paragraph(f"<b>Produto:</b> {caso.produto.nome}", styles['Normal']))
+    story.append(Spacer(1, 0.25*inch))
+    data = [['Data', 'Advogado', 'Descrição', 'Tempo Gasto']]
+    for ts in timesheets:
+        advogado_nome = ts.advogado.get_full_name() or ts.advogado.username if ts.advogado else '-'
+        data.append([
+            ts.data_execucao.strftime('%d/%m/%Y'),
+            advogado_nome,
+            Paragraph(ts.descricao.replace('\n', '<br/>'), styles['Normal']),
+            str(ts.tempo)
+        ])
+    data.append(['', '', Paragraph("<b>Total:</b>", styles['Normal']), Paragraph(f"<b>{str(tempo_total)}</b>", styles['Normal'])])
+    table = Table(data, colWidths=[1.2*inch, 1.5*inch, 3.3*inch, 1.2*inch])
+    style = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -2), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('ALIGN', (2, 1), (2, -1), 'LEFT'),
+        ('ALIGN', (2, -1), (3, -1), 'RIGHT'),
+        ('FONTNAME', (-2, -1), (-1, -1), 'Helvetica-Bold'),
+    ])
+    table.setStyle(style)
+    story.append(table)
+    doc.build(story)
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="timesheet_caso_{caso.id}.pdf"'
+    return response
+
+
+# ==============================================================================
+# EDIÇÃO DE TIMESHEET/DESPESA/ACORDO
+# ==============================================================================
+
+@login_required
+def editar_timesheet(request, pk):
+    timesheet = get_object_or_404(Timesheet, pk=pk)
+    caso = timesheet.caso
+    if request.method == 'POST':
+        form = TimesheetForm(request.POST, instance=timesheet)
+        if form.is_valid():
+            ts_editado = form.save(commit=False)
+            tempo_str = request.POST.get('tempo')
+            try:
+                horas, minutos = map(int, tempo_str.split(':'))
+                ts_editado.tempo = timedelta(hours=horas, minutes=minutos)
+            except (ValueError, TypeError):
+                form.add_error('tempo', 'Formato inválido. Use HH:MM.')
+            else:
+                ts_editado.save()
+                return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})}?aba=timesheet")
+    else:
+        initial_data = {}
+        if timesheet.tempo:
+            total_seconds = int(timesheet.tempo.total_seconds())
+            horas = total_seconds // 3600
+            minutos = (total_seconds % 3600) // 60
+            initial_data['tempo'] = f"{str(horas).zfill(2)}:{str(minutos).zfill(2)}"
+        form = TimesheetForm(instance=timesheet, initial=initial_data)
+    context = {'form': form, 'timesheet': timesheet, 'caso': caso}
+    return render(request, 'casos/timesheet_form.html', context)
+
+
+@login_required
+def deletar_timesheet(request, pk):
+    timesheet = get_object_or_404(Timesheet, pk=pk)
+    caso = timesheet.caso
+    if request.method == 'POST':
+        timesheet.delete()
+        return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})}?aba=timesheet")
+    context = {'timesheet': timesheet, 'caso': caso}
+    return render(request, 'casos/timesheet_confirm_delete.html', context)
+
+
+@require_POST
+@login_required
+def quitar_parcela(request, pk):
+    parcela = get_object_or_404(Parcela, pk=pk)
+    if parcela.status == 'QUITADA':
+        parcela.status = 'EMITIDA'
+        parcela.data_pagamento = None
+    else:
+        parcela.status = 'QUITADA'
+        parcela.data_pagamento = date.today()
+    parcela.save()
+    return render(request, 'casos/partials/parcela_linha.html', {'parcela': parcela})
+
+
+@login_required
+def editar_acordo(request, pk):
+    acordo = get_object_or_404(Acordo, pk=pk)
+    caso = acordo.caso
+    if request.method == 'POST':
+        form = AcordoForm(request.POST, instance=acordo, user=request.user)
+        if form.is_valid():
+            acordo_editado = form.save()
+            acordo_editado.parcelas.all().delete()
+            valor_total = acordo_editado.valor_total
+            num_parcelas = acordo_editado.numero_parcelas
+            valor_parcela = round(Decimal(valor_total) / num_parcelas, 2)
+            for i in range(num_parcelas):
+                data_vencimento = acordo_editado.data_primeira_parcela + relativedelta(months=i)
+                Parcela.objects.create(
+                    acordo=acordo_editado, numero_parcela=i + 1, valor_parcela=valor_parcela, data_vencimento=data_vencimento
+                )
+            soma_parcelas = valor_parcela * num_parcelas
+            diferenca = valor_total - soma_parcelas
+            if diferenca != 0:
+                ultima_parcela = acordo_editado.parcelas.order_by('-numero_parcela').first()
+                if ultima_parcela:
+                    ultima_parcela.valor_parcela += diferenca
+                    ultima_parcela.save()
+            return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})}?aba=acordos")
+    else:
+        form = AcordoForm(instance=acordo, user=request.user)
+    context = {'form_acordo': form, 'acordo': acordo, 'caso': caso}
+    return render(request, 'casos/acordo_form.html', context)
+
+
+@login_required
+def editar_despesa(request, pk):
+    despesa = get_object_or_404(Despesa, pk=pk)
+    caso = despesa.caso
+    if request.method == 'POST':
+        form = DespesaForm(request.POST, instance=despesa, user=request.user)
+        if form.is_valid():
+            form.save()
+            return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})}?aba=despesas")
+    else:
+        form = DespesaForm(instance=despesa, user=request.user)
+    context = {'form_despesa': form, 'despesa': despesa, 'caso': caso}
+    return render(request, 'casos/despesa_form.html', context)
+
+
+# ==============================================================================
+# API (DRF)
+# ==============================================================================
+
+class CasoAPIViewSet(viewsets.ModelViewSet):
+    queryset = Caso.objects.all().order_by('-data_criacao')
+    serializer_class = CasoSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def perform_update(self, serializer):
+        if 'status' in serializer.validated_data:
+            if serializer.validated_data['status'] == 'ENCERRADO':
+                if not serializer.instance.data_encerramento:
+                    serializer.validated_data['data_encerramento'] = timezone.now().date()
+        serializer.save()
+
+
+# ==============================================================================
+# IMPORTAÇÃO/EXPORTAÇÃO DINÂMICA
+# ==============================================================================
+
+@login_required
+def selecionar_filtros_exportacao(request):
+    if request.method == 'POST':
+        cliente_id = request.POST.get('cliente')
+        produto_id = request.POST.get('produto')
+        if cliente_id and produto_id:
+            return redirect('casos:exportar_casos_dinamico', cliente_id=cliente_id, produto_id=produto_id)
+    clientes = Cliente.objects.all().order_by('nome')
+    produtos = Produto.objects.all().order_by('nome')
+    context = {'clientes': clientes, 'produtos': produtos, 'titulo': 'Exportação Dinâmica de Casos'}
+    return render(request, 'casos/selecionar_filtros_exportacao.html', context)
+
+
+@login_required
+def exportar_casos_dinamico(request, cliente_id, produto_id):
+    cliente = get_object_or_404(Cliente, id=cliente_id)
+    produto = get_object_or_404(Produto, id=produto_id)
+    lista_chaves, lista_cabecalhos = get_cabecalho_exportacao(cliente, produto)
+    casos_queryset = Caso.objects.filter(cliente=cliente, produto=produto).select_related(
+        'cliente', 'produto', 'advogado_responsavel'
+    ).prefetch_related('valores_personalizados__campo').order_by('-data_entrada')
     
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = f'Export_{produto.nome[:30]}'
+    sheet.append(lista_cabecalhos)
+    sheet.append(lista_chaves)
+    
+    for caso in casos_queryset:
+        linha_dados = []
+        valores_personalizados_case = {f'personalizado_{v.campo.nome_variavel}': v.valor for v in caso.valores_personalizados.all()}
+        for chave in lista_chaves:
+            valor = '-'
+            if not chave.startswith('personalizado_'):
+                if '__' in chave:
+                    partes = chave.split('__')
+                    obj = getattr(caso, partes[0], None)
+                    valor = getattr(obj, partes[1], '-') if obj else '-'
+                elif chave == 'status':
+                    valor = caso.get_status_display()
+                else:
+                    valor = getattr(caso, chave, '-')
+            else:
+                valor = valores_personalizados_case.get(chave, '-')
+            linha_dados.append(str(valor))
+        sheet.append(linha_dados)
+        
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    response = HttpResponse(output, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    filename = f'casos_{cliente.nome}_{produto.nome}.xlsx'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required
+def importar_casos_view(request):
+    if request.method == 'GET':
+        try:
+            clientes = Cliente.objects.all().order_by('nome')
+            produtos = Produto.objects.all().order_by('nome')
+            context = {'clientes': clientes, 'produtos': produtos, 'titulo': 'Importação Massiva de Casos'}
+            return render(request, 'casos/importar_casos_form.html', context)
+        except Exception as e:
+            logger.error(f"Erro ao carregar importação: {e}", exc_info=True)
+            messages.error(request, "Erro ao carregar página.")
+            return redirect('casos:lista_casos')
+
+    elif request.method == 'POST':
+        cliente_id = request.POST.get('cliente')
+        produto_id = request.POST.get('produto')
+        arquivo_excel = request.FILES.get('arquivo_excel')
+
+        if not (cliente_id and produto_id and arquivo_excel):
+            messages.error(request, "Todos os campos são obrigatórios.")
+            return redirect('casos:importar_casos_view')
+
+        try:
+            cliente = get_object_or_404(Cliente, id=cliente_id)
+            produto = get_object_or_404(Produto, id=produto_id)
+            lista_chaves_validas, _ = get_cabecalho_exportacao(cliente, produto)
+            chaves_validas_set = set(lista_chaves_validas)
+            estrutura_campos = EstruturaDeCampos.objects.filter(cliente=cliente, produto=produto).prefetch_related('campos').first()
+            campos_meta_map = {cm.nome_variavel: cm for cm in estrutura_campos.campos.all()} if estrutura_campos else {}
+            
+            workbook = openpyxl.load_workbook(arquivo_excel, data_only=True)
+            sheet = workbook.active
+            if sheet.max_row < 2:
+                raise ValidationError("Planilha vazia.")
+
+            excel_headers_raw = [cell.value for cell in sheet[1]]
+            excel_headers = [str(h).strip().lower().replace(' ', '_') if h else '' for h in excel_headers_raw]
+            header_map = {}
+            variaveis_lower = {nome_var.lower(): nome_var for nome_var in campos_meta_map.keys()}
+
+            for excel_header_norm in excel_headers:
+                if not excel_header_norm: continue
+                chave_mapeada = None
+                if excel_header_norm in chaves_validas_set and not excel_header_norm.startswith('personalizado_') and '__' not in excel_header_norm:
+                    chave_mapeada = excel_header_norm
+                elif excel_header_norm in variaveis_lower:
+                    nome_variavel_original = variaveis_lower[excel_header_norm]
+                    if f'personalizado_{nome_variavel_original}' in chaves_validas_set:
+                        chave_mapeada = nome_variavel_original
+                elif excel_header_norm.startswith('personalizado_'):
+                    nome_base = excel_header_norm.split('personalizado_', 1)[1]
+                    if nome_base in variaveis_lower:
+                        nome_variavel_original = variaveis_lower[nome_base]
+                        if f'personalizado_{nome_variavel_original}' in chaves_validas_set:
+                            chave_mapeada = nome_variavel_original
+                if chave_mapeada:
+                    header_map[excel_header_norm] = chave_mapeada
+
+            mapeamentos_uteis = {k: v for k, v in header_map.items() if k != '_row_index'}
+            if not mapeamentos_uteis:
+                raise ValidationError("Nenhum cabeçalho corresponde aos campos esperados.")
+
+            linhas_enviadas = 0
+            campos_meta_map_serializable = {nome_var: campo.id for nome_var, campo in campos_meta_map.items()}
+
+            for row_index, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+                linha_dados = dict(zip(excel_headers, row))
+                linha_dados['_row_index'] = row_index
+                linha_dados_mapeada = {k: v for k, v in linha_dados.items() if k in header_map or k == '_row_index'}
+                if not any(v for k, v in linha_dados_mapeada.items() if k != '_row_index' and v is not None):
+                    continue
+
+                processar_linha_importacao.apply_async(
+                    args=[
+                        linha_dados_mapeada, cliente.id, produto.id, header_map, list(chaves_validas_set),
+                        campos_meta_map_serializable, produto.padrao_titulo, estrutura_campos.id if estrutura_campos else None
+                    ],
+                    countdown=linhas_enviadas * 10
+                )
+                linhas_enviadas += 1
+            
+            if linhas_enviadas == 0:
+                messages.warning(request, "Nenhuma linha válida encontrada.")
+            else:
+                messages.success(request, f"✅ Importação iniciada! {linhas_enviadas} casos enviados.")
+            return redirect('casos:importar_casos_view')
+
+        except ValidationError as e:
+            messages.error(request, f"❌ Erro: {e.message}")
+            return render(request, 'casos/importar_casos_form.html', {'clientes': Cliente.objects.all(), 'produtos': Produto.objects.all()})
+        except Exception as e:
+            logger.error(f"Erro inesperado: {e}", exc_info=True)
+            messages.error(request, "❌ Erro inesperado.")
+            return redirect('casos:importar_casos_view')
+
+    return redirect('casos:importar_casos_view')
+
+@login_required
+@require_POST
+def editar_info_basicas(request, pk):
+    caso = get_object_or_404(Caso, pk=pk)
+    caso.status = request.POST.get('status')
+    caso.data_entrada = request.POST.get('data_entrada')
+    caso.valor_apurado = request.POST.get('valor_apurado')
+    caso.advogado_responsavel_id = request.POST.get('advogado_responsavel')
+    caso.save()
+    return render(request, 'casos/partials/card_info_basicas.html', {'caso': caso})
+
+@login_required
+@require_POST
+def editar_dados_adicionais(request, pk):
+    caso = get_object_or_404(Caso, pk=pk)
+    caso.sinistro_todo = request.POST.get('sinistro_todo')
+    caso.acao = request.POST.get('acao')
+    caso.save()
+    return render(request, 'casos/partials/card_dados_adicionais.html', {'caso': caso})
+
+@login_required
+def visao_casos_prazo(request):
+    casos_list = Caso.objects.select_related('cliente', 'produto', 'advogado_responsavel').filter(status='ATIVO')
+    filtro_cliente = request.GET.get('filtro_cliente', '')
+    filtro_produto = request.GET.get('filtro_produto', '')
+    filtro_advogado = request.GET.get('filtro_advogado', '')
+
+    if filtro_cliente: casos_list = casos_list.filter(cliente_id=filtro_cliente)
+    if filtro_produto: casos_list = casos_list.filter(produto_id=filtro_produto)
+    if filtro_advogado: casos_list = casos_list.filter(advogado_responsavel_id=filtro_advogado)
+
+    prazo_inicio_str = request.GET.get('prazo_inicio', '')
+    prazo_fim_str = request.GET.get('prazo_fim', '')
+    
+    if prazo_inicio_str or prazo_fim_str:
+        try:
+            prazo_inicio = datetime.strptime(prazo_inicio_str, '%Y-%m-%d').date() if prazo_inicio_str else None
+            prazo_fim = datetime.strptime(prazo_fim_str, '%Y-%m-%d').date() if prazo_fim_str else None
+            casos_filtrados = []
+            for caso in casos_list:
+                prazo_final = caso.prazo_final_calculado
+                if prazo_final:
+                    if prazo_inicio and prazo_fim:
+                        if prazo_inicio <= prazo_final <= prazo_fim: casos_filtrados.append(caso)
+                    elif prazo_inicio:
+                        if prazo_final >= prazo_inicio: casos_filtrados.append(caso)
+                    elif prazo_fim:
+                        if prazo_final <= prazo_fim: casos_filtrados.append(caso)
+            casos_list = casos_filtrados
+        except ValueError:
+            messages.error(request, "Formato de data inválido.")
+            casos_list = []
+    
+    casos_list = sorted(casos_list, key=lambda caso: caso.prazo_final_calculado or date.max)
+    context = {
+        'casos': casos_list,
+        'valores_filtro': request.GET,
+        'todos_clientes': Cliente.objects.all().order_by('nome'),
+        'todos_produtos': Produto.objects.all().order_by('nome'),
+        'todos_advogados': User.objects.filter(is_active=True).order_by('first_name'),
+        'hoje': date.today(),
+    }
+    return render(request, 'casos/visao_casos_prazo.html', context)
+
+@login_required
+def analyser_navegador(request, pk):
+    caso = get_object_or_404(Caso, pk=pk)
+    if not caso.sharepoint_folder_id:
+        return HttpResponse('<div class="analyser-empty-state">Pasta não encontrada</div>')
     try:
         sp = SharePoint()
         itens = sp.listar_conteudo_pasta(caso.sharepoint_folder_id)
@@ -509,12 +982,21 @@ def selecionar_produto_cliente(request):
 
 @login_required
 def obter_detalhes_tomador(request, pk):
-    tomador = get_object_or_404(Tomador, pk=pk)
-    return JsonResponse({
-        'success': True,
-        'cpf_cnpj': tomador.cpf_cnpj,
-        'emails': list(tomador.emails.values_list('email', flat=True)),
-        'telefones': list(tomador.telefones.values_list('telefone', flat=True))
-    })
-
-# FIM DO ARQUIVO
+    """
+    Busca os dados do tomador (CPF, Emails, Telefones) e retorna JSON.
+    """
+    try:
+        tomador = Tomador.objects.get(pk=pk)
+        
+        # Pega a lista de emails e telefones
+        emails = list(tomador.emails.values_list('email', flat=True))
+        telefones = list(tomador.telefones.values_list('telefone', flat=True))
+        
+        return JsonResponse({
+            'success': True,
+            'cpf_cnpj': tomador.cpf_cnpj,
+            'emails': emails,
+            'telefones': telefones
+        })
+    except Tomador.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Tomador não encontrado'})
