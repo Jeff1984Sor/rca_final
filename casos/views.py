@@ -85,6 +85,14 @@ from reportlab.lib.units import inch
 logger = logging.getLogger('casos_app')
 User = get_user_model()
 
+def normalize_currency_input(value):
+    if value is None:
+        return ''
+    value = str(value)
+    value = value.replace('R$', '').replace(' ', '').replace('\xa0', '')
+    value = value.replace('.', '').replace(',', '.')
+    return value
+
 # Importa funções auxiliares (com fallback)
 try:
     from .utils import get_cabecalho_exportacao
@@ -274,7 +282,16 @@ def criar_caso(request, cliente_id, produto_id):
         return redirect('casos:selecionar_produto_cliente')
 
     if request.method == 'POST':
-        form = CasoDinamicoForm(request.POST, cliente=cliente, produto=produto)
+        post_data = request.POST.copy()
+        if post_data.get('valor_apurado'):
+            post_data['valor_apurado'] = normalize_currency_input(post_data['valor_apurado'])
+
+        for key, value in post_data.items():
+            if 'campo_personalizado' in key and value and isinstance(value, str):
+                if ',' in value or 'R$' in value:
+                    post_data[key] = normalize_currency_input(value)
+
+        form = CasoDinamicoForm(post_data, cliente=cliente, produto=produto)
     else:
         form = CasoDinamicoForm(cliente=cliente, produto=produto)
 
@@ -339,6 +356,101 @@ def criar_caso(request, cliente_id, produto_id):
     })
 
 
+# ==============================================================================
+# EDITAR CASO
+# ==============================================================================
+@login_required
+def editar_caso(request, pk):
+    caso = get_object_or_404(Caso, pk=pk)
+    cliente = caso.cliente
+    produto = caso.produto
+
+    try:
+        estrutura = EstruturaDeCampos.objects.prefetch_related(
+            'campos', 'grupos_repetiveis__campos'
+        ).get(cliente=cliente, produto=produto)
+    except EstruturaDeCampos.DoesNotExist:
+        messages.error(request, "Estrutura de campos não definida.")
+        return redirect('casos:lista_casos')
+
+    if request.method == 'POST':
+        post_data = request.POST.copy()
+        if post_data.get('valor_apurado'):
+            post_data['valor_apurado'] = normalize_currency_input(post_data['valor_apurado'])
+
+        for key, value in post_data.items():
+            if 'campo_personalizado' in key and value and isinstance(value, str):
+                if ',' in value or 'R$' in value:
+                    post_data[key] = normalize_currency_input(value)
+
+        form = CasoDinamicoForm(post_data, instance=caso, cliente=cliente, produto=produto)
+    else:
+        form = CasoDinamicoForm(instance=caso, cliente=cliente, produto=produto)
+
+    grupo_formsets = {}
+    for grupo in estrutura.grupos_repetiveis.all():
+        GrupoFormSet = formset_factory(BaseGrupoForm, extra=0, can_delete=True)
+        prefix = f'grupo_{grupo.id}'
+        kwargs = {'grupo_campos': grupo, 'cliente': cliente, 'produto': produto}
+
+        instancias_salvas = caso.grupos_de_valores.filter(grupo=grupo).prefetch_related('valores__campo')
+        initial_data = []
+        for instancia in instancias_salvas:
+            dados_instancia = {}
+            for valor in instancia.valores.all():
+                dados_instancia[f'campo_personalizado_{valor.campo.id}'] = valor.valor
+            initial_data.append(dados_instancia)
+
+        if request.method == 'POST':
+            formset = GrupoFormSet(post_data, prefix=prefix, form_kwargs=kwargs, initial=initial_data)
+        else:
+            formset = GrupoFormSet(prefix=prefix, form_kwargs=kwargs, initial=initial_data)
+        grupo_formsets[grupo.id] = (grupo, formset)
+
+    if request.method == 'POST':
+        formsets_validos = all(fs.is_valid() for _, fs in grupo_formsets.values())
+        if form.is_valid() and formsets_validos:
+            try:
+                with transaction.atomic():
+                    caso = form.save()
+
+                    for eco in estrutura.ordenamentos_simples.all():
+                        val = form.cleaned_data.get(f'campo_personalizado_{eco.campo.id}')
+                        valor_obj, _ = ValorCampoPersonalizado.objects.get_or_create(
+                            caso=caso, campo=eco.campo, instancia_grupo__isnull=True
+                        )
+                        valor_obj.valor = '' if val is None else str(val)
+                        valor_obj.save()
+
+                    for grupo, formset in grupo_formsets.values():
+                        caso.grupos_de_valores.filter(grupo=grupo).delete()
+                        for idx, f in enumerate(formset):
+                            if not f.has_changed() or f.cleaned_data.get('DELETE'):
+                                continue
+                            inst = InstanciaGrupoValor.objects.create(
+                                caso=caso, grupo=grupo, ordem_instancia=idx
+                            )
+                            for conf in grupo.ordenamentos_grupo.all():
+                                val_f = f.cleaned_data.get(f'campo_personalizado_{conf.campo.id}')
+                                ValorCampoPersonalizado.objects.create(
+                                    instancia_grupo=inst, campo=conf.campo, valor=str(val_f)
+                                )
+
+                    messages.success(request, "Caso atualizado!")
+                    return redirect('casos:detalhe_caso', pk=caso.pk)
+            except Exception as e:
+                messages.error(request, f"Erro: {e}")
+
+    return render(request, 'casos/editar_caso.html', {
+        'cliente': cliente,
+        'produto': produto,
+        'caso': caso,
+        'form': form,
+        'grupo_formsets': grupo_formsets.values(),
+        'estrutura': estrutura
+    })
+
+
 @login_required
 def lista_casos(request):
     casos_list = Caso.objects.select_related(
@@ -390,9 +502,8 @@ def detalhe_caso(request, pk):
                 if data_entrada:
                     caso.data_entrada = data_entrada
                 
-                valor_apurado = request.POST.get('valor_apurado', '').strip()
+                valor_apurado = normalize_currency_input(request.POST.get('valor_apurado', ''))
                 if valor_apurado:
-                    valor_apurado = valor_apurado.replace('R$', '').replace('.', '').replace(',', '.').strip()
                     caso.valor_apurado = Decimal(valor_apurado)
                 
                 advogado_id = request.POST.get('advogado_responsavel')
@@ -417,8 +528,8 @@ def detalhe_caso(request, pk):
                 if key.startswith('campo_'):
                     c_id = key.replace('campo_', '')
                     # Limpeza rápida se for moeda (detectado por vírgula)
-                    if isinstance(value, str) and ',' in value:
-                        value = value.replace('.', '').replace(',', '.')
+                    if isinstance(value, str) and (',' in value or 'R$' in value):
+                        value = normalize_currency_input(value)
                     
                     val_obj, _ = ValorCampoPersonalizado.objects.get_or_create(
                         caso=caso, campo_id=c_id, instancia_grupo__isnull=True
@@ -851,7 +962,8 @@ def editar_info_basicas(request, pk):
     caso = get_object_or_404(Caso, pk=pk)
     caso.status = request.POST.get('status')
     caso.data_entrada = request.POST.get('data_entrada')
-    caso.valor_apurado = request.POST.get('valor_apurado')
+    valor_apurado = normalize_currency_input(request.POST.get('valor_apurado', ''))
+    caso.valor_apurado = Decimal(valor_apurado) if valor_apurado else None
     caso.advogado_responsavel_id = request.POST.get('advogado_responsavel')
     caso.save()
     return render(request, 'casos/partials/card_info_basicas.html', {'caso': caso})
