@@ -140,7 +140,7 @@ class CasoDinamicoForm(forms.ModelForm):
         widgets = {
             'data_entrada': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
             'valor_apurado': forms.TextInput(attrs={
-                'class': 'form-control js-moeda',
+                'class': 'form-control js-moeda money',
                 'inputmode': 'decimal',
                 'placeholder': 'R$ 0,00'
             }),
@@ -356,7 +356,7 @@ class CasoInfoBasicasForm(forms.ModelForm):
         widgets = {
             'data_entrada': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'valor_apurado': forms.TextInput(attrs={
-                'class': 'form-control js-moeda',
+                'class': 'form-control js-moeda money',
                 'inputmode': 'decimal',
                 'placeholder': 'R$ 0,00'
             }),
@@ -370,6 +370,7 @@ class CasoInfoBasicasForm(forms.ModelForm):
             existing_classes = field.widget.attrs.get('class', '').strip()
             if not existing_classes:
                 field.widget.attrs['class'] = 'form-control'
+
 
 
 

@@ -220,7 +220,7 @@
     // --- FUNÇÕES DE MÁSCARA ---
     function aplicarMascaras() {
         // Moeda: O '#' permite números infinitos antes da vírgula (corrige o bug de 2 dígitos)
-        $('.money').mask('#.##0,00', {reverse: true});
+        $('.money').mask('R$ 000.000.000.000.000,00', {reverse: true});
 
         // Máscaras Dinâmicas do Admin (data-mask)
         $('.custom-mask').each(function() {

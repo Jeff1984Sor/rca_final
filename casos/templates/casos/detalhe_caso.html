@@ -295,8 +295,12 @@
 {% block extra_js %}
 {{ modelos_andamento_json|json_script:"modelos-andamento-data" }}
 <script src="{% static 'js/detalhe_caso.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        if (window.jQuery) {
+            $('.money').mask('R$ 000.000.000.000.000,00', {reverse: true});
+        }
         const modelosDataEl = document.getElementById('modelos-andamento-data');
         const modelosData = modelosDataEl ? JSON.parse(modelosDataEl.textContent) : {};
         
