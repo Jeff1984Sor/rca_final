@@ -594,10 +594,10 @@ def dashboard_view(request):
     return render(request, 'casos/dashboard.html', context)
 
 # ==============================================================================
-# SHAREPOINT & ANEXOS
+# EXPORTAR ANDAMENTOS
 # ==============================================================================
 @login_required
-def carregar_painel_anexos(request, pk):
+def exportar_andamentos_excel(request, pk):
     caso = get_object_or_404(Caso, pk=pk)
     andamentos = caso.andamentos.select_related('autor').order_by('data_andamento')
     workbook = openpyxl.Workbook()
@@ -617,6 +617,230 @@ def carregar_painel_anexos(request, pk):
     workbook.save(response)
     return response
 
+
+# ==============================================================================
+# SHAREPOINT & ANEXOS
+# ==============================================================================
+@login_required
+def carregar_painel_anexos(request, pk):
+    caso = get_object_or_404(Caso, pk=pk)
+    modo = request.GET.get('modo', 'anexos')
+
+    if not caso.sharepoint_folder_id:
+        return render(request, 'casos/partials/painel_anexos_criar.html', {'caso': caso})
+
+    try:
+        sp = SharePoint()
+        itens = sp.listar_conteudo_pasta(caso.sharepoint_folder_id)
+        context = {
+            'caso': caso,
+            'itens': itens,
+            'folder_id': caso.sharepoint_folder_id,
+            'root_folder_id': caso.sharepoint_folder_id,
+            'folder_name': f"Caso #{caso.id}",
+            'modo': modo
+        }
+        if modo == 'analyser':
+            return render(request, 'casos/partials/painel_anexos_analyser.html', context)
+        return render(request, 'casos/partials/painel_anexos.html', context)
+    except Exception as e:
+        logger.error(f"Erro ao carregar anexos: {e}", exc_info=True)
+        return render(request, 'casos/partials/painel_anexos_erro.html', {
+            'caso': caso,
+            'mensagem_erro': f"Erro ao conectar ao SharePoint: {str(e)}"
+        })
+
+@login_required
+def carregar_painel_analyser(request, pk):
+    request.GET = request.GET.copy()
+    request.GET._mutable = True
+    request.GET['modo'] = 'analyser'
+    return carregar_painel_anexos(request, pk)
+
+@require_POST
+@login_required
+def criar_pasta_para_caso(request, pk):
+    caso = get_object_or_404(Caso, pk=pk)
+    try:
+        sp = SharePoint()
+        nome_pasta_caso = str(caso.id)
+        pasta_caso_id = sp.criar_pasta_caso(nome_pasta_caso)
+        caso.sharepoint_folder_id = pasta_caso_id
+        caso.save()
+        return carregar_painel_anexos(request, pk)
+    except Exception as e:
+        logger.error(f"Erro ao criar pasta: {e}", exc_info=True)
+        return render(request, 'casos/partials/painel_anexos_erro.html', {
+            'caso': caso,
+            'mensagem_erro': f"Erro ao criar pasta: {e}"
+        })
+
+@login_required
+def recriar_pastas_sharepoint(request, pk):
+    caso = get_object_or_404(Caso, pk=pk)
+    try:
+        caso.sharepoint_folder_id = None
+        caso.save(update_fields=['sharepoint_folder_id'])
+        folder_id = recriar_estrutura_de_pastas(caso)
+        sp = SharePoint()
+        conteudo = sp.listar_conteudo_pasta(folder_id)
+        context = {
+            'caso': caso,
+            'itens': conteudo,
+            'folder_id': folder_id,
+            'root_folder_id': folder_id,
+            'folder_name': "Raiz"
+        }
+        return render(request, 'casos/partials/lista_arquivos.html', context)
+    except Exception as e:
+        return HttpResponse(f"<div class='alert alert-danger'><strong>Falha ao recriar pastas:</strong> {e}</div>")
+
+@login_required
+def baixar_arquivo_sharepoint(request, caso_pk, arquivo_id):
+    caso = get_object_or_404(Caso, pk=caso_pk)
+    try:
+        sp = SharePoint()
+        conteudo = sp.baixar_arquivo(arquivo_id)
+        info = sp.obter_info_arquivo(arquivo_id)
+        nome = info.get('name', 'arquivo')
+
+        response = HttpResponse(conteudo, content_type='application/octet-stream')
+        response['Content-Disposition'] = f'attachment; filename="{nome}"'
+        return response
+    except Exception as e:
+        logger.error(f"Erro no download: {e}", exc_info=True)
+        messages.error(request, f"Erro ao baixar: {str(e)}")
+        return redirect('casos:detalhe_caso', pk=caso_pk)
+
+@login_required
+def deletar_arquivo_sharepoint(request, caso_pk):
+    caso = get_object_or_404(Caso, pk=caso_pk)
+    arquivo_id = request.GET.get('arquivo_id')
+
+    if not arquivo_id:
+        return JsonResponse({'error': 'ID do arquivo nao fornecido'}, status=400)
+
+    try:
+        sp = SharePoint()
+        sp.excluir_item(arquivo_id)
+        return carregar_painel_anexos(request, caso_pk)
+    except Exception as e:
+        logger.error(f"Erro ao deletar arquivo: {e}", exc_info=True)
+        return render(request, 'casos/partials/painel_anexos_erro.html', {
+            'caso': caso,
+            'mensagem_erro': f"Erro ao deletar arquivo: {str(e)}"
+        })
+
+@login_required
+def criar_pasta_sharepoint(request, caso_pk):
+    caso = get_object_or_404(Caso, pk=caso_pk)
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Metodo nao permitido'}, status=405)
+
+    try:
+        nome_pasta = request.POST.get('nome_pasta', '').strip()
+        if not nome_pasta:
+            return JsonResponse({'error': 'Nome obrigatorio'}, status=400)
+
+        sp = SharePoint()
+        sp.criar_subpasta(caso.sharepoint_folder_id, nome_pasta)
+        return carregar_painel_anexos(request, caso_pk)
+    except Exception as e:
+        logger.error(f"Erro ao criar subpasta: {e}", exc_info=True)
+        return render(request, 'casos/partials/painel_anexos_erro.html', {
+            'caso': caso,
+            'mensagem_erro': f"Erro: {str(e)}"
+        })
+
+@login_required
+def carregar_conteudo_pasta(request, folder_id):
+    caso_pk = request.GET.get('caso_pk')
+    root_folder_id = request.GET.get('root_folder_id', folder_id)
+    modo = request.GET.get('modo', 'anexos')
+
+    caso = get_object_or_404(Caso, pk=caso_pk) if caso_pk else None
+
+    try:
+        sp = SharePoint()
+        folder_details = sp.get_item_details(folder_id)
+        itens = sp.listar_conteudo_pasta(folder_id)
+
+        context = {
+            'caso': caso,
+            'itens': itens,
+            'folder_id': folder_id,
+            'root_folder_id': root_folder_id,
+            'folder_name': folder_details.get('name', 'Pasta'),
+            'folder_details': folder_details,
+            'modo': modo
+        }
+
+        if modo == 'analyser':
+            return render(request, 'casos/partials/painel_anexos_analyser.html', context)
+        return render(request, 'casos/partials/painel_anexos.html', context)
+    except Exception as e:
+        logger.error(f"Erro ao carregar pasta: {e}", exc_info=True)
+        return HttpResponse(f"<div class='alert alert-danger'>Erro: {e}</div>")
+
+@login_required
+def preview_anexo(request, item_id):
+    try:
+        sp = SharePoint()
+        preview_url = sp.get_preview_url(item_id)
+        return HttpResponse(f'<iframe src="{preview_url}"></iframe>')
+    except Exception as e:
+        return HttpResponse(f"<p style='color:red;'>Erro: {e}</p>")
+
+@require_POST
+@login_required
+def excluir_anexo_sharepoint(request, item_id):
+    try:
+        sp = SharePoint()
+        sp.excluir_item(item_id)
+        response = HttpResponse(status=200)
+        response['HX-Refresh'] = 'true'
+        return response
+    except Exception as e:
+        return HttpResponse(f"<p style='color:red;'>Erro: {e}</p>", status=400)
+
+@login_required
+def listar_arquivos_para_analise(request, pk):
+    caso = get_object_or_404(Caso, pk=pk)
+    try:
+        sp = SharePoint()
+        if not caso.sharepoint_folder_id:
+            return JsonResponse({'success': False, 'arquivos': [], 'mensagem': 'Pasta nao encontrada'})
+
+        itens = sp.listar_conteudo_pasta(caso.sharepoint_folder_id)
+        arquivos = [
+            {'id': item['id'], 'nome': item.get('name') or item.get('nome')}
+            for item in itens
+            if item.get('type') == 'file' or item.get('tipo') == 'file'
+        ]
+        return JsonResponse({'success': True, 'arquivos': arquivos})
+    except Exception as e:
+        return JsonResponse({'success': False, 'arquivos': [], 'mensagem': str(e)})
+
+@login_required
+def analyser_navegador_pasta(request, pk, folder_id):
+    caso = get_object_or_404(Caso, pk=pk)
+    root_folder_id = request.GET.get('root_folder_id', folder_id)
+    try:
+        sp = SharePoint()
+        folder_details = sp.get_item_details(folder_id)
+        itens = sp.listar_conteudo_pasta(folder_id)
+        context = {
+            'caso': caso,
+            'itens': itens,
+            'folder_id': folder_id,
+            'root_folder_id': root_folder_id,
+            'folder_name': folder_details.get('name', 'Pasta'),
+            'folder_details': folder_details
+        }
+        return render(request, 'casos/partials/analyser_navegador.html', context)
+    except Exception as e:
+        return HttpResponse(f'<div class="alert alert-danger">Erro: {e}</div>')
 
 @login_required
 def exportar_timesheet_excel(request, pk):
@@ -830,6 +1054,41 @@ def selecionar_filtros_exportacao(request):
     produtos = Produto.objects.all().order_by('nome')
     context = {'clientes': clientes, 'produtos': produtos, 'titulo': 'Exportação Dinâmica de Casos'}
     return render(request, 'casos/selecionar_filtros_exportacao.html', context)
+
+@login_required
+def exportar_casos_excel(request):
+    casos_queryset = Caso.objects.select_related(
+        'cliente', 'produto', 'advogado_responsavel'
+    ).order_by('-data_entrada')
+
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = 'Casos'
+    headers = [
+        'ID', 'Cliente', 'Produto', 'Status', 'Data Entrada',
+        'Advogado', 'Valor Apurado'
+    ]
+    sheet.append(headers)
+
+    for caso in casos_queryset:
+        advogado = ''
+        if caso.advogado_responsavel:
+            advogado = caso.advogado_responsavel.get_full_name() or caso.advogado_responsavel.username
+        data_entrada = caso.data_entrada.strftime('%d/%m/%Y') if caso.data_entrada else ''
+        sheet.append([
+            caso.id,
+            caso.cliente.nome if caso.cliente else '',
+            caso.produto.nome if caso.produto else '',
+            caso.get_status_display(),
+            data_entrada,
+            advogado,
+            str(caso.valor_apurado) if caso.valor_apurado is not None else ''
+        ])
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="casos.xlsx"'
+    workbook.save(response)
+    return response
 
 
 @login_required
