@@ -92,6 +92,7 @@ class Caso(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        verbose_name="Advogado Responsável",
         related_name='casos_responsaveis'
     )
     
