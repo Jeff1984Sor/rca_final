@@ -121,8 +121,34 @@
         </div>
         {% endif %}
 
-        <!-- CARD 4: GRUPOS REPETÍVEIS -->
-        {% if grupos_de_valores_salvos %}{% for instancia in grupos_de_valores_salvos %}<div class="card mt-4"><div class="card-header-with-edit"><h2 class="card-title-icon card-title"><i class="fa-solid fa-layer-group"></i> {{ instancia.grupo.nome_grupo }} #{{ forloop.counter }}</h2><a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="btn btn-sm action-btn btn-edit"><i class="fa-solid fa-pen"></i> Editar</a></div><div class="card-body"><div class="details-grid">{% for valor in instancia.valores.all %}<div class="detail-card"><div class="detail-label"><i class="fa-solid fa-circle-dot"></i> {{ valor.campo.nome_campo }}</div><div class="detail-value">{{ valor.valor|format_dynamic_value:valor.campo.tipo_campo|default:"-" }}</div></div>{% endfor %}</div></div></div>{% endfor %}{% endif %}
+        <!-- CARD 4: GRUPOS REPETIVEIS -->
+        {% if grupos_repetiveis_context %}
+            {% for item in grupos_repetiveis_context %}
+                {% for instancia in item.instancias %}
+                    <div class="card mt-4">
+                        <div class="card-header-with-edit">
+                            <h2 class="card-title-icon card-title">
+                                <i class="fa-solid fa-layer-group"></i>
+                                {{ item.grupo.nome_grupo }}{% if not instancia.placeholder %} #{{ forloop.counter }}{% endif %}
+                            </h2>
+                            <a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="btn btn-sm action-btn btn-edit">
+                                <i class="fa-solid fa-pen"></i> Editar
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <div class="details-grid">
+                                {% for valor in instancia.valores %}
+                                    <div class="detail-card">
+                                        <div class="detail-label"><i class="fa-solid fa-circle-dot"></i> {{ valor.campo.nome_campo }}</div>
+                                        <div class="detail-value">{{ valor.valor|format_dynamic_value:valor.campo.tipo_campo|default:"-" }}</div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endfor %}
+        {% endif %}
     </div>
 
     <!-- ABA: AÇÕES -->

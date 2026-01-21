@@ -412,7 +412,7 @@ def editar_caso(request, pk):
 
     grupo_formsets = {}
     for grupo in estrutura.grupos_repetiveis.all():
-        GrupoFormSet = formset_factory(BaseGrupoForm, extra=0, can_delete=True)
+        GrupoFormSet = formset_factory(BaseGrupoForm, extra=1, can_delete=True)
         prefix = f'grupo_{grupo.id}'
         kwargs = {'grupo_campos': grupo, 'cliente': cliente, 'produto': produto}
 
@@ -567,6 +567,30 @@ def detalhe_caso(request, pk):
             return redirect('casos:detalhe_caso', pk=pk)
 
     # Renderização normal do detalhe
+    estrutura = EstruturaDeCampos.objects.filter(
+        cliente=caso.cliente, produto=caso.produto
+    ).prefetch_related('grupos_repetiveis__ordenamentos_grupo__campo').first()
+
+    grupos_repetiveis_context = []
+    if estrutura:
+        for grupo in estrutura.grupos_repetiveis.all():
+            campos_grupo = list(grupo.ordenamentos_grupo.select_related('campo').order_by('order'))
+            instancias = caso.grupos_de_valores.filter(grupo=grupo).prefetch_related('valores__campo')
+            instancias_context = []
+            for instancia in instancias:
+                valores_map = {v.campo_id: v.valor for v in instancia.valores.all()}
+                valores_render = []
+                for conf in campos_grupo:
+                    valores_render.append({
+                        'campo': conf.campo,
+                        'valor': valores_map.get(conf.campo_id, '')
+                    })
+                instancias_context.append({'valores': valores_render, 'placeholder': False})
+            if not instancias_context:
+                valores_render = [{'campo': conf.campo, 'valor': ''} for conf in campos_grupo]
+                instancias_context.append({'valores': valores_render, 'placeholder': True})
+            grupos_repetiveis_context.append({'grupo': grupo, 'instancias': instancias_context})
+
     context = {
         'caso': caso,
         'form_andamento': AndamentoForm(),
@@ -581,6 +605,7 @@ def detalhe_caso(request, pk):
         'form_info_basicas': CasoInfoBasicasForm(instance=caso),
         'valores_personalizados': caso.valores_personalizados.filter(instancia_grupo__isnull=True).select_related('campo'),
         'grupos_de_valores_salvos': caso.grupos_de_valores.all().prefetch_related('valores__campo'),
+        'grupos_repetiveis_context': grupos_repetiveis_context,
     }
     return render(request, 'casos/detalhe_caso.html', context)
 

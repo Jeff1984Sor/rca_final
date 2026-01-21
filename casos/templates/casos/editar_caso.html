@@ -169,6 +169,7 @@
                                                 {{ field }}
                                             </div>
                                         {% endfor %}
+                                        {% for hidden in form_grupo.hidden_fields %}{{ hidden }}{% endfor %}
                                     </div>
                                 </div>
                             </div>
