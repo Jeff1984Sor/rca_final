@@ -343,6 +343,18 @@ def criar_caso(request, cliente_id, produto_id):
                         val = dados_limpos.get(f'campo_personalizado_{eco.campo.id}', '')
                         dados_titulo[eco.campo.nome_variavel.lower()] = '' if val is None else str(val)
 
+                    for grupo, formset in grupo_formsets.values():
+                        for f in formset:
+                            if not f.has_changed() or f.cleaned_data.get('DELETE'):
+                                continue
+                            for conf in grupo.ordenamentos_grupo.all():
+                                val_f = f.cleaned_data.get(f'campo_personalizado_{conf.campo.id}')
+                                if val_f not in (None, ''):
+                                    dados_titulo.setdefault(
+                                        conf.campo.nome_variavel.lower(),
+                                        str(val_f)
+                                    )
+
                     titulo_final = render_titulo_caso(produto.padrao_titulo or "", dados_titulo)
                     
                     if not titulo_final.strip(): titulo_final = f"Caso {cliente.nome}"
