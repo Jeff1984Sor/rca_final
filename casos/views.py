@@ -4,6 +4,7 @@
 # ==============================================================================
 
 import logging
+import re
 from decimal import Decimal, InvalidOperation
 from datetime import datetime, timedelta, date
 from django.db.models import ProtectedError
@@ -92,6 +93,14 @@ def normalize_currency_input(value):
     value = value.replace('R$', '').replace(' ', '').replace('\xa0', '')
     value = value.replace('.', '').replace(',', '.')
     return value
+
+def render_titulo_caso(padrao, dados):
+    if not padrao:
+        return ''
+    def replacer(match):
+        key = match.group(1).strip().lower()
+        return dados.get(key, '')
+    return re.sub(r'\{([^}]+)\}', replacer, padrao)
 
 # Importa funções auxiliares (com fallback)
 try:
@@ -332,11 +341,9 @@ def criar_caso(request, cliente_id, produto_id):
                     dados_limpos = form.cleaned_data
                     for eco in estrutura.ordenamentos_simples.all():
                         val = dados_limpos.get(f'campo_personalizado_{eco.campo.id}', '')
-                        dados_titulo[eco.campo.nome_variavel] = str(val)
+                        dados_titulo[eco.campo.nome_variavel.lower()] = '' if val is None else str(val)
 
-                    titulo_final = produto.padrao_titulo or ""
-                    for chave, valor in dados_titulo.items():
-                        titulo_final = titulo_final.replace(f"{{{chave}}}", valor)
+                    titulo_final = render_titulo_caso(produto.padrao_titulo or "", dados_titulo)
                     
                     if not titulo_final.strip(): titulo_final = f"Caso {cliente.nome}"
 
@@ -490,8 +497,12 @@ def lista_casos(request):
     if filtro_advogado:
         casos_list = casos_list.filter(advogado_responsavel_id=filtro_advogado)
 
+    paginator = Paginator(casos_list, 20)
+    page = request.GET.get('page')
+    casos = paginator.get_page(page)
+
     context = {
-        'casos': casos_list,
+        'casos': casos,
         'valores_filtro': request.GET,
         'todos_clientes': Cliente.objects.all().order_by('nome'),
         'todos_produtos': Produto.objects.all().order_by('nome'),
@@ -1335,33 +1346,6 @@ def criar_pasta_raiz_sharepoint(request):
     response = HttpResponse(status=200)
     response['HX-Refresh'] = 'true'
     return response
-
-# ==============================================================================
-# LISTA DE CASOS E FILTROS
-# ==============================================================================
-@login_required
-def lista_casos(request):
-    casos_list = Caso.objects.select_related('cliente', 'produto', 'advogado_responsavel').all().order_by('-id')
-    
-    q = request.GET.get('filtro_titulo')
-    if q: casos_list = casos_list.filter(titulo__icontains=q)
-    
-    cliente_id = request.GET.get('filtro_cliente')
-    if cliente_id: casos_list = casos_list.filter(cliente_id=cliente_id)
-
-    status = request.GET.get('filtro_status')
-    if status: casos_list = casos_list.filter(status=status)
-
-    paginator = Paginator(casos_list, 20)
-    page = request.GET.get('page')
-    casos = paginator.get_page(page)
-
-    return render(request, 'casos/lista_casos.html', {
-        'casos': casos,
-        'todos_clientes': Cliente.objects.all(),
-        'todos_produtos': Produto.objects.all(),
-        'status_choices': Caso.STATUS_CHOICES
-    })
 
 # ==============================================================================
 # OUTRAS VIEWS (TIMESHEET, ACORDOS, ETC)
