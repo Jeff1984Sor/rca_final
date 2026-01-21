@@ -20,8 +20,8 @@ class TomadorTelefoneInline(admin.TabularInline):
 
 @admin.register(Tomador)
 class TomadorAdmin(admin.ModelAdmin):
-    list_display = ('nome', 'cpf_cnpj', 'data_criacao')
-    search_fields = ('nome', 'cpf_cnpj')
+    list_display = ('nome', 'tipo', 'cpf', 'cnpj', 'data_criacao')
+    search_fields = ('nome', 'cpf', 'cnpj')
     inlines = [TomadorEmailInline, TomadorTelefoneInline]
 
 # --- FIM CONFIGURAÇÃO TOMADOR ---

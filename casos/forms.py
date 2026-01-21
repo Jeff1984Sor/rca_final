@@ -173,6 +173,9 @@ class CasoDinamicoForm(forms.ModelForm):
 
         if mostrar_tomador:
             self.fields['tomador'].queryset = Tomador.objects.all().order_by('nome')
+            self.fields['tomador'].widget.attrs.update({'class': 'form-select select2-tomador'})
+            # Evita problemas de cursor ao renderizar choices em algumas bases
+            self.fields['tomador'].choices = list(self.fields['tomador'].choices)
         else:
             if 'tomador' in self.fields:
                 del self.fields['tomador']
