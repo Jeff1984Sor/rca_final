@@ -21,7 +21,7 @@ from django.db import transaction
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.core.paginator import Paginator
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from io import BytesIO
 
 # --- DRF ---
@@ -56,7 +56,10 @@ from .models import (
     FluxoInterno,
     Tomador,
     TomadorEmail,
-    TomadorTelefone
+    TomadorTelefone,
+    Segurado,
+    SeguradoEmail,
+    SeguradoTelefone
 )
 from .forms import (
     CasoDinamicoForm,
@@ -67,7 +70,8 @@ from .forms import (
     BaseGrupoForm,
     CasoInfoBasicasForm,
     CasoDadosAdicionaisForm,
-    TomadorForm
+    TomadorForm,
+    SeguradoForm
 )
 from .folder_utils import recriar_estrutura_de_pastas
 from .serializers import CasoSerializer
@@ -149,6 +153,50 @@ def exportar_tomadores_excel(request):
 
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename="relatorio_tomadores.xlsx"'
+    wb.save(response)
+    return response
+
+@login_required
+def exportar_segurados_excel(request):
+    queryset = Segurado.objects.prefetch_related(
+        'casos__cliente', 'casos__produto', 'casos__valores_personalizados__campo'
+    )
+    q = request.GET.get('q')
+    if q:
+        queryset = queryset.filter(
+            Q(nome__icontains=q) | Q(cpf__icontains=q) | Q(cnpj__icontains=q)
+        )
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Relatorio Segurados"
+    headers = ["Nome do Segurado", "CPF/CNPJ", "Cliente", "Produto", "Aviso", "Status"]
+    ws.append(headers)
+
+    for segurado in queryset:
+        casos = segurado.casos.all()
+        if casos.exists():
+            for caso in casos:
+                aviso = "-"
+                for valor in caso.valores_personalizados.all():
+                    if valor.campo and valor.campo.nome_variavel == 'aviso' and valor.valor:
+                        aviso = valor.valor
+                        break
+                if aviso == "-":
+                    aviso = caso.titulo or f"Caso #{caso.id}"
+                ws.append([
+                    segurado.nome,
+                    segurado.cpf or segurado.cnpj or "-",
+                    caso.cliente.nome if caso.cliente else "-",
+                    caso.produto.nome if caso.produto else "-",
+                    aviso,
+                    caso.get_status_display()
+                ])
+        else:
+            ws.append([segurado.nome, segurado.cpf or segurado.cnpj or "-", "-", "-", "-", "Sem casos"])
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="relatorio_segurados.xlsx"'
     wb.save(response)
     return response
 
@@ -311,6 +359,129 @@ class TomadorDeleteView(DeleteView):
                 f"Nao e possivel excluir o tomador '{self.object.nome}' pois existem casos vinculados."
             )
             return redirect('casos:editar_tomador', pk=self.object.pk)
+
+
+class SeguradoListView(ListView):
+    model = Segurado
+    template_name = 'casos/segurado_list.html'
+    context_object_name = 'segurados'
+    paginate_by = 20
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        q = self.request.GET.get('q')
+        if q:
+            queryset = queryset.filter(
+                Q(nome__icontains=q) | Q(cpf__icontains=q) | Q(cnpj__icontains=q)
+            )
+        return queryset
+
+
+class SeguradoCreateView(CreateView):
+    model = Segurado
+    form_class = SeguradoForm
+    template_name = 'casos/segurado_form.html'
+    success_url = reverse_lazy('casos:lista_segurados')
+
+    def form_valid(self, form):
+        with transaction.atomic():
+            self.object = form.save()
+            for email in self.request.POST.getlist('lista_emails'):
+                if email.strip():
+                    SeguradoEmail.objects.create(segurado=self.object, email=email.strip())
+            fones = self.request.POST.getlist('lista_telefones')
+            tipos = self.request.POST.getlist('lista_telefones_tipo')
+            for idx, fone in enumerate(fones):
+                if fone.strip():
+                    tipo = tipos[idx] if idx < len(tipos) and tipos[idx] else 'CELULAR'
+                    SeguradoTelefone.objects.create(segurado=self.object, telefone=fone.strip(), tipo=tipo)
+        return redirect(self.get_success_url())
+
+
+class SeguradoUpdateView(UpdateView):
+    model = Segurado
+    form_class = SeguradoForm
+    template_name = 'casos/segurado_form.html'
+    success_url = reverse_lazy('casos:lista_segurados')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['casos_vinculados'] = self.object.casos.all().select_related('cliente', 'produto')
+        context['emails'] = self.object.emails.all()
+        context['telefones'] = self.object.telefones.all()
+        context['todos_segurados'] = Segurado.objects.exclude(id=self.object.id).order_by('nome')
+        return context
+
+    def form_valid(self, form):
+        with transaction.atomic():
+            self.object = form.save()
+            remove_emails = set(self.request.POST.getlist('remove_emails'))
+            remove_fones = set(self.request.POST.getlist('remove_telefones'))
+
+            for email_obj in self.object.emails.all():
+                if str(email_obj.id) in remove_emails:
+                    email_obj.delete()
+                    continue
+                new_val = self.request.POST.get(f'email_{email_obj.id}', '').strip()
+                if not new_val:
+                    email_obj.delete()
+                elif new_val != email_obj.email:
+                    email_obj.email = new_val
+                    email_obj.save()
+
+            for fone_obj in self.object.telefones.all():
+                if str(fone_obj.id) in remove_fones:
+                    fone_obj.delete()
+                    continue
+                new_val = self.request.POST.get(f'telefone_{fone_obj.id}', '').strip()
+                new_tipo = self.request.POST.get(f'telefone_tipo_{fone_obj.id}', fone_obj.tipo)
+                if not new_val:
+                    fone_obj.delete()
+                elif new_val != fone_obj.telefone or new_tipo != fone_obj.tipo:
+                    fone_obj.telefone = new_val
+                    fone_obj.tipo = new_tipo
+                    fone_obj.save()
+
+            for email in self.request.POST.getlist('lista_emails'):
+                if email.strip():
+                    SeguradoEmail.objects.create(segurado=self.object, email=email.strip())
+            fones = self.request.POST.getlist('lista_telefones')
+            tipos = self.request.POST.getlist('lista_telefones_tipo')
+            for idx, fone in enumerate(fones):
+                if fone.strip():
+                    tipo = tipos[idx] if idx < len(tipos) and tipos[idx] else 'CELULAR'
+                    SeguradoTelefone.objects.create(segurado=self.object, telefone=fone.strip(), tipo=tipo)
+        return redirect(self.get_success_url())
+
+
+class SeguradoDeleteView(DeleteView):
+    model = Segurado
+    template_name = 'casos/segurado_confirm_delete.html'
+    success_url = reverse_lazy('casos:lista_segurados')
+
+    def post(self, request, *args, **kwargs):
+        try:
+            return super().post(request, *args, **kwargs)
+        except ProtectedError:
+            self.object = self.get_object()
+            messages.error(
+                request,
+                f"Nao e possivel excluir o segurado '{self.object.nome}' pois existem casos vinculados."
+            )
+            return redirect('casos:editar_segurado', pk=self.object.pk)
+
+
+class SeguradoDetailView(DetailView):
+    model = Segurado
+    template_name = 'casos/segurado_detail.html'
+    context_object_name = 'segurado'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['casos_vinculados'] = self.object.casos.all().select_related('cliente', 'produto')
+        context['emails'] = self.object.emails.all()
+        context['telefones'] = self.object.telefones.all()
+        return context
 
 @require_POST
 @login_required
@@ -1467,3 +1638,28 @@ def obter_detalhes_tomador(request, pk):
         })
     except Tomador.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Tomador não encontrado'})
+
+
+@login_required
+def obter_detalhes_segurado(request, pk):
+    """
+    Busca os dados do segurado (CPF, Emails, Telefones) e retorna JSON.
+    """
+    try:
+        segurado = Segurado.objects.get(pk=pk)
+        emails = list(segurado.emails.values_list('email', flat=True))
+        telefones = [
+            f"{fone.get_tipo_display()}: {fone.telefone}"
+            for fone in segurado.telefones.all()
+        ]
+        return JsonResponse({
+            'success': True,
+            'tipo': segurado.tipo,
+            'cpf': segurado.cpf,
+            'cnpj': segurado.cnpj,
+            'documento': segurado.cpf if segurado.tipo == 'PF' else segurado.cnpj,
+            'emails': emails,
+            'telefones': telefones
+        })
+    except Segurado.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Segurado nao encontrado'})

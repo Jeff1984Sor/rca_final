@@ -110,7 +110,7 @@
             <h3 id="sec-dados-principais" class="section-title"><i class="fa-solid fa-circle-info"></i> Dados Principais</h3>
             <div class="row g-3">
                 {% for field in form.campos_fixos %}
-                    {% if field.name != 'tomador' %}
+                    {% if field.name != 'tomador' and field.name != 'segurado' %}
                         <div class="col-md-6">
                             <label class="form-label fw-bold">{{ field.label }}</label>
                             {{ field }}
@@ -130,6 +130,41 @@
                     </div>
                 {% endfor %}
             </div>
+
+            <!-- 3. SEGURADO -->
+            {% if 'segurado' in form.fields %}
+            <h3 id="sec-segurado" class="section-title"><i class="fa-solid fa-user-shield"></i> Segurado</h3>
+            <div class="p-3 bg-light rounded border">
+                <div class="row">
+                    <div class="col-12 mb-2">
+                        <label class="form-label fw-bold">Selecione o Segurado:</label>
+                        {{ form.segurado }}
+                    </div>
+
+                    <div class="col-12 mb-2" id="painelDetalhesSegurado" style="display:none;">
+                        <div class="card card-body bg-white border shadow-sm py-2">
+                            <div class="row text-muted small">
+                                <div class="col-md-4"><strong>CPF/CNPJ:</strong> <span id="lblSeguradoDoc">-</span></div>
+                                <div class="col-md-4"><strong>Emails:</strong> <span id="lblSeguradoEmails">-</span></div>
+                                <div class="col-md-4"><strong>Fones:</strong> <span id="lblSeguradoFones">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-2">
+                        {% if caso.segurado %}
+                            <a href="{% url 'casos:editar_segurado' caso.segurado.pk %}" class="btn btn-sm btn-orange">
+                                <i class="fa-solid fa-pen"></i> Editar Segurado
+                            </a>
+                        {% else %}
+                            <a href="{% url 'casos:criar_segurado' %}" class="btn btn-sm btn-orange">
+                                <i class="fa-solid fa-plus"></i> Cadastrar Novo Segurado
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- 3. TOMADOR (SEPARADO) -->
             {% if 'tomador' in form.fields %}
@@ -336,6 +371,12 @@
         aplicarMascaras();
 
         // 1. SELECT2
+        $('.select2-segurado').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: 'Pesquise...',
+            allowClear: true
+        });
         $('.select2-tomador').select2({
             theme: 'bootstrap-5',
             width: '100%',
@@ -356,6 +397,29 @@
         toggleDocumentoFields($('select[name="tipo"]').val());
         $('select[name="tipo"]').on('change', function() {
             toggleDocumentoFields($(this).val());
+        });
+
+        // 2. DETALHES DO SEGURADO (Ao carregar e ao mudar)
+        function carregarDetalhesSegurado(id) {
+            if (id) {
+                $.get('/casos/ajax/segurado/' + id + '/detalhes/', function(data) {
+                    if (data.success) {
+                        $('#lblSeguradoDoc').text(data.documento || '-');
+                        $('#lblSeguradoEmails').text(data.emails.join(', ') || '-');
+                        $('#lblSeguradoFones').text(data.telefones.join(', ') || '-');
+                        $('#painelDetalhesSegurado').slideDown();
+                    }
+                });
+            } else {
+                $('#painelDetalhesSegurado').slideUp();
+            }
+        }
+
+        var seguradoInicial = $('.select2-segurado').val();
+        if (seguradoInicial) carregarDetalhesSegurado(seguradoInicial);
+
+        $('.select2-segurado').on('change', function() {
+            carregarDetalhesSegurado($(this).val());
         });
 
         // 2. DETALHES DO TOMADOR (Ao carregar e ao mudar)

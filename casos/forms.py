@@ -23,7 +23,7 @@ from campos_custom.models import (
 
 from .models import (
     Caso, Andamento, Timesheet, Acordo, Despesa, 
-    Tomador, ConfiguracaoTomador 
+    Tomador, ConfiguracaoTomador, Segurado 
 )
 from clientes.models import Cliente
 from produtos.models import Produto
@@ -140,12 +140,28 @@ class TomadorForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
 # ==============================================================================
+# FORMULARIO DO SEGURADO
+class SeguradoForm(forms.ModelForm):
+    class Meta:
+        model = Segurado
+        fields = ['nome', 'tipo', 'cpf', 'cnpj']
+        widgets = {
+            'nome': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nome completo'}),
+            'tipo': forms.Select(attrs={'class': 'form-select'}),
+            'cpf': forms.TextInput(attrs={'class': 'form-control custom-mask', 'placeholder': '000.000.000-00', 'data-mask': '000.000.000-00'}),
+            'cnpj': forms.TextInput(attrs={'class': 'form-control custom-mask', 'placeholder': '00.000.000/0000-00', 'data-mask': '00.000.000/0000-00'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
 # FORMULÁRIO DINÂMICO DE CASO
 # ==============================================================================
 class CasoDinamicoForm(forms.ModelForm):
     class Meta:
         model = Caso
-        fields = ['data_entrada', 'valor_apurado', 'data_encerramento', 'status', 'advogado_responsavel', 'tomador']
+        fields = ['data_entrada', 'valor_apurado', 'data_encerramento', 'status', 'advogado_responsavel', 'segurado', 'tomador']
         widgets = {
             'data_entrada': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
             'valor_apurado': forms.TextInput(attrs={
@@ -156,6 +172,7 @@ class CasoDinamicoForm(forms.ModelForm):
             'data_encerramento': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date', 'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
             'advogado_responsavel': forms.Select(attrs={'class': 'form-select'}),
+            'segurado': forms.Select(attrs={'class': 'form-select select2-segurado'}),
             'tomador': forms.Select(attrs={'class': 'form-select select2-tomador'}),
         }
 
@@ -193,6 +210,11 @@ class CasoDinamicoForm(forms.ModelForm):
             if 'tomador' in self.fields:
                 del self.fields['tomador']
                 self._campos_fixos_list = [f for f in self._campos_fixos_list if f.name != 'tomador']
+
+        if 'segurado' in self.fields:
+            self.fields['segurado'].queryset = Segurado.objects.all().order_by('nome')
+            self.fields['segurado'].widget.attrs.update({'class': 'form-select select2-segurado'})
+            self.fields['segurado'].choices = list(self.fields['segurado'].choices)
 
         # --- CARREGAMENTO DE ESTRUTURA ---
         if self.instance and self.instance.pk:

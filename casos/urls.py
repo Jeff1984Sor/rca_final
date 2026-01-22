@@ -28,8 +28,16 @@ urlpatterns = [
     path('tomadores/<int:pk>/editar/', views.TomadorUpdateView.as_view(), name='editar_tomador'),
     path('tomadores/<int:pk>/deletar/', views.TomadorDeleteView.as_view(), name='deletar_tomador'),
 
+    # --- SEGURADOS (CRUD) ---
+    path('segurados/', views.SeguradoListView.as_view(), name='lista_segurados'),
+    path('segurados/novo/', views.SeguradoCreateView.as_view(), name='criar_segurado'),
+    path('segurados/<int:pk>/', views.SeguradoDetailView.as_view(), name='detalhe_segurado'),
+    path('segurados/<int:pk>/editar/', views.SeguradoUpdateView.as_view(), name='editar_segurado'),
+    path('segurados/<int:pk>/deletar/', views.SeguradoDeleteView.as_view(), name='deletar_segurado'),
+
     # --- AJAX ---
     path('ajax/criar-tomador/', views.criar_tomador_ajax, name='ajax_criar_tomador'),
+    path('ajax/segurado/<int:pk>/detalhes/', views.obter_detalhes_segurado, name='ajax_segurado_detalhes'),
 
     # --- MODAIS HTMX ---
     path('caso/<int:pk>/editar-info-basicas/', views.editar_info_basicas, name='editar_info_basicas'),
@@ -78,6 +86,7 @@ urlpatterns = [
     path('ajax/tomador/<int:pk>/detalhes/', views.obter_detalhes_tomador, name='ajax_tomador_detalhes'),
     path('tomadores/exportar/excel/', views.exportar_tomadores_excel, name='exportar_tomadores_excel'),
     path('tomadores/exportar/pdf/', views.exportar_tomadores_pdf, name='exportar_tomadores_pdf'),
+    path('segurados/exportar/excel/', views.exportar_segurados_excel, name='exportar_segurados_excel'),
     path('caso/<int:pk>/trocar-tomador/', views.trocar_tomador_do_caso, name='trocar_tomador_do_caso'),
     
     # API

@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Confirmar Exclusao de Segurado{% endblock %}
+
+{% block content %}
+<div class="confirm-delete-container">
+    <div class="card slide-up">
+        <div class="confirm-delete-content text-center">
+            <div class="confirm-delete-icon-wrapper">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h1 class="confirm-delete-title">Atencao!</h1>
+            <p class="confirm-delete-message">
+                Voce tem certeza que deseja deletar permanentemente este segurado?
+            </p>
+
+            <div class="object-details-box">
+                <div class="object-details-item">
+                    <span class="label"><i class="fa-solid fa-user-shield"></i> Segurado</span>
+                    <span class="value">{{ object.nome }}</span>
+                </div>
+                <div class="object-details-item">
+                    <span class="label"><i class="fa-solid fa-id-card"></i> Documento</span>
+                    <span class="value">{{ object.cpf|default:object.cnpj|default:"-" }}</span>
+                </div>
+                <div class="object-details-item">
+                    <span class="label"><i class="fa-solid fa-folder-open"></i> Casos vinculados</span>
+                    <span class="value highlight">{{ object.casos.count }}</span>
+                </div>
+            </div>
+
+            <div class="alert alert-danger text-left">
+                <div class="d-flex" style="gap: 12px; align-items: flex-start;">
+                    <i class="fa-solid fa-circle-exclamation" style="font-size: 1.5rem; margin-top: 4px;"></i>
+                    <div>
+                        <div style="font-weight: 700;">Esta acao e irreversivel!</div>
+                        <div style="font-size: 0.9rem;">O segurado sera permanentemente removido.</div>
+                    </div>
+                </div>
+            </div>
+
+            <form method="post" class="mt-4">
+                {% csrf_token %}
+                <div class="d-flex justify-content-center gap-12">
+                    <a href="{% url 'casos:lista_segurados' %}" class="btn btn-outline-secondary">
+                        <i class="fa-solid fa-times-circle"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fa-solid fa-trash-alt"></i> Sim, Deletar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -53,6 +53,53 @@ class TomadorTelefone(models.Model):
         return self.telefone
 
 # ==============================================================================
+# 1B. MODELOS DE SEGURADO
+# ==============================================================================
+
+class Segurado(models.Model):
+    TIPO_PESSOA_CHOICES = [
+        ('PF', 'Pessoa Fisica'),
+        ('PJ', 'Pessoa Juridica'),
+    ]
+
+    nome = models.CharField(max_length=255, verbose_name="Nome do Segurado")
+    tipo = models.CharField(max_length=2, choices=TIPO_PESSOA_CHOICES, verbose_name="Tipo", default="PF")
+    cpf = models.CharField(max_length=14, verbose_name="CPF", blank=True, null=True)
+    cnpj = models.CharField(max_length=18, verbose_name="CNPJ", blank=True, null=True)
+    data_criacao = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['nome']
+        verbose_name = "Segurado"
+        verbose_name_plural = "Segurados"
+
+    def __str__(self):
+        return self.nome
+
+class SeguradoEmail(models.Model):
+    """Tabela auxiliar para multiplos e-mails por segurado"""
+    segurado = models.ForeignKey(Segurado, on_delete=models.CASCADE, related_name='emails')
+    email = models.EmailField(verbose_name="E-mail")
+
+    def __str__(self):
+        return self.email
+
+class SeguradoTelefone(models.Model):
+    """Tabela auxiliar para multiplos telefones por segurado"""
+    TIPO_CHOICES = [
+        ('COMERCIAL', 'Comercial'),
+        ('RESIDENCIAL', 'Residencial'),
+        ('CELULAR', 'Celular'),
+    ]
+
+    segurado = models.ForeignKey(Segurado, on_delete=models.CASCADE, related_name='telefones')
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='CELULAR', verbose_name="Tipo")
+    telefone = models.CharField(max_length=20, verbose_name="Telefone")
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} - {self.telefone}"
+
+# ==============================================================================
 # 2. MODELO DE CASO (ATUALIZADO)
 # ==============================================================================
 
@@ -67,6 +114,16 @@ class Caso(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='casos')
     
     produto = models.ForeignKey('produtos.Produto', on_delete=models.PROTECT, related_name='casos')
+
+    segurado = models.ForeignKey(
+        Segurado,
+        on_delete=models.PROTECT,
+        related_name='casos',
+        verbose_name="Segurado",
+        null=True,
+        blank=True
+    )
+    # ---------------------------
 
     # --- NOVO CAMPO: TOMADOR ---
     tomador = models.ForeignKey(
