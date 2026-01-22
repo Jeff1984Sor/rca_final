@@ -263,10 +263,37 @@ class TomadorUpdateView(UpdateView):
     def form_valid(self, form):
         with transaction.atomic():
             self.object = form.save()
+            remove_emails = set(self.request.POST.getlist('remove_emails'))
+            remove_fones = set(self.request.POST.getlist('remove_telefones'))
+
+            for email_obj in self.object.emails.all():
+                if str(email_obj.id) in remove_emails:
+                    email_obj.delete()
+                    continue
+                new_val = self.request.POST.get(f'email_{email_obj.id}', '').strip()
+                if not new_val:
+                    email_obj.delete()
+                elif new_val != email_obj.email:
+                    email_obj.email = new_val
+                    email_obj.save()
+
+            for fone_obj in self.object.telefones.all():
+                if str(fone_obj.id) in remove_fones:
+                    fone_obj.delete()
+                    continue
+                new_val = self.request.POST.get(f'telefone_{fone_obj.id}', '').strip()
+                if not new_val:
+                    fone_obj.delete()
+                elif new_val != fone_obj.telefone:
+                    fone_obj.telefone = new_val
+                    fone_obj.save()
+
             for email in self.request.POST.getlist('lista_emails'):
-                if email.strip(): TomadorEmail.objects.create(tomador=self.object, email=email.strip())
+                if email.strip():
+                    TomadorEmail.objects.create(tomador=self.object, email=email.strip())
             for fone in self.request.POST.getlist('lista_telefones'):
-                if fone.strip(): TomadorTelefone.objects.create(tomador=self.object, telefone=fone.strip())
+                if fone.strip():
+                    TomadorTelefone.objects.create(tomador=self.object, telefone=fone.strip())
         return redirect(self.get_success_url())
 
 class TomadorDeleteView(DeleteView):

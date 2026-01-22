@@ -153,6 +153,29 @@
         gap: 10px;
         font-size: 0.9rem;
     }
+    .contact-item input {
+        border: none;
+        background: transparent;
+        flex: 1;
+        padding: 0;
+        font-size: 0.9rem;
+        color: #475569;
+    }
+    .contact-item input:focus {
+        outline: none;
+        background: #fff7ed;
+    }
+    .btn-item {
+        border: none;
+        background: transparent;
+        color: #64748b;
+        padding: 4px 6px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .btn-item:hover { background: #f1f5f9; color: #0f172a; }
+    .btn-item.btn-danger { color: #ef4444; }
     .btn-add-mini {
         background: #1e293b; color: white; border: none;
         padding: 6px 14px; border-radius: 8px; font-size: 0.75rem;
@@ -288,7 +311,16 @@
                                 <label class="form-label mb-3"><i class="fa-solid fa-envelope me-2 text-muted"></i>E-mails</label>
                                 <div class="contact-list">
                                     {% for email in emails %}
-                                        <div class="contact-item"><i class="fa-solid fa-check text-success"></i> {{ email.email }}</div>
+                                        <div class="contact-item" data-item="email" data-id="{{ email.id }}">
+                                            <i class="fa-solid fa-envelope text-muted"></i>
+                                            <input type="email" name="email_{{ email.id }}" value="{{ email.email }}" readonly onclick="startEditItem(this)">
+                                            <button type="button" class="btn-item" onclick="startEditItem(this)">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
+                                            <button type="button" class="btn-item btn-danger" onclick="removeItem(this, 'email', '{{ email.id }}')">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
                                     {% endfor %}
                                 </div>
                                 <div id="divEmails">
@@ -303,7 +335,16 @@
                                 <label class="form-label mb-3"><i class="fa-solid fa-phone me-2 text-muted"></i>Telefones</label>
                                 <div class="contact-list">
                                     {% for fone in telefones %}
-                                        <div class="contact-item"><i class="fa-solid fa-check text-success"></i> {{ fone.telefone }}</div>
+                                        <div class="contact-item" data-item="telefone" data-id="{{ fone.id }}">
+                                            <i class="fa-solid fa-phone text-muted"></i>
+                                            <input type="text" name="telefone_{{ fone.id }}" value="{{ fone.telefone }}" readonly onclick="startEditItem(this)">
+                                            <button type="button" class="btn-item" onclick="startEditItem(this)">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
+                                            <button type="button" class="btn-item btn-danger" onclick="removeItem(this, 'telefone', '{{ fone.id }}')">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
                                     {% endfor %}
                                 </div>
                                 <div id="divFones">
@@ -445,6 +486,26 @@
     }
     function addFone() { 
         $('#divFones').append('<input type="text" name="lista_telefones" class="form-control mb-2" placeholder="Outro telefone">'); 
+    }
+    function startEditItem(target) {
+        var item = target.closest('.contact-item');
+        if (!item) return;
+        var input = item.querySelector('input');
+        if (!input) return;
+        input.removeAttribute('readonly');
+        input.focus();
+        input.select();
+    }
+    function removeItem(target, tipo, id) {
+        var form = document.getElementById('formTomador');
+        if (!form) return;
+        var hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = tipo === 'email' ? 'remove_emails' : 'remove_telefones';
+        hidden.value = id;
+        form.appendChild(hidden);
+        var item = target.closest('.contact-item');
+        if (item) item.style.display = 'none';
     }
     function irParaTomador() {
         var id = document.getElementById('selectTomadorTroca').value;
