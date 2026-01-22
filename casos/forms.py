@@ -181,6 +181,11 @@ class CasoDinamicoForm(forms.ModelForm):
             self.fields['tomador'].widget.attrs.update({'class': 'form-select select2-tomador'})
             # Evita problemas de cursor ao renderizar choices em algumas bases
             self.fields['tomador'].choices = list(self.fields['tomador'].choices)
+        
+        if 'advogado_responsavel' in self.fields:
+            self.fields['advogado_responsavel'].label_from_instance = (
+                lambda u: u.get_full_name() or u.username
+            )
         else:
             if 'tomador' in self.fields:
                 del self.fields['tomador']
@@ -376,6 +381,10 @@ class CasoInfoBasicasForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if 'advogado_responsavel' in self.fields:
+            self.fields['advogado_responsavel'].label_from_instance = (
+                lambda u: u.get_full_name() or u.username
+            )
 
     def clean(self):
         cleaned = super().clean()

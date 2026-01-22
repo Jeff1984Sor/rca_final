@@ -397,6 +397,7 @@ def criar_caso(request, cliente_id, produto_id):
                     novo_caso.cliente = cliente
                     novo_caso.produto = produto
                     novo_caso.titulo = titulo_final
+                    novo_caso._criador = request.user
                     novo_caso.save()
 
                     # Salvar campos simples

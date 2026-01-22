@@ -202,6 +202,7 @@ def gatilho_pos_criacao_caso(sender, instance, created, **kwargs):
         try:
             # Verifica se já existe para evitar duplicação pelo signal duplo do runserver
             if not FluxoInterno.objects.filter(caso=instance, tipo_evento='CRIACAO_CASO').exists():
+                autor_evento = getattr(instance, '_criador', None) or instance.advogado_responsavel
                 FluxoInterno.objects.create(
                     caso=instance,
                     tipo_evento='CRIACAO_CASO',
