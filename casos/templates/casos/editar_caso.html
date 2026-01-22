@@ -51,6 +51,14 @@
             background-color: #fd7e14; border-color: #fd7e14; color: white; font-weight: bold;
         }
         .btn-orange:hover { background-color: #e36902; border-color: #e36902; color: white; }
+        .btn-add-item {
+            color: #fd7e14;
+            border: 1px dashed #fd7e14;
+            background: transparent;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-add-item:hover { background-color: #fff3cd; color: #e36902; }
 
         /* Ajuste do Select2 */
         .select2-container { width: 100% !important; }
@@ -160,20 +168,57 @@
                     {{ formset.management_form }}
                     <div id="formset-container-{{ grupo.id }}">
                         {% for form_grupo in formset %}
-                            <div class="card mb-3 border-light bg-light">
+                            <div class="card mb-3 border-light bg-light grupo-form">
                                 <div class="card-body">
                                     <div class="row g-3">
                                         {% for field in form_grupo.visible_fields %}
-                                            <div class="col-md-6">
-                                                <label class="form-label small fw-bold">{{ field.label }}</label>
-                                                {{ field }}
-                                            </div>
+                                            {% if field.name == 'DELETE' %}
+                                                <div class="col-md-6 d-flex align-items-end">
+                                                    <div class="d-none">{{ field }}</div>
+                                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeFormsetRow(this)">
+                                                        <i class="fa-solid fa-trash"></i> Remover
+                                                    </button>
+                                                </div>
+                                            {% else %}
+                                                <div class="col-md-6">
+                                                    <label class="form-label small fw-bold">{{ field.label }}</label>
+                                                    {{ field }}
+                                                </div>
+                                            {% endif %}
                                         {% endfor %}
                                         {% for hidden in form_grupo.hidden_fields %}{{ hidden }}{% endfor %}
                                     </div>
                                 </div>
                             </div>
                         {% endfor %}
+                    </div>
+
+                    <button type="button" class="btn btn-sm btn-add-item mb-4" onclick="addFormsetRow('{{ grupo.id }}', '{{ formset.prefix }}')">
+                        <i class="fa-solid fa-plus-circle"></i> Incluir novo em {{ grupo.nome_grupo }}
+                    </button>
+
+                    <div id="empty-form-{{ grupo.id }}" style="display:none;">
+                        <div class="card mb-3 border-light bg-light shadow-sm grupo-form">
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    {% for field in formset.empty_form.visible_fields %}
+                                        {% if field.name == 'DELETE' %}
+                                            <div class="col-md-6 d-flex align-items-end">
+                                                <div class="d-none">{{ field }}</div>
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeFormsetRow(this)">
+                                                    <i class="fa-solid fa-trash"></i> Remover
+                                                </button>
+                                            </div>
+                                        {% else %}
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-bold">{{ field.label }}</label>
+                                                {{ field }}
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 {% endfor %}
             {% endif %}
@@ -256,12 +301,39 @@
 <script src="{% static 'js/form_editar_caso.js' %}"></script>
 
 <script>
-    $(document).ready(function() {
+    function aplicarMascaras() {
         $('.money').mask('R$ 000.000.000.000.000,00', {reverse: true});
         $('.custom-mask').each(function() {
             var m = $(this).attr('data-mask');
             if (m) $(this).mask(m);
         });
+    }
+
+    function addFormsetRow(grupoId, prefix) {
+        const totalFormsInput = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
+        const currentCount = parseInt(totalFormsInput.value, 10);
+        const templateHtml = document.getElementById(`empty-form-${grupoId}`).innerHTML;
+        const newRowHtml = templateHtml.replace(/__prefix__/g, currentCount);
+
+        const container = document.getElementById(`formset-container-${grupoId}`);
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = newRowHtml;
+        container.appendChild(wrapper.firstElementChild);
+
+        totalFormsInput.value = currentCount + 1;
+        aplicarMascaras();
+    }
+
+    function removeFormsetRow(button) {
+        const formCard = button.closest('.grupo-form');
+        if (!formCard) return;
+        const deleteInput = formCard.querySelector('input[name$="-DELETE"]');
+        if (deleteInput) deleteInput.checked = true;
+        formCard.style.display = 'none';
+    }
+
+    $(document).ready(function() {
+        aplicarMascaras();
 
         // 1. SELECT2
         $('.select2-tomador').select2({

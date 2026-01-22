@@ -356,7 +356,7 @@ def criar_caso(request, cliente_id, produto_id):
 
     grupo_formsets = {}
     for grupo in estrutura.grupos_repetiveis.all():
-        GrupoFormSet = formset_factory(BaseGrupoForm, extra=1, can_delete=True)
+        GrupoFormSet = formset_factory(BaseGrupoForm, extra=0, can_delete=True)
         prefix = f'grupo_{grupo.id}'
         kwargs = {'grupo_campos': grupo, 'cliente': cliente, 'produto': produto}
         if request.method == 'POST':
@@ -458,7 +458,7 @@ def editar_caso(request, pk):
 
     grupo_formsets = {}
     for grupo in estrutura.grupos_repetiveis.all():
-        GrupoFormSet = formset_factory(BaseGrupoForm, extra=1, can_delete=True)
+        GrupoFormSet = formset_factory(BaseGrupoForm, extra=0, can_delete=True)
         prefix = f'grupo_{grupo.id}'
         kwargs = {'grupo_campos': grupo, 'cliente': cliente, 'produto': produto}
 

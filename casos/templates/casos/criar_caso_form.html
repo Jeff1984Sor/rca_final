@@ -117,14 +117,23 @@
                     {{ formset.management_form }}
                     <div id="formset-container-{{ grupo.id }}">
                         {% for form_grupo in formset %}
-                            <div class="card mb-3 border-light bg-light">
+                            <div class="card mb-3 border-light bg-light grupo-form">
                                 <div class="card-body">
                                     <div class="row g-3">
                                         {% for field in form_grupo.visible_fields %}
-                                            <div class="{% if 'textarea' in field.field.widget.attrs.class %}col-12{% else %}col-md-6{% endif %}">
-                                                <label class="form-label small fw-bold">{{ field.label }}</label>
-                                                {{ field }}
-                                            </div>
+                                            {% if field.name == 'DELETE' %}
+                                                <div class="col-md-6 d-flex align-items-end">
+                                                    <div class="d-none">{{ field }}</div>
+                                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeFormsetRow(this)">
+                                                        <i class="fa-solid fa-trash"></i> Remover
+                                                    </button>
+                                                </div>
+                                            {% else %}
+                                                <div class="{% if 'textarea' in field.field.widget.attrs.class %}col-12{% else %}col-md-6{% endif %}">
+                                                    <label class="form-label small fw-bold">{{ field.label }}</label>
+                                                    {{ field }}
+                                                </div>
+                                            {% endif %}
                                         {% endfor %}
                                         {% for hidden in form_grupo.hidden_fields %}{{ hidden }}{% endfor %}
                                     </div>
@@ -139,14 +148,23 @@
 
                     <!-- Template Vazio (Escondido) -->
                     <div id="empty-form-{{ grupo.id }}" style="display:none;">
-                        <div class="card mb-3 border-light bg-light shadow-sm">
+                        <div class="card mb-3 border-light bg-light shadow-sm grupo-form">
                             <div class="card-body">
                                 <div class="row g-3">
                                     {% for field in formset.empty_form.visible_fields %}
-                                        <div class="{% if 'textarea' in field.field.widget.attrs.class %}col-12{% else %}col-md-6{% endif %}">
-                                            <label class="form-label small fw-bold">{{ field.label }}</label>
-                                            {{ field }}
-                                        </div>
+                                        {% if field.name == 'DELETE' %}
+                                            <div class="col-md-6 d-flex align-items-end">
+                                                <div class="d-none">{{ field }}</div>
+                                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeFormsetRow(this)">
+                                                    <i class="fa-solid fa-trash"></i> Remover
+                                                </button>
+                                            </div>
+                                        {% else %}
+                                            <div class="{% if 'textarea' in field.field.widget.attrs.class %}col-12{% else %}col-md-6{% endif %}">
+                                                <label class="form-label small fw-bold">{{ field.label }}</label>
+                                                {{ field }}
+                                            </div>
+                                        {% endif %}
                                     {% endfor %}
                                 </div>
                             </div>
@@ -253,6 +271,14 @@
 
         totalFormsInput.value = currentCount + 1;
         aplicarMascaras(); // Reaplica máscaras na linha nova
+    }
+
+    function removeFormsetRow(button) {
+        const formCard = button.closest('.grupo-form');
+        if (!formCard) return;
+        const deleteInput = formCard.querySelector('input[name$="-DELETE"]');
+        if (deleteInput) deleteInput.checked = true;
+        formCard.style.display = 'none';
     }
 
     $(document).ready(function() {
