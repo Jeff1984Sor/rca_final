@@ -102,9 +102,14 @@ def build_form_field(campo_obj: CampoPersonalizado, is_required=False, cliente=N
         )
 
     elif tipo == 'BOOLEANO':
-        return forms.BooleanField(
-            label=label, required=False, 
-            widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+        choices = [('True', 'Sim'), ('False', 'Não')]
+        if not is_required:
+            choices = [('', '---')] + choices
+        return forms.ChoiceField(
+            label=label,
+            required=is_required,
+            choices=choices,
+            widget=forms.Select(attrs={'class': 'form-select'})
         )
 
     elif tipo == 'TEXTO_LONGO':
@@ -216,7 +221,7 @@ class CasoDinamicoForm(forms.ModelForm):
                     if campo.tipo_campo == 'LISTA_MULTIPLA' and valor_salvo.valor:
                         self.fields[field_name].initial = [v.strip() for v in valor_salvo.valor.split(',')]
                     elif campo.tipo_campo == 'BOOLEANO':
-                        self.fields[field_name].initial = (valor_salvo.valor == 'True')
+                        self.fields[field_name].initial = 'True' if str(valor_salvo.valor) == 'True' else 'False'
                     else:
                         self.fields[field_name].initial = valor_salvo.valor
             
@@ -283,7 +288,7 @@ class CasoDadosAdicionaisForm(forms.Form):
             
             # Define o valor inicial
             if campo.tipo_campo == 'BOOLEANO':
-                self.fields[field_name].initial = (valor.valor == 'True')
+                self.fields[field_name].initial = 'True' if str(valor.valor) == 'True' else 'False'
             elif campo.tipo_campo == 'LISTA_MULTIPLA' and valor.valor:
                 self.fields[field_name].initial = [v.strip() for v in valor.valor.split(',')]
             else:
