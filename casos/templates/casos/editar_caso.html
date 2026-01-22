@@ -99,7 +99,7 @@
             {% csrf_token %}
             
             <!-- 1. DADOS PRINCIPAIS -->
-            <h3 class="section-title"><i class="fa-solid fa-circle-info"></i> Dados Principais</h3>
+            <h3 id="sec-dados-principais" class="section-title"><i class="fa-solid fa-circle-info"></i> Dados Principais</h3>
             <div class="row g-3">
                 {% for field in form.campos_fixos %}
                     {% if field.name != 'tomador' %}
@@ -113,7 +113,7 @@
             </div>
             
             <!-- 2. DADOS ADICIONAIS -->
-            <h3 class="section-title"><i class="fa-solid fa-sliders"></i> Dados Adicionais</h3>
+            <h3 id="sec-dados-adicionais" class="section-title"><i class="fa-solid fa-sliders"></i> Dados Adicionais</h3>
             <div class="row g-3">
                 {% for field in form.campos_personalizados_simples %}
                     <div class="col-md-6">
@@ -125,7 +125,7 @@
 
             <!-- 3. TOMADOR (SEPARADO) -->
             {% if 'tomador' in form.fields %}
-            <h3 class="section-title"><i class="fa-solid fa-user-tie"></i> Tomador / Interessado</h3>
+            <h3 id="sec-tomador" class="section-title"><i class="fa-solid fa-user-tie"></i> Tomador / Interessado</h3>
             <div class="p-3 bg-light rounded border">
                 <div class="row">
                     <div class="col-12 mb-2">
@@ -156,7 +156,7 @@
             <!-- 4. GRUPOS REPETÍVEIS -->
             {% if grupo_formsets %}
                 {% for grupo, formset in grupo_formsets %}
-                    <h3 class="section-title">{{ grupo.nome_grupo }}</h3>
+                    <h3 id="grupo-{{ grupo.id }}" class="section-title">{{ grupo.nome_grupo }}</h3>
                     {{ formset.management_form }}
                     <div id="formset-container-{{ grupo.id }}">
                         {% for form_grupo in formset %}

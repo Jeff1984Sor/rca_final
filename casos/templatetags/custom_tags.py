@@ -1,6 +1,7 @@
 # casos/templatetags/custom_tags.py
 
 import re
+from decimal import Decimal, InvalidOperation
 from django import template
 from datetime import date, datetime
 import locale
@@ -68,8 +69,11 @@ def get_event_icon(event_type):
 def format_dynamic_value(value, field_type):
     if value is None or value == '': return "-"
     if field_type == 'MOEDA':
-        try: return locale.currency(float(value), grouping=True)
-        except (ValueError, TypeError): return value
+        try:
+            return locale.currency(float(value), grouping=True)
+        except (ValueError, TypeError):
+            formatted = _format_currency_br(value)
+            return formatted if formatted is not None else value
     if field_type == 'DATA':
         try:
             date_obj = datetime.strptime(str(value), '%Y-%m-%d').date()
@@ -78,6 +82,39 @@ def format_dynamic_value(value, field_type):
             if hasattr(value, 'strftime'): return value.strftime('%d/%m/%Y')
             return value
     return value
+
+def _format_currency_br(value):
+    if value is None:
+        return None
+    raw = str(value).strip()
+    if not raw:
+        return None
+    raw = raw.replace('R$', '').replace(' ', '')
+    raw = re.sub(r'[^0-9,.\-]', '', raw)
+    if not raw:
+        return None
+    if ',' in raw and '.' in raw:
+        raw = raw.replace('.', '').replace(',', '.')
+    elif ',' in raw:
+        raw = raw.replace('.', '')
+        if raw.count(',') > 1:
+            parts = raw.split(',')
+            raw = ''.join(parts[:-1]) + '.' + parts[-1]
+        else:
+            raw = raw.replace(',', '.')
+    elif raw.count('.') > 1:
+        parts = raw.split('.')
+        raw = ''.join(parts[:-1]) + '.' + parts[-1]
+    try:
+        num = Decimal(raw)
+    except (InvalidOperation, ValueError):
+        return None
+    sign = '-' if num < 0 else ''
+    num = abs(num).quantize(Decimal('0.01'))
+    int_part = int(num)
+    dec_part = f"{num:.2f}".split('.')[1]
+    int_str = f"{int_part:,}".replace(',', '.')
+    return f"{sign}R$ {int_str},{dec_part}"
 
 @register.filter
 def get_item(container, key):

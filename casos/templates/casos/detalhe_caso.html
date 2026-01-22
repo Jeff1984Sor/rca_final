@@ -24,9 +24,9 @@
                     <div class="prazo-label"><i class="fa-solid fa-clock"></i> Prazo Final</div>
                     <div class="prazo-value">{{ caso.prazo_final_calculado|date:"d/m" }}</div>
                     <div class="prazo-status">{{ caso.prazo_final_calculado|date:"Y" }}</div>
-                    <a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="btn btn-sm btn-light mt-3"><i class="fa-solid fa-pen-to-square"></i> Editar Caso</a>
+                    <a href="{% url 'casos:editar_caso' pk=caso.pk %}#sec-dados-principais" class="btn btn-sm btn-light mt-3"><i class="fa-solid fa-pen-to-square"></i> Editar Caso</a>
                 </div>
-                {% else %}<a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="btn btn-primary"><i class="fa-solid fa-pen-to-square"></i> Editar Caso</a>{% endif %}
+                {% else %}<a href="{% url 'casos:editar_caso' pk=caso.pk %}#sec-dados-principais" class="btn btn-primary"><i class="fa-solid fa-pen-to-square"></i> Editar Caso</a>{% endif %}
             </div>
         </div>
     </div>
@@ -52,7 +52,7 @@
         <div class="card" id="card-info-basicas">
             <div class="card-header-with-edit">
                 <h2 class="card-title-icon card-title"><i class="fa-solid fa-circle-info"></i> Informações do Caso</h2>
-                <button type="button" class="btn btn-sm action-btn btn-edit" onclick="openEditModal('info-basicas')"><i class="fa-solid fa-pen"></i> Editar</button>
+                <a href="{% url 'casos:editar_caso' pk=caso.pk %}#sec-dados-principais" class="btn btn-sm action-btn btn-edit"><i class="fa-solid fa-pen"></i> Editar</a>
             </div>
             <div class="card-body">
                 <div class="details-grid">
@@ -116,7 +116,7 @@
         <!-- CARD 3: DADOS ADICIONAIS -->
         {% if valores_personalizados %}
         <div class="card mt-4" id="card-dados-adicionais">
-            <div class="card-header-with-edit"><h2 class="card-title-icon card-title"><i class="fa-solid fa-sliders"></i> Dados Adicionais</h2><button type="button" class="btn btn-sm action-btn btn-edit" onclick="openEditModal('dados-adicionais')"><i class="fa-solid fa-pen"></i> Editar</button></div>
+            <div class="card-header-with-edit"><h2 class="card-title-icon card-title"><i class="fa-solid fa-sliders"></i> Dados Adicionais</h2><a href="{% url 'casos:editar_caso' pk=caso.pk %}#sec-dados-adicionais" class="btn btn-sm action-btn btn-edit"><i class="fa-solid fa-pen"></i> Editar</a></div>
             <div class="card-body"><div class="details-grid">{% for valor in valores_personalizados %}{% if not valor.instancia_grupo %}<div class="detail-card"><div class="detail-label"><i class="fa-solid fa-tag"></i> {{ valor.campo.nome_campo }}</div><div class="detail-value">{% if valor.campo.tipo_campo == 'BOOLEANO' %}{% if valor.valor == 'True' or valor.valor == '1' or valor.valor == 'true' %}<span class="bool-true"><i class="fa-solid fa-check-circle"></i> Sim</span>{% else %}<span class="bool-false"><i class="fa-solid fa-times-circle"></i> Não</span>{% endif %}{% else %}{{ valor.valor|format_dynamic_value:valor.campo.tipo_campo|default:"-" }}{% endif %}</div></div>{% endif %}{% endfor %}</div></div>
         </div>
         {% endif %}
@@ -131,7 +131,7 @@
                                 <i class="fa-solid fa-layer-group"></i>
                                 {{ item.grupo.nome_grupo }}{% if not instancia.placeholder %} #{{ forloop.counter }}{% endif %}
                             </h2>
-                            <a href="{% url 'casos:editar_caso' pk=caso.pk %}" class="btn btn-sm action-btn btn-edit">
+                            <a href="{% url 'casos:editar_caso' pk=caso.pk %}#grupo-{{ item.grupo.id }}" class="btn btn-sm action-btn btn-edit">
                                 <i class="fa-solid fa-pen"></i> Editar
                             </a>
                         </div>
