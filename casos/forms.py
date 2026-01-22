@@ -57,6 +57,7 @@ def build_form_field(campo_obj: CampoPersonalizado, is_required=False, cliente=N
                 campo=campo_obj, cliente=cliente, produto=produto
             )
             opcoes = opcoes_obj.get_opcoes_como_lista()
+            opcoes = sorted(opcoes, key=lambda opt: opt.strip().casefold())
             choices = [(opt.strip(), opt.strip()) for opt in opcoes]
         except OpcoesListaPersonalizada.DoesNotExist:
             choices = []
@@ -97,7 +98,8 @@ def build_form_field(campo_obj: CampoPersonalizado, is_required=False, cliente=N
 
     elif tipo == 'LISTA_USUARIOS':
         return forms.ModelChoiceField(
-            queryset=User.objects.all(), label=label, required=is_required, 
+            queryset=User.objects.all().order_by('first_name', 'username'),
+            label=label, required=is_required,
             widget=forms.Select(attrs={'class': 'form-select'})
         )
 
@@ -183,6 +185,7 @@ class CasoDinamicoForm(forms.ModelForm):
             self.fields['tomador'].choices = list(self.fields['tomador'].choices)
         
         if 'advogado_responsavel' in self.fields:
+            self.fields['advogado_responsavel'].queryset = User.objects.all().order_by('first_name', 'username')
             self.fields['advogado_responsavel'].label_from_instance = (
                 lambda u: u.get_full_name() or u.username
             )
@@ -317,6 +320,8 @@ class TimesheetForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        if 'advogado' in self.fields:
+            self.fields['advogado'].queryset = User.objects.all().order_by('first_name', 'username')
         if user:
             self.fields['advogado'].initial = user
             self.fields['advogado'].queryset = User.objects.filter(id=user.id)
@@ -334,6 +339,8 @@ class AcordoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        if 'advogado_acordo' in self.fields:
+            self.fields['advogado_acordo'].queryset = User.objects.all().order_by('first_name', 'username')
         if user:
             self.fields['advogado_acordo'].initial = user
             self.fields['advogado_acordo'].queryset = User.objects.filter(id=user.id)
@@ -351,6 +358,8 @@ class DespesaForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        if 'advogado' in self.fields:
+            self.fields['advogado'].queryset = User.objects.all().order_by('first_name', 'username')
         if user:
             self.fields['advogado'].initial = user
             self.fields['advogado'].queryset = User.objects.filter(id=user.id)
@@ -382,6 +391,7 @@ class CasoInfoBasicasForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if 'advogado_responsavel' in self.fields:
+            self.fields['advogado_responsavel'].queryset = User.objects.all().order_by('first_name', 'username')
             self.fields['advogado_responsavel'].label_from_instance = (
                 lambda u: u.get_full_name() or u.username
             )

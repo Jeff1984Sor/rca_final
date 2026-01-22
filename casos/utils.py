@@ -121,7 +121,9 @@ def build_form_field(campo, is_required=False, cliente=None, produto=None):
     elif tipo in ['LISTA_UNICA', 'LISTA_MULTIPLA']:
         from campos_custom.models import OpcoesListaPersonalizada
         opcoes_obj = OpcoesListaPersonalizada.objects.filter(campo=campo, cliente=cliente, produto=produto).first()
-        choices = [(opt.strip(), opt.strip()) for opt in opcoes_obj.get_opcoes_como_lista()] if opcoes_obj else []
+        opcoes = opcoes_obj.get_opcoes_como_lista() if opcoes_obj else []
+        opcoes = sorted(opcoes, key=lambda opt: opt.strip().casefold())
+        choices = [(opt.strip(), opt.strip()) for opt in opcoes]
 
         if tipo == 'LISTA_UNICA':
             return forms.ChoiceField(
