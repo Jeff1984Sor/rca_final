@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+
+{% block title %}{% if object %}Editar Corretor{% else %}Novo Corretor{% endif %}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    body { background-color: #f4f7f9 !important; font-family: 'Inter', 'Segoe UI', sans-serif; color: #334155; }
+    .main-container { max-width: 900px; margin: 60px auto 120px auto; }
+    .paper-card { background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.05); overflow: hidden; }
+    .card-header-orange { background: linear-gradient(135deg, #fd7e14 0%, #ff922b 100%); color: white; padding: 30px 40px; display: flex; justify-content: space-between; align-items: center; }
+    .header-title { font-size: 1.6rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
+    .header-actions .btn-action { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 15px; border-radius: 8px; font-weight: 600; backdrop-filter: blur(5px); transition: all 0.2s; text-decoration: none; font-size: 0.85rem; }
+    .header-actions .btn-action:hover { background: rgba(255,255,255,0.3); transform: translateY(-2px); }
+    .card-body-custom { padding: 45px; }
+    .section-title { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #94a3b8; margin-top: 40px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .section-title i { color: #fd7e14; font-size: 1.1rem; }
+    .section-title:first-child { margin-top: 0; }
+    .form-group { margin-bottom: 25px; }
+    .form-label { font-weight: 700; color: #1e293b; margin-bottom: 8px; font-size: 0.95rem; }
+    .form-control { padding: 12px 16px; border: 2px solid #f1f5f9; border-radius: 10px; background-color: #f8fafc; transition: all 0.3s; }
+    .form-control:focus { background-color: #fff; border-color: #fd7e14; box-shadow: 0 0 0 4px rgba(253,126,20,0.1); outline: none; }
+    .contact-box { background-color: #fcfcfd; border: 1px solid #edf2f7; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #fd7e14; }
+    .contact-list { list-style: none; padding: 0; margin-bottom: 15px; }
+    .contact-item { padding: 10px; background: white; border: 1px solid #f1f5f9; border-radius: 8px; margin-bottom: 5px; color: #475569; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
+    .contact-item input { border: none; background: transparent; flex: 1; padding: 0; font-size: 0.9rem; color: #475569; }
+    .contact-item input:focus { outline: none; background: #fff7ed; }
+    .btn-item { border: none; background: transparent; color: #64748b; padding: 4px 6px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+    .btn-item:hover { background: #f1f5f9; color: #0f172a; }
+    .btn-item.btn-danger { color: #ef4444; }
+    .btn-add-mini { background: #1e293b; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn-add-mini:hover { background: #0f172a; }
+    .bottom-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 500px; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); padding: 15px 30px; border-radius: 50px; border: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+    .btn-save-big { background-color: #fd7e14; color: white; font-weight: 700; font-size: 1rem; padding: 12px 35px; border-radius: 30px; border: none; cursor: pointer; transition: 0.3s; }
+    .btn-save-big:hover { background-color: #e36902; transform: scale(1.05); box-shadow: 0 5px 15px rgba(253,126,20,0.3); }
+    .btn-cancel { color: #64748b; text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+    .btn-cancel:hover { color: #1e293b; }
+    .table-clean { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+    .table-clean th { color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; padding: 10px; border: none; }
+    .table-clean td { background: #f8fafc; padding: 15px; border: none; }
+    .table-clean td:first-child { border-radius: 10px 0 0 10px; }
+    .table-clean td:last-child { border-radius: 0 10px 10px 0; }
+    .phone-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .phone-row select { width: 160px; }
+    .phone-row input { flex: 1; min-width: 180px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="main-container">
+        <div class="paper-card">
+            <div class="card-header-orange">
+                <h1 class="header-title">
+                    <i class="fa-solid fa-user-tag me-2"></i>
+                    {% if object %}Editar Corretor{% else %}Novo Corretor{% endif %}
+                </h1>
+                {% if object %}
+                <div class="header-actions">
+                    <button type="button" class="btn-action bg-danger" data-bs-toggle="modal" data-bs-target="#modalExcluir">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="card-body-custom">
+                {% if form.errors %}
+                    <div class="alert alert-danger border-0 shadow-sm rounded-4">
+                        <i class="fa-solid fa-circle-exclamation me-2"></i> Por favor, corrija os erros no formulario.
+                    </div>
+                {% endif %}
+
+                <form method="post" id="formCorretor">
+                    {% csrf_token %}
+
+                    <div class="section-title"><i class="fa-solid fa-id-card"></i> Dados de Identificacao</div>
+                    <div class="form-group">
+                        <label class="form-label">Nome Completo ou Razao Social *</label>
+                        {{ form.nome }}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tipo</label>
+                        {{ form.tipo }}
+                    </div>
+                    <div class="form-group" id="cpfField">
+                        <label class="form-label">CPF</label>
+                        {{ form.cpf }}
+                    </div>
+                    <div class="form-group" id="cnpjField" style="display:none;">
+                        <label class="form-label">CNPJ</label>
+                        {{ form.cnpj }}
+                    </div>
+
+                    <div class="section-title"><i class="fa-solid fa-comment-dots"></i> Canais de Comunicacao</div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="contact-box">
+                                <label class="form-label mb-3"><i class="fa-solid fa-envelope me-2 text-muted"></i>E-mails</label>
+                                <div class="contact-list">
+                                    {% for email in emails %}
+                                        <div class="contact-item" data-item="email" data-id="{{ email.id }}">
+                                            <i class="fa-solid fa-envelope text-muted"></i>
+                                            <input type="email" name="email_{{ email.id }}" value="{{ email.email }}" readonly onclick="startEditItem(this)">
+                                            <button type="button" class="btn-item" onclick="startEditItem(this)">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
+                                            <button type="button" class="btn-item btn-danger" onclick="removeItem(this, 'email', '{{ email.id }}')">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                <div id="divEmails">
+                                    <div class="d-flex gap-2 mb-2 email-row">
+                                        <input type="email" name="lista_emails" class="form-control" placeholder="exemplo@email.com">
+                                        <button type="button" class="btn-item btn-danger" onclick="removeNewRow(this)">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-add-mini" onclick="addEmail()">+ Adicionar</button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="contact-box">
+                                <label class="form-label mb-3"><i class="fa-solid fa-phone me-2 text-muted"></i>Telefones</label>
+                                <div class="contact-list">
+                                    {% for fone in telefones %}
+                                        <div class="contact-item" data-item="telefone" data-id="{{ fone.id }}">
+                                            <i class="fa-solid fa-phone text-muted"></i>
+                                            <select name="telefone_tipo_{{ fone.id }}" class="form-select form-select-sm" style="max-width: 140px;">
+                                                <option value="COMERCIAL" {% if fone.tipo == 'COMERCIAL' %}selected{% endif %}>Comercial</option>
+                                                <option value="RESIDENCIAL" {% if fone.tipo == 'RESIDENCIAL' %}selected{% endif %}>Residencial</option>
+                                                <option value="CELULAR" {% if fone.tipo == 'CELULAR' %}selected{% endif %}>Celular</option>
+                                            </select>
+                                            <input type="text" name="telefone_{{ fone.id }}" value="{{ fone.telefone }}" readonly onclick="startEditItem(this)" class="phone-input" data-tipo="{{ fone.tipo }}">
+                                            <button type="button" class="btn-item" onclick="startEditItem(this)">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
+                                            <button type="button" class="btn-item btn-danger" onclick="removeItem(this, 'telefone', '{{ fone.id }}')">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                <div id="divFones">
+                                    <div class="phone-row mb-2 phone-row-new">
+                                        <select name="lista_telefones_tipo" class="form-select">
+                                            <option value="COMERCIAL">Comercial</option>
+                                            <option value="RESIDENCIAL">Residencial</option>
+                                            <option value="CELULAR" selected>Celular</option>
+                                        </select>
+                                        <input type="text" name="lista_telefones" class="form-control phone-input" placeholder="(00) 00000-0000" data-tipo="CELULAR">
+                                        <button type="button" class="btn-item btn-danger" onclick="removeNewRow(this)">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-add-mini" onclick="addFone()">+ Adicionar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if object %}
+                    <div class="section-title"><i class="fa-solid fa-folder-open"></i> Historico de Casos</div>
+                    <table class="table-clean">
+                        <thead>
+                            <tr><th>Referencia / Produto</th><th>Status</th><th class="text-end">Acao</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for caso in casos_vinculados %}
+                            <tr>
+                                <td>
+                                    <span class="fw-bold text-dark">#{{ caso.id }}</span><br>
+                                    <span class="text-muted small">{{ caso.produto.nome }}</span>
+                                </td>
+                                <td><span class="badge rounded-pill bg-light text-dark border">{{ caso.get_status_display }}</span></td>
+                                <td class="text-end">
+                                    <a href="{% url 'casos:detalhe_caso' caso.id %}" target="_blank" class="btn btn-sm btn-white shadow-sm border">Ver Detalhes</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="3" class="text-center py-4 text-muted small">Nenhum caso registrado para este corretor.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% endif %}
+
+                    <div class="bottom-bar">
+                        <a href="{% url 'casos:lista_corretores' %}" class="btn-cancel">Descartar</a>
+                        <button type="submit" class="btn-save-big">Salvar Alteracoes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if object %}
+<div class="modal fade" id="modalExcluir" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-body text-center p-5">
+                {% if casos_vinculados %}
+                    <div class="text-danger mb-3"><i class="fa-solid fa-lock fa-4x"></i></div>
+                    <h4 class="fw-bold">Acao Bloqueada</h4>
+                    <p class="text-muted">Este corretor possui <strong>{{ casos_vinculados|length }} casos</strong> ativos. Transfira os casos antes de excluir.</p>
+                    <button type="button" class="btn btn-secondary w-100 rounded-pill" data-bs-dismiss="modal">Entendido</button>
+                {% else %}
+                    <div class="text-warning mb-3"><i class="fa-solid fa-circle-exclamation fa-4x"></i></div>
+                    <h4 class="fw-bold">Excluir Corretor?</h4>
+                    <p class="text-muted">Voce esta prestes a remover <strong>{{ object.nome }}</strong>. Esta acao nao pode ser desfeita.</p>
+                    <form method="post" action="{% url 'casos:deletar_corretor' object.id %}" class="mt-4">
+                        {% csrf_token %}
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <button type="button" class="btn btn-light w-100 rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                            </div>
+                            <div class="col-6">
+                                <button type="submit" class="btn btn-danger w-100 rounded-pill">Sim, Excluir</button>
+                            </div>
+                        </div>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+<script>
+    function toggleDocumentoFields(tipo) {
+        const cpfField = document.getElementById('cpfField');
+        const cnpjField = document.getElementById('cnpjField');
+        if (!cpfField || !cnpjField) return;
+        if (tipo === 'PJ') {
+            cpfField.style.display = 'none';
+            cnpjField.style.display = '';
+        } else {
+            cnpjField.style.display = 'none';
+            cpfField.style.display = '';
+        }
+    }
+    function addEmail() {
+        $('#divEmails').append(
+            '<div class="d-flex gap-2 mb-2 email-row">' +
+                '<input type="email" name="lista_emails" class="form-control" placeholder="Outro e-mail">' +
+                '<button type="button" class="btn-item btn-danger" onclick="removeNewRow(this)">' +
+                    '<i class="fa-solid fa-trash"></i>' +
+                '</button>' +
+            '</div>'
+        );
+    }
+    function addFone() {
+        $('#divFones').append(
+            '<div class="phone-row mb-2 phone-row-new">' +
+                '<select name="lista_telefones_tipo" class="form-select">' +
+                    '<option value="COMERCIAL">Comercial</option>' +
+                    '<option value="RESIDENCIAL">Residencial</option>' +
+                    '<option value="CELULAR" selected>Celular</option>' +
+                '</select>' +
+                '<input type="text" name="lista_telefones" class="form-control phone-input" placeholder="(00) 00000-0000" data-tipo="CELULAR">' +
+                '<button type="button" class="btn-item btn-danger" onclick="removeNewRow(this)">' +
+                    '<i class="fa-solid fa-trash"></i>' +
+                '</button>' +
+            '</div>'
+        );
+        aplicarMascaraTelefone();
+    }
+    function startEditItem(target) {
+        var item = target.closest('.contact-item');
+        if (!item) return;
+        var input = item.querySelector('input');
+        if (!input) return;
+        input.removeAttribute('readonly');
+        input.focus();
+        input.select();
+    }
+    function removeItem(target, tipo, id) {
+        var form = document.getElementById('formCorretor');
+        if (!form) return;
+        var hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = tipo === 'email' ? 'remove_emails' : 'remove_telefones';
+        hidden.value = id;
+        form.appendChild(hidden);
+        var item = target.closest('.contact-item');
+        if (item) item.style.display = 'none';
+    }
+    function removeNewRow(target) {
+        var row = target.closest('.email-row') || target.closest('.phone-row');
+        if (row) row.remove();
+    }
+    function aplicarMascaraTelefone() {
+        $('.phone-input').each(function() {
+            var tipo = $(this).attr('data-tipo') || 'CELULAR';
+            if (tipo === 'COMERCIAL' || tipo === 'RESIDENCIAL') {
+                $(this).mask('(00) 0000-0000');
+            } else {
+                $(this).mask('(00) 00000-0000');
+            }
+        });
+    }
+    $(document).ready(function() {
+        const tipoSelect = document.getElementById('id_tipo');
+        if (tipoSelect) {
+            toggleDocumentoFields(tipoSelect.value);
+            tipoSelect.addEventListener('change', function() {
+                toggleDocumentoFields(this.value);
+            });
+        }
+        $('.custom-mask').each(function() {
+            var m = $(this).attr('data-mask');
+            if (m) $(this).mask(m);
+        });
+        aplicarMascaraTelefone();
+
+        $(document).on('change', 'select[name^=\"telefone_tipo_\"]', function() {
+            var input = $(this).closest('.contact-item').find('input.phone-input');
+            input.attr('data-tipo', $(this).val());
+            aplicarMascaraTelefone();
+        });
+        $(document).on('change', 'select[name=\"lista_telefones_tipo\"]', function() {
+            var input = $(this).closest('div').find('input.phone-input');
+            input.attr('data-tipo', $(this).val());
+            aplicarMascaraTelefone();
+        });
+    });
+</script>
+{% endblock %}

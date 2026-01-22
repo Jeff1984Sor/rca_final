@@ -60,6 +60,7 @@
                     <div class="detail-card"><div class="detail-label"><i class="fa-solid fa-calendar-days"></i> Data Entrada</div><div class="detail-value">{{ caso.data_entrada|date:"d/m/Y" }}</div></div>
                     {% if caso.valor_apurado %}<div class="detail-card"><div class="detail-label"><i class="fa-solid fa-money-bill-wave"></i> Valor Apurado</div><div class="detail-value">{{ caso.valor_apurado|currency }}</div></div>{% endif %}
                     <div class="detail-card"><div class="detail-label"><i class="fa-solid fa-route"></i> Fase Atual</div><div class="detail-value">{{ caso.fase_atual_wf.nome|default:"Não iniciado" }}</div></div>
+                    <div class="detail-card"><div class="detail-label"><i class="fa-solid fa-user-tag"></i> Corretor</div><div class="detail-value">{% if caso.corretor %}{{ caso.corretor.nome }}{% else %}-{% endif %}</div></div>
                     <div class="detail-card"><div class="detail-label"><i class="fa-solid fa-user-shield"></i> Segurado</div><div class="detail-value">{% if caso.segurado %}{{ caso.segurado.nome }}{% else %}-{% endif %}</div></div>
                     <div class="detail-card"><div class="detail-label"><i class="fa-solid fa-user-tie"></i> Responsável</div><div class="detail-value">{% if caso.advogado_responsavel %}{{ caso.advogado_responsavel.get_full_name|default:caso.advogado_responsavel.username }}{% else %}Não atribuído{% endif %}</div></div>
                 </div>

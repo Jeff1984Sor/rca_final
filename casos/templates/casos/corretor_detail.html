@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Corretor | {{ corretor.nome }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    body { background-color: #fd7e14 !important; font-family: 'Inter', sans-serif; }
+    .main-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        padding: 30px;
+        margin-top: 30px;
+        margin-bottom: 50px;
+    }
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #f1f1f1;
+        padding-bottom: 20px;
+        margin-bottom: 20px;
+    }
+    .header h1 { font-size: 1.6rem; font-weight: 800; color: #fd7e14; margin: 0; }
+    .pill { background: #f8fafc; border: 1px solid #eee; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .info-card { background: #fff7ed; border: 1px solid #ffe5c2; border-radius: 10px; padding: 12px; }
+    .info-label { font-weight: 700; font-size: 0.85rem; color: #6b7280; }
+    .info-value { font-size: 1rem; font-weight: 700; color: #111827; }
+    .table-clean { width: 100%; border-collapse: separate; border-spacing: 0 8px; margin-top: 20px; }
+    .table-clean th { color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; padding: 10px; border: none; }
+    .table-clean td { background: #f8fafc; padding: 15px; border: none; }
+    .table-clean td:first-child { border-radius: 10px 0 0 10px; }
+    .table-clean td:last-child { border-radius: 0 10px 10px 0; }
+    .btn-outline-orange {
+        border: 2px solid #fd7e14;
+        color: #fd7e14;
+        background: transparent;
+        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .btn-outline-orange:hover { background-color: #fd7e14; color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="main-card">
+        <div class="header">
+            <h1><i class="fa-solid fa-user-tag"></i> {{ corretor.nome }}</h1>
+            <div class="d-flex gap-2">
+                <a href="{% url 'casos:editar_corretor' corretor.pk %}" class="btn-outline-orange">
+                    <i class="fa-solid fa-pen"></i> Editar Corretor
+                </a>
+                <a href="{% url 'casos:lista_corretores' %}" class="btn-outline-orange">
+                    <i class="fa-solid fa-arrow-left"></i> Voltar
+                </a>
+            </div>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-card">
+                <div class="info-label">Tipo</div>
+                <div class="info-value">{{ corretor.get_tipo_display }}</div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">Documento</div>
+                <div class="info-value">{{ corretor.cpf|default:corretor.cnpj|default:"-" }}</div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">Emails</div>
+                <div class="info-value">
+                    {% for email in emails %}{{ email.email }}{% if not forloop.last %}; {% endif %}{% empty %}-{% endfor %}
+                </div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">Telefones</div>
+                <div class="info-value">
+                    {% for fone in telefones %}{{ fone.get_tipo_display }}: {{ fone.telefone }}{% if not forloop.last %}; {% endif %}{% empty %}-{% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <h3 style="margin-top: 30px; font-weight: 800;">Casos vinculados</h3>
+        <table class="table-clean">
+            <thead>
+                <tr><th>Referencia</th><th>Cliente / Produto</th><th>Status</th><th class="text-end">Acao</th></tr>
+            </thead>
+            <tbody>
+                {% for caso in casos_vinculados %}
+                <tr>
+                    <td><span class="pill">#{{ caso.id }}</span> {{ caso.titulo|default:"-" }}</td>
+                    <td>{{ caso.cliente.nome }} / {{ caso.produto.nome }}</td>
+                    <td>{{ caso.get_status_display }}</td>
+                    <td class="text-end">
+                        <a href="{% url 'casos:detalhe_caso' caso.pk %}" class="btn-outline-orange">Ver Caso</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center py-4 text-muted">Nenhum caso vinculado.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

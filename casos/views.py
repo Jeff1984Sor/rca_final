@@ -59,7 +59,10 @@ from .models import (
     TomadorTelefone,
     Segurado,
     SeguradoEmail,
-    SeguradoTelefone
+    SeguradoTelefone,
+    Corretor,
+    CorretorEmail,
+    CorretorTelefone
 )
 from .forms import (
     CasoDinamicoForm,
@@ -71,7 +74,8 @@ from .forms import (
     CasoInfoBasicasForm,
     CasoDadosAdicionaisForm,
     TomadorForm,
-    SeguradoForm
+    SeguradoForm,
+    CorretorForm
 )
 from .folder_utils import recriar_estrutura_de_pastas
 from .serializers import CasoSerializer
@@ -197,6 +201,50 @@ def exportar_segurados_excel(request):
 
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename="relatorio_segurados.xlsx"'
+    wb.save(response)
+    return response
+
+@login_required
+def exportar_corretores_excel(request):
+    queryset = Corretor.objects.prefetch_related(
+        'casos__cliente', 'casos__produto', 'casos__valores_personalizados__campo'
+    )
+    q = request.GET.get('q')
+    if q:
+        queryset = queryset.filter(
+            Q(nome__icontains=q) | Q(cpf__icontains=q) | Q(cnpj__icontains=q)
+        )
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Relatorio Corretores"
+    headers = ["Nome do Corretor", "CPF/CNPJ", "Cliente", "Produto", "Aviso", "Status"]
+    ws.append(headers)
+
+    for corretor in queryset:
+        casos = corretor.casos.all()
+        if casos.exists():
+            for caso in casos:
+                aviso = "-"
+                for valor in caso.valores_personalizados.all():
+                    if valor.campo and valor.campo.nome_variavel == 'aviso' and valor.valor:
+                        aviso = valor.valor
+                        break
+                if aviso == "-":
+                    aviso = caso.titulo or f"Caso #{caso.id}"
+                ws.append([
+                    corretor.nome,
+                    corretor.cpf or corretor.cnpj or "-",
+                    caso.cliente.nome if caso.cliente else "-",
+                    caso.produto.nome if caso.produto else "-",
+                    aviso,
+                    caso.get_status_display()
+                ])
+        else:
+            ws.append([corretor.nome, corretor.cpf or corretor.cnpj or "-", "-", "-", "-", "Sem casos"])
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=\"relatorio_corretores.xlsx\"'
     wb.save(response)
     return response
 
@@ -475,6 +523,129 @@ class SeguradoDetailView(DetailView):
     model = Segurado
     template_name = 'casos/segurado_detail.html'
     context_object_name = 'segurado'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['casos_vinculados'] = self.object.casos.all().select_related('cliente', 'produto')
+        context['emails'] = self.object.emails.all()
+        context['telefones'] = self.object.telefones.all()
+        return context
+
+
+class CorretorListView(ListView):
+    model = Corretor
+    template_name = 'casos/corretor_list.html'
+    context_object_name = 'corretores'
+    paginate_by = 20
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        q = self.request.GET.get('q')
+        if q:
+            queryset = queryset.filter(
+                Q(nome__icontains=q) | Q(cpf__icontains=q) | Q(cnpj__icontains=q)
+            )
+        return queryset
+
+
+class CorretorCreateView(CreateView):
+    model = Corretor
+    form_class = CorretorForm
+    template_name = 'casos/corretor_form.html'
+    success_url = reverse_lazy('casos:lista_corretores')
+
+    def form_valid(self, form):
+        with transaction.atomic():
+            self.object = form.save()
+            for email in self.request.POST.getlist('lista_emails'):
+                if email.strip():
+                    CorretorEmail.objects.create(corretor=self.object, email=email.strip())
+            fones = self.request.POST.getlist('lista_telefones')
+            tipos = self.request.POST.getlist('lista_telefones_tipo')
+            for idx, fone in enumerate(fones):
+                if fone.strip():
+                    tipo = tipos[idx] if idx < len(tipos) and tipos[idx] else 'CELULAR'
+                    CorretorTelefone.objects.create(corretor=self.object, telefone=fone.strip(), tipo=tipo)
+        return redirect(self.get_success_url())
+
+
+class CorretorUpdateView(UpdateView):
+    model = Corretor
+    form_class = CorretorForm
+    template_name = 'casos/corretor_form.html'
+    success_url = reverse_lazy('casos:lista_corretores')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['casos_vinculados'] = self.object.casos.all().select_related('cliente', 'produto')
+        context['emails'] = self.object.emails.all()
+        context['telefones'] = self.object.telefones.all()
+        context['todos_corretores'] = Corretor.objects.exclude(id=self.object.id).order_by('nome')
+        return context
+
+    def form_valid(self, form):
+        with transaction.atomic():
+            self.object = form.save()
+            remove_emails = set(self.request.POST.getlist('remove_emails'))
+            remove_fones = set(self.request.POST.getlist('remove_telefones'))
+
+            for email_obj in self.object.emails.all():
+                if str(email_obj.id) in remove_emails:
+                    email_obj.delete()
+                    continue
+                new_val = self.request.POST.get(f'email_{email_obj.id}', '').strip()
+                if not new_val:
+                    email_obj.delete()
+                elif new_val != email_obj.email:
+                    email_obj.email = new_val
+                    email_obj.save()
+
+            for fone_obj in self.object.telefones.all():
+                if str(fone_obj.id) in remove_fones:
+                    fone_obj.delete()
+                    continue
+                new_val = self.request.POST.get(f'telefone_{fone_obj.id}', '').strip()
+                new_tipo = self.request.POST.get(f'telefone_tipo_{fone_obj.id}', fone_obj.tipo)
+                if not new_val:
+                    fone_obj.delete()
+                elif new_val != fone_obj.telefone or new_tipo != fone_obj.tipo:
+                    fone_obj.telefone = new_val
+                    fone_obj.tipo = new_tipo
+                    fone_obj.save()
+
+            for email in self.request.POST.getlist('lista_emails'):
+                if email.strip():
+                    CorretorEmail.objects.create(corretor=self.object, email=email.strip())
+            fones = self.request.POST.getlist('lista_telefones')
+            tipos = self.request.POST.getlist('lista_telefones_tipo')
+            for idx, fone in enumerate(fones):
+                if fone.strip():
+                    tipo = tipos[idx] if idx < len(tipos) and tipos[idx] else 'CELULAR'
+                    CorretorTelefone.objects.create(corretor=self.object, telefone=fone.strip(), tipo=tipo)
+        return redirect(self.get_success_url())
+
+
+class CorretorDeleteView(DeleteView):
+    model = Corretor
+    template_name = 'casos/corretor_confirm_delete.html'
+    success_url = reverse_lazy('casos:lista_corretores')
+
+    def post(self, request, *args, **kwargs):
+        try:
+            return super().post(request, *args, **kwargs)
+        except ProtectedError:
+            self.object = self.get_object()
+            messages.error(
+                request,
+                f"Nao e possivel excluir o corretor '{self.object.nome}' pois existem casos vinculados."
+            )
+            return redirect('casos:editar_corretor', pk=self.object.pk)
+
+
+class CorretorDetailView(DetailView):
+    model = Corretor
+    template_name = 'casos/corretor_detail.html'
+    context_object_name = 'corretor'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1663,3 +1834,28 @@ def obter_detalhes_segurado(request, pk):
         })
     except Segurado.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Segurado nao encontrado'})
+
+
+@login_required
+def obter_detalhes_corretor(request, pk):
+    """
+    Busca os dados do corretor (CPF, Emails, Telefones) e retorna JSON.
+    """
+    try:
+        corretor = Corretor.objects.get(pk=pk)
+        emails = list(corretor.emails.values_list('email', flat=True))
+        telefones = [
+            f"{fone.get_tipo_display()}: {fone.telefone}"
+            for fone in corretor.telefones.all()
+        ]
+        return JsonResponse({
+            'success': True,
+            'tipo': corretor.tipo,
+            'cpf': corretor.cpf,
+            'cnpj': corretor.cnpj,
+            'documento': corretor.cpf if corretor.tipo == 'PF' else corretor.cnpj,
+            'emails': emails,
+            'telefones': telefones
+        })
+    except Corretor.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Corretor nao encontrado'})

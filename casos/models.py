@@ -99,6 +99,49 @@ class SeguradoTelefone(models.Model):
     def __str__(self):
         return f"{self.get_tipo_display()} - {self.telefone}"
 
+class Corretor(models.Model):
+    TIPO_PESSOA_CHOICES = [
+        ('PF', 'Pessoa Fisica'),
+        ('PJ', 'Pessoa Juridica'),
+    ]
+
+    nome = models.CharField(max_length=255, verbose_name="Nome do Corretor")
+    tipo = models.CharField(max_length=2, choices=TIPO_PESSOA_CHOICES, verbose_name="Tipo", default="PF")
+    cpf = models.CharField(max_length=14, verbose_name="CPF", blank=True, null=True)
+    cnpj = models.CharField(max_length=18, verbose_name="CNPJ", blank=True, null=True)
+    data_criacao = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['nome']
+        verbose_name = "Corretor"
+        verbose_name_plural = "Corretores"
+
+    def __str__(self):
+        return self.nome
+
+class CorretorEmail(models.Model):
+    """Tabela auxiliar para multiplos e-mails por corretor"""
+    corretor = models.ForeignKey(Corretor, on_delete=models.CASCADE, related_name='emails')
+    email = models.EmailField(verbose_name="E-mail")
+
+    def __str__(self):
+        return self.email
+
+class CorretorTelefone(models.Model):
+    """Tabela auxiliar para multiplos telefones por corretor"""
+    TIPO_CHOICES = [
+        ('COMERCIAL', 'Comercial'),
+        ('RESIDENCIAL', 'Residencial'),
+        ('CELULAR', 'Celular'),
+    ]
+
+    corretor = models.ForeignKey(Corretor, on_delete=models.CASCADE, related_name='telefones')
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='CELULAR', verbose_name="Tipo")
+    telefone = models.CharField(max_length=20, verbose_name="Telefone")
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} - {self.telefone}"
+
 # ==============================================================================
 # 2. MODELO DE CASO (ATUALIZADO)
 # ==============================================================================
@@ -120,6 +163,16 @@ class Caso(models.Model):
         on_delete=models.PROTECT,
         related_name='casos',
         verbose_name="Segurado",
+        null=True,
+        blank=True
+    )
+    # ---------------------------
+
+    corretor = models.ForeignKey(
+        Corretor,
+        on_delete=models.PROTECT,
+        related_name='casos',
+        verbose_name="Corretor",
         null=True,
         blank=True
     )

@@ -59,7 +59,7 @@
             <h3 class="section-title"><i class="fa-solid fa-info-circle"></i> Dados Principais</h3>
             <div class="row g-3">
                 {% for field in form.campos_fixos %}
-                    {% if field.name != 'tomador' and field.name != 'segurado' and field.name != 'titulo_manual' %}
+                    {% if field.name != 'tomador' and field.name != 'segurado' and field.name != 'corretor' and field.name != 'titulo_manual' %}
                         <div class="col-md-6">
                             <label class="form-label fw-bold">{{ field.label }}</label>
                             {{ field }}
@@ -138,7 +138,36 @@
                 </div>
             </div>
             {% endif %}
-            
+<!-- 3. CORRETOR -->
+            {% if 'corretor' in form.fields %}
+            <h3 class="section-title"><i class="fa-solid fa-user-tag"></i> Corretor</h3>
+            <div class="p-3 bg-light rounded border">
+                <div class="row">
+                    <div class="col-12 mb-2">
+                        <label class="form-label fw-bold">Selecione o Corretor:</label>
+                        {{ form.corretor }}
+                    </div>
+
+                    <div class="col-12 mb-2" id="painelDetalhesCorretor" style="display:none;">
+                        <div class="card card-body bg-white border shadow-sm py-2">
+                            <div class="row text-muted small">
+                                <div class="col-md-4"><strong>CPF/CNPJ:</strong> <span id="lblCorretorDoc">-</span></div>
+                                <div class="col-md-4"><strong>Emails:</strong> <span id="lblCorretorEmails">-</span></div>
+                                <div class="col-md-4"><strong>Fones:</strong> <span id="lblCorretorFones">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-2">
+                        <a href="{% url 'casos:criar_corretor' %}" class="btn btn-sm btn-orange">
+                            <i class="fa-solid fa-plus"></i> Cadastrar Novo Corretor
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+                        
             <!-- 4. GRUPOS REPETÍVEIS -->
             {% if grupo_formsets %}
                 {% for grupo, formset in grupo_formsets %}
@@ -314,6 +343,7 @@
         aplicarMascaras();
 
         $('.select2-segurado').select2({ theme: 'bootstrap-5', width: '100%', placeholder: 'Pesquise...', allowClear: true });
+        $('.select2-corretor').select2({ theme: 'bootstrap-5', width: '100%', placeholder: 'Pesquise...', allowClear: true });
 
         $('.select2-tomador').select2({ theme: 'bootstrap-5', width: '100%', placeholder: 'Pesquise...', allowClear: true });
 
@@ -331,6 +361,22 @@
         $('select[name="tipo"]').on('change', function() {
             toggleDocumentoFields($(this).val());
             aplicarMascaras();
+        });
+
+        $('.select2-corretor').on('change', function() {
+            var id = $(this).val();
+            if (id) {
+                $.get('/casos/ajax/corretor/' + id + '/detalhes/', function(data) {
+                    if (data.success) {
+                        $('#lblCorretorDoc').text(data.documento || '-');
+                        $('#lblCorretorEmails').text(data.emails.join(', ') || '-');
+                        $('#lblCorretorFones').text(data.telefones.join(', ') || '-');
+                        $('#painelDetalhesCorretor').slideDown();
+                    }
+                });
+            } else {
+                $('#painelDetalhesCorretor').slideUp();
+            }
         });
 
         $('.select2-segurado').on('change', function() {

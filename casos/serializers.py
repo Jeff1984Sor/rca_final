@@ -1,7 +1,7 @@
 # casos/serializers.py
 
 from rest_framework import serializers
-from .models import Caso, Andamento, Timesheet, Acordo, Parcela, Despesa, FluxoInterno, Segurado
+from .models import Caso, Andamento, Timesheet, Acordo, Parcela, Despesa, FluxoInterno, Segurado, Corretor
 from clientes.models import Cliente
 from produtos.models import Produto
 from django.contrib.auth import get_user_model
@@ -20,6 +20,9 @@ class CasoSerializer(serializers.ModelSerializer):
     produto = serializers.PrimaryKeyRelatedField(queryset=Produto.objects.all())
     segurado = serializers.PrimaryKeyRelatedField(
         queryset=Segurado.objects.all(), allow_null=True, required=False
+    )
+    corretor = serializers.PrimaryKeyRelatedField(
+        queryset=Corretor.objects.all(), allow_null=True, required=False
     )
     advogado_responsavel = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(), allow_null=True, required=False
@@ -42,7 +45,7 @@ class CasoSerializer(serializers.ModelSerializer):
         model = Caso
         # Adicionamos os campos read-only à lista de fields
         fields = [
-            'id', 'external_id', 'cliente', 'produto', 'segurado', 'data_entrada', 'status',
+            'id', 'external_id', 'cliente', 'produto', 'segurado', 'corretor', 'data_entrada', 'status',
             'sharepoint_folder_id', 'titulo', 'data_encerramento',
             'advogado_responsavel', 'fase_atual_wf', 'data_criacao',
             # Campos extras para a resposta da API:
