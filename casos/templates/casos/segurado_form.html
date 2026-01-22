@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
     body { background-color: #f4f7f9 !important; font-family: 'Inter', 'Segoe UI', sans-serif; color: #334155; }
-    .main-container { max-width: 800px; margin: 60px auto 120px auto; }
+    .main-container { max-width: 900px; margin: 60px auto 120px auto; }
     .paper-card { background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.05); overflow: hidden; }
     .card-header-orange { background: linear-gradient(135deg, #fd7e14 0%, #ff922b 100%); color: white; padding: 30px 40px; display: flex; justify-content: space-between; align-items: center; }
     .header-title { font-size: 1.6rem; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
@@ -26,6 +26,9 @@
     .contact-item { padding: 10px; background: white; border: 1px solid #f1f5f9; border-radius: 8px; margin-bottom: 5px; color: #475569; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
     .contact-item input { border: none; background: transparent; flex: 1; padding: 0; font-size: 0.9rem; color: #475569; }
     .contact-item input:focus { outline: none; background: #fff7ed; }
+    .phone-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .phone-row select { width: 160px; }
+    .phone-row input { flex: 1; min-width: 180px; }
     .btn-item { border: none; background: transparent; color: #64748b; padding: 4px 6px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
     .btn-item:hover { background: #f1f5f9; color: #0f172a; }
     .btn-item.btn-danger { color: #ef4444; }
@@ -110,7 +113,12 @@
                                     {% endfor %}
                                 </div>
                                 <div id="divEmails">
-                                    <input type="email" name="lista_emails" class="form-control mb-2" placeholder="exemplo@email.com">
+                                    <div class="d-flex gap-2 mb-2 email-row">
+                                        <input type="email" name="lista_emails" class="form-control" placeholder="exemplo@email.com">
+                                        <button type="button" class="btn-item btn-danger" onclick="removeNewRow(this)">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
                                 </div>
                                 <button type="button" class="btn-add-mini" onclick="addEmail()">+ Adicionar</button>
                             </div>
@@ -138,13 +146,16 @@
                                     {% endfor %}
                                 </div>
                                 <div id="divFones">
-                                    <div class="d-flex gap-2 mb-2">
-                                        <select name="lista_telefones_tipo" class="form-select" style="max-width: 160px;">
+                                    <div class="phone-row mb-2 phone-row-new">
+                                        <select name="lista_telefones_tipo" class="form-select">
                                             <option value="COMERCIAL">Comercial</option>
                                             <option value="RESIDENCIAL">Residencial</option>
                                             <option value="CELULAR" selected>Celular</option>
                                         </select>
                                         <input type="text" name="lista_telefones" class="form-control phone-input" placeholder="(00) 00000-0000" data-tipo="CELULAR">
+                                        <button type="button" class="btn-item btn-danger" onclick="removeNewRow(this)">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
                                     </div>
                                 </div>
                                 <button type="button" class="btn-add-mini" onclick="addFone()">+ Adicionar</button>
@@ -237,16 +248,28 @@
             cpfField.style.display = '';
         }
     }
-    function addEmail() { $('#divEmails').append('<input type="email" name="lista_emails" class="form-control mb-2" placeholder="Outro e-mail">'); }
+    function addEmail() {
+        $('#divEmails').append(
+            '<div class="d-flex gap-2 mb-2 email-row">' +
+                '<input type="email" name="lista_emails" class="form-control" placeholder="Outro e-mail">' +
+                '<button type="button" class="btn-item btn-danger" onclick="removeNewRow(this)">' +
+                    '<i class="fa-solid fa-trash"></i>' +
+                '</button>' +
+            '</div>'
+        );
+    }
     function addFone() {
         $('#divFones').append(
-            '<div class="d-flex gap-2 mb-2">' +
-                '<select name="lista_telefones_tipo" class="form-select" style="max-width: 160px;">' +
+            '<div class="phone-row mb-2 phone-row-new">' +
+                '<select name="lista_telefones_tipo" class="form-select">' +
                     '<option value="COMERCIAL">Comercial</option>' +
                     '<option value="RESIDENCIAL">Residencial</option>' +
                     '<option value="CELULAR" selected>Celular</option>' +
                 '</select>' +
                 '<input type="text" name="lista_telefones" class="form-control phone-input" placeholder="(00) 00000-0000" data-tipo="CELULAR">' +
+                '<button type="button" class="btn-item btn-danger" onclick="removeNewRow(this)">' +
+                    '<i class="fa-solid fa-trash"></i>' +
+                '</button>' +
             '</div>'
         );
         aplicarMascaraTelefone();
@@ -270,6 +293,10 @@
         form.appendChild(hidden);
         var item = target.closest('.contact-item');
         if (item) item.style.display = 'none';
+    }
+    function removeNewRow(target) {
+        var row = target.closest('.email-row') || target.closest('.phone-row');
+        if (row) row.remove();
     }
     $(document).ready(function() {
         const tipoSelect = document.getElementById('id_tipo');

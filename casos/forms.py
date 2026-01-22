@@ -9,7 +9,8 @@ from django.forms.widgets import HiddenInput
 from datetime import timedelta
 import re
 
-from django.db.models import Q 
+from django.db.models import Q
+from django.db.models.functions import Lower
 
 # Importa os modelos de campos customizados
 from campos_custom.models import (
@@ -196,7 +197,7 @@ class CasoDinamicoForm(forms.ModelForm):
                 mostrar_tomador = True
 
         if mostrar_tomador:
-            self.fields['tomador'].queryset = Tomador.objects.all().order_by('nome')
+            self.fields['tomador'].queryset = Tomador.objects.all().order_by(Lower('nome'))
             self.fields['tomador'].widget.attrs.update({'class': 'form-select select2-tomador'})
             # Evita problemas de cursor ao renderizar choices em algumas bases
             self.fields['tomador'].choices = list(self.fields['tomador'].choices)
