@@ -45,12 +45,19 @@ class TomadorEmail(models.Model):
         return self.email
 
 class TomadorTelefone(models.Model):
-    """Tabela auxiliar para múltiplos telefones por tomador"""
+    """Tabela auxiliar para m?ltiplos telefones por tomador"""
+    TIPO_CHOICES = [
+        ('COMERCIAL', 'Comercial'),
+        ('RESIDENCIAL', 'Residencial'),
+        ('CELULAR', 'Celular'),
+    ]
+
     tomador = models.ForeignKey(Tomador, on_delete=models.CASCADE, related_name='telefones')
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='CELULAR', verbose_name="Tipo")
     telefone = models.CharField(max_length=20, verbose_name="Telefone")
 
     def __str__(self):
-        return self.telefone
+        return f"{self.get_tipo_display()} - {self.telefone}"
 
 # ==============================================================================
 # 1B. MODELOS DE SEGURADO

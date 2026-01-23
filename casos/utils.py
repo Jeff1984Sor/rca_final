@@ -9,8 +9,25 @@ from clientes.models import Cliente
 from produtos.models import Produto
 
 from django import forms
+import re
 
 
+
+def _sort_opcoes_personalizadas(opcoes):
+    def parse_num(value):
+        cleaned = value.strip().replace('%', '').replace(' ', '')
+        cleaned = cleaned.replace('.', '').replace(',', '.')
+        if re.fullmatch(r'-?\d+(\.\d+)?', cleaned):
+            return float(cleaned)
+        return None
+
+    parsed = []
+    for opt in opcoes:
+        num = parse_num(opt)
+        if num is None:
+            return sorted(opcoes, key=lambda item: item.strip().casefold())
+        parsed.append((num, opt))
+    return [opt for _, opt in sorted(parsed, key=lambda item: item[0])]
 
 def get_lista_campos_fixos():
     """
@@ -122,7 +139,7 @@ def build_form_field(campo, is_required=False, cliente=None, produto=None):
         from campos_custom.models import OpcoesListaPersonalizada
         opcoes_obj = OpcoesListaPersonalizada.objects.filter(campo=campo, cliente=cliente, produto=produto).first()
         opcoes = opcoes_obj.get_opcoes_como_lista() if opcoes_obj else []
-        opcoes = sorted(opcoes, key=lambda opt: opt.strip().casefold())
+        opcoes = _sort_opcoes_personalizadas(opcoes)
         choices = [(opt.strip(), opt.strip()) for opt in opcoes]
 
         if tipo == 'LISTA_UNICA':

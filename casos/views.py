@@ -381,8 +381,12 @@ class TomadorCreateView(CreateView):
             self.object = form.save()
             for email in self.request.POST.getlist('lista_emails'):
                 if email.strip(): TomadorEmail.objects.create(tomador=self.object, email=email.strip())
-            for fone in self.request.POST.getlist('lista_telefones'):
-                if fone.strip(): TomadorTelefone.objects.create(tomador=self.object, telefone=fone.strip())
+            fones = self.request.POST.getlist('lista_telefones')
+            tipos = self.request.POST.getlist('lista_telefones_tipo')
+            for idx, fone in enumerate(fones):
+                if fone.strip():
+                    tipo = tipos[idx] if idx < len(tipos) and tipos[idx] else 'CELULAR'
+                    TomadorTelefone.objects.create(tomador=self.object, telefone=fone.strip(), tipo=tipo)
         return redirect(self.get_success_url())
 
 class TomadorUpdateView(UpdateView):
@@ -421,16 +425,27 @@ class TomadorUpdateView(UpdateView):
                 new_val = self.request.POST.get(f'telefone_{fone_obj.id}', '').strip()
                 if not new_val:
                     fone_obj.delete()
-                elif new_val != fone_obj.telefone:
+                    continue
+                new_tipo = self.request.POST.get(f'telefone_tipo_{fone_obj.id}', '') or fone_obj.tipo
+                changed = False
+                if new_val != fone_obj.telefone:
                     fone_obj.telefone = new_val
+                    changed = True
+                if new_tipo != fone_obj.tipo:
+                    fone_obj.tipo = new_tipo
+                    changed = True
+                if changed:
                     fone_obj.save()
 
             for email in self.request.POST.getlist('lista_emails'):
                 if email.strip():
                     TomadorEmail.objects.create(tomador=self.object, email=email.strip())
-            for fone in self.request.POST.getlist('lista_telefones'):
+            fones = self.request.POST.getlist('lista_telefones')
+            tipos = self.request.POST.getlist('lista_telefones_tipo')
+            for idx, fone in enumerate(fones):
                 if fone.strip():
-                    TomadorTelefone.objects.create(tomador=self.object, telefone=fone.strip())
+                    tipo = tipos[idx] if idx < len(tipos) and tipos[idx] else 'CELULAR'
+                    TomadorTelefone.objects.create(tomador=self.object, telefone=fone.strip(), tipo=tipo)
         return redirect(self.get_success_url())
 
 class TomadorDeleteView(DeleteView):
@@ -704,6 +719,12 @@ def criar_tomador_ajax(request):
             tomador = form.save()
             for email in request.POST.getlist('lista_emails'):
                 if email.strip(): TomadorEmail.objects.create(tomador=tomador, email=email.strip())
+            fones = request.POST.getlist('lista_telefones')
+            tipos = request.POST.getlist('lista_telefones_tipo')
+            for idx, fone in enumerate(fones):
+                if fone.strip():
+                    tipo = tipos[idx] if idx < len(tipos) and tipos[idx] else 'CELULAR'
+                    TomadorTelefone.objects.create(tomador=tomador, telefone=fone.strip(), tipo=tipo)
             return JsonResponse({'success': True, 'id': tomador.id, 'text': tomador.nome})
     return JsonResponse({'success': False, 'errors': form.errors})
 
@@ -1912,7 +1933,10 @@ def obter_detalhes_tomador(request, pk):
         
         # Pega a lista de emails e telefones
         emails = list(tomador.emails.values_list('email', flat=True))
-        telefones = list(tomador.telefones.values_list('telefone', flat=True))
+        telefones = [
+            f"{fone.get_tipo_display()}: {fone.telefone}"
+            for fone in tomador.telefones.all()
+        ]
         
         return JsonResponse({
             'success': True,

@@ -104,7 +104,7 @@
                         <div class="detail-label"><i class="fa-solid fa-phone"></i> Telefones</div>
                         <div class="detail-value">
                             {% for fone in caso.tomador.telefones.all %}
-                                <span class="badge bg-light text-dark border me-1">{{ fone.telefone }}</span>
+                                <span class="badge bg-light text-dark border me-1">{{ fone.get_tipo_display }}: {{ fone.telefone }}</span>
                             {% empty %}
                                 <span class="text-muted">-</span>
                             {% endfor %}

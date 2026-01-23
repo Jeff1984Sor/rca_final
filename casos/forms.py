@@ -34,6 +34,22 @@ User = get_user_model()
 # ==============================================================================
 # FUNÇÃO AUXILIAR: CONSTRUTOR DE CAMPOS (ATUALIZADA)
 # ==============================================================================
+def _sort_opcoes_personalizadas(opcoes):
+    def parse_num(value):
+        cleaned = value.strip().replace('%', '').replace(' ', '')
+        cleaned = cleaned.replace('.', '').replace(',', '.')
+        if re.fullmatch(r'-?\d+(\.\d+)?', cleaned):
+            return float(cleaned)
+        return None
+
+    parsed = []
+    for opt in opcoes:
+        num = parse_num(opt)
+        if num is None:
+            return sorted(opcoes, key=lambda item: item.strip().casefold())
+        parsed.append((num, opt))
+    return [opt for _, opt in sorted(parsed, key=lambda item: item[0])]
+
 def build_form_field(campo_obj: CampoPersonalizado, is_required=False, cliente=None, produto=None) -> forms.Field:
     """
     Cria o campo de formulário Django apropriado com base no 'tipo_campo'.
@@ -58,7 +74,7 @@ def build_form_field(campo_obj: CampoPersonalizado, is_required=False, cliente=N
                 campo=campo_obj, cliente=cliente, produto=produto
             )
             opcoes = opcoes_obj.get_opcoes_como_lista()
-            opcoes = sorted(opcoes, key=lambda opt: opt.strip().casefold())
+            opcoes = _sort_opcoes_personalizadas(opcoes)
             choices = [(opt.strip(), opt.strip()) for opt in opcoes]
         except OpcoesListaPersonalizada.DoesNotExist:
             choices = []

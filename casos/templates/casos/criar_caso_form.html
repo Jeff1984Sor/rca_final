@@ -280,7 +280,14 @@
                     <div class="mb-2">
                         <label class="form-label">Telefones</label>
                         <div id="divFones">
-                            <input type="text" name="lista_telefones" class="form-control mb-2" placeholder="Telefone principal">
+                            <div class="d-flex gap-2 mb-2">
+                                <select name="lista_telefones_tipo" class="form-select" style="max-width: 160px;">
+                                    <option value="COMERCIAL">Comercial</option>
+                                    <option value="RESIDENCIAL">Residencial</option>
+                                    <option value="CELULAR" selected>Celular</option>
+                                </select>
+                                <input type="text" name="lista_telefones" class="form-control phone-input" placeholder="(00) 00000-0000" data-tipo="CELULAR">
+                            </div>
                         </div>
                         <button type="button" class="btn btn-sm btn-light border" onclick="addFone()">+ Outro</button>
                     </div>
@@ -559,7 +566,19 @@
     });
 
     function addEmail() { $('#divEmails').append('<input type="email" name="lista_emails" class="form-control mb-2" placeholder="Outro Email">'); }
-    function addFone() { $('#divFones').append('<input type="text" name="lista_telefones" class="form-control mb-2" placeholder="Outro Telefone">'); }
+    function addFone() {
+        $('#divFones').append(
+            '<div class="d-flex gap-2 mb-2">' +
+                '<select name="lista_telefones_tipo" class="form-select" style="max-width: 160px;">' +
+                    '<option value="COMERCIAL">Comercial</option>' +
+                    '<option value="RESIDENCIAL">Residencial</option>' +
+                    '<option value="CELULAR" selected>Celular</option>' +
+                '</select>' +
+                '<input type="text" name="lista_telefones" class="form-control phone-input" placeholder="(00) 00000-0000" data-tipo="CELULAR">' +
+            '</div>'
+        );
+        aplicarMascaraTelefone();
+    }
     function addSeguradoEmail() { $('#divSeguradoEmails').append('<input type="email" name="lista_emails" class="form-control mb-2" placeholder="Outro Email">'); }
     function addSeguradoFone() {
         $('#divSeguradoFones').append(

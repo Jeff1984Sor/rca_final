@@ -337,7 +337,12 @@
                                     {% for fone in telefones %}
                                         <div class="contact-item" data-item="telefone" data-id="{{ fone.id }}">
                                             <i class="fa-solid fa-phone text-muted"></i>
-                                            <input type="text" name="telefone_{{ fone.id }}" value="{{ fone.telefone }}" readonly onclick="startEditItem(this)">
+                                            <select name="telefone_tipo_{{ fone.id }}" class="form-select form-select-sm" style="max-width: 140px;">
+                                                <option value="COMERCIAL" {% if fone.tipo == 'COMERCIAL' %}selected{% endif %}>Comercial</option>
+                                                <option value="RESIDENCIAL" {% if fone.tipo == 'RESIDENCIAL' %}selected{% endif %}>Residencial</option>
+                                                <option value="CELULAR" {% if fone.tipo == 'CELULAR' %}selected{% endif %}>Celular</option>
+                                            </select>
+                                            <input type="text" name="telefone_{{ fone.id }}" value="{{ fone.telefone }}" class="phone-input" data-tipo="{{ fone.tipo|default:'CELULAR' }}" readonly onclick="startEditItem(this)">
                                             <button type="button" class="btn-item" onclick="startEditItem(this)">
                                                 <i class="fa-solid fa-pen"></i>
                                             </button>
@@ -348,7 +353,14 @@
                                     {% endfor %}
                                 </div>
                                 <div id="divFones">
-                                    <input type="text" name="lista_telefones" class="form-control mb-2" placeholder="(00) 00000-0000">
+                                    <div class="d-flex gap-2 mb-2">
+                                        <select name="lista_telefones_tipo" class="form-select" style="max-width: 140px;">
+                                            <option value="COMERCIAL">Comercial</option>
+                                            <option value="RESIDENCIAL">Residencial</option>
+                                            <option value="CELULAR" selected>Celular</option>
+                                        </select>
+                                        <input type="text" name="lista_telefones" class="form-control phone-input" placeholder="(00) 00000-0000" data-tipo="CELULAR">
+                                    </div>
                                 </div>
                                 <button type="button" class="btn-add-mini" onclick="addFone()">+ Adicionar</button>
                             </div>
@@ -485,9 +497,30 @@
         $('#divEmails').append('<input type="email" name="lista_emails" class="form-control mb-2" placeholder="Outro e-mail">'); 
     }
     function addFone() { 
-        $('#divFones').append('<input type="text" name="lista_telefones" class="form-control mb-2" placeholder="Outro telefone">'); 
+        $('#divFones').append(
+            '<div class="d-flex gap-2 mb-2">' +
+                '<select name="lista_telefones_tipo" class="form-select" style="max-width: 140px;">' +
+                    '<option value="COMERCIAL">Comercial</option>' +
+                    '<option value="RESIDENCIAL">Residencial</option>' +
+                    '<option value="CELULAR" selected>Celular</option>' +
+                '</select>' +
+                '<input type="text" name="lista_telefones" class="form-control phone-input" placeholder="(00) 00000-0000" data-tipo="CELULAR">' +
+            '</div>'
+        );
+        aplicarMascaraTelefone();
     }
-    function startEditItem(target) {
+        function aplicarMascaraTelefone() {
+        $('.phone-input').each(function() {
+            var tipo = $(this).attr('data-tipo') || 'CELULAR';
+            if (tipo === 'COMERCIAL' || tipo === 'RESIDENCIAL') {
+                $(this).mask('(00) 0000-0000');
+            } else {
+                $(this).mask('(00) 00000-0000');
+            }
+        });
+    }
+
+function startEditItem(target) {
         var item = target.closest('.contact-item');
         if (!item) return;
         var input = item.querySelector('input');
@@ -521,6 +554,13 @@
             if (m) $(this).mask(m);
         });
     });
+
+    $(document).on('change', 'select[name^="telefone_tipo_"], select[name="lista_telefones_tipo"]', function() {
+        var input = $(this).closest('.contact-item, .d-flex').find('input.phone-input');
+        input.attr('data-tipo', $(this).val());
+        aplicarMascaraTelefone();
+    });
+
 </script>
     <script>
         function toggleDocumentoFields(tipo) {
