@@ -4752,3 +4752,12 @@ td.actions {
     .reset-card { padding: 40px 24px; }
     .reset-header h1 { font-size: 1.75rem; }
 }
+
+.acordo-actions {
+    margin-left: auto;
+}
+
+.acordo-actions .btn {
+    min-width: 90px;
+    justify-content: center;
+}
