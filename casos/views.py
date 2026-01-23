@@ -110,6 +110,47 @@ def render_titulo_caso(padrao, dados):
         return dados.get(key, '')
     return re.sub(r'\{([^}]+)\}', replacer, padrao)
 
+def add_system_title_fields(dados_titulo, *, cliente=None, produto=None, caso=None, cleaned=None):
+    def pick(name):
+        if cleaned and name in cleaned:
+            return cleaned.get(name)
+        if caso is not None:
+            return getattr(caso, name, None)
+        return None
+
+    def format_date(value):
+        if hasattr(value, 'strftime'):
+            return value.strftime('%d/%m/%Y')
+        return str(value) if value else ''
+
+    advogado = pick('advogado_responsavel')
+    tomador = pick('tomador')
+    segurado = pick('segurado')
+    corretor = pick('corretor')
+    status = pick('status')
+
+    if cliente:
+        dados_titulo.setdefault('cliente', cliente.nome)
+        dados_titulo.setdefault('cliente_nome', cliente.nome)
+    if produto:
+        dados_titulo.setdefault('produto', produto.nome)
+        dados_titulo.setdefault('produto_nome', produto.nome)
+
+    dados_titulo.setdefault('status', status or '')
+    dados_titulo.setdefault('data_entrada', format_date(pick('data_entrada')))
+    dados_titulo.setdefault('data_encerramento', format_date(pick('data_encerramento')))
+
+    if advogado:
+        nome_adv = advogado.get_full_name() or advogado.username
+        dados_titulo.setdefault('advogado', nome_adv)
+        dados_titulo.setdefault('advogado_responsavel', nome_adv)
+    if tomador:
+        dados_titulo.setdefault('tomador', tomador.nome)
+    if segurado:
+        dados_titulo.setdefault('segurado', segurado.nome)
+    if corretor:
+        dados_titulo.setdefault('corretor', corretor.nome)
+
 # Importa funções auxiliares (com fallback)
 try:
     from .utils import get_cabecalho_exportacao
@@ -731,9 +772,15 @@ def criar_caso(request, cliente_id, produto_id):
                                         str(val_f)
                                     )
 
-                    titulo_final = render_titulo_caso(produto.padrao_titulo or "", dados_titulo)
-                    
-                    if not titulo_final.strip(): titulo_final = f"Caso {cliente.nome}"
+                    add_system_title_fields(dados_titulo, cliente=cliente, produto=produto, cleaned=dados_limpos)
+
+                    if produto.padrao_titulo:
+                        titulo_final = render_titulo_caso(produto.padrao_titulo or "", dados_titulo)
+                        if not titulo_final.strip():
+                            titulo_final = f"Caso {cliente.nome}"
+                    else:
+                        titulo_manual = dados_limpos.get('titulo_manual', '').strip()
+                        titulo_final = titulo_manual if titulo_manual else f"Caso {cliente.nome}"
 
                     novo_caso = form.save(commit=False)
                     novo_caso.cliente = cliente
@@ -824,7 +871,38 @@ def editar_caso(request, pk):
         if form.is_valid() and formsets_validos:
             try:
                 with transaction.atomic():
-                    caso = form.save()
+                    caso = form.save(commit=False)
+
+                    dados_limpos = form.cleaned_data
+                    dados_titulo = {}
+                    for eco in estrutura.ordenamentos_simples.all():
+                        val = dados_limpos.get(f'campo_personalizado_{eco.campo.id}', '')
+                        dados_titulo[eco.campo.nome_variavel.lower()] = '' if val is None else str(val)
+
+                    for grupo, formset in grupo_formsets.values():
+                        for f in formset:
+                            if not f.has_changed() or f.cleaned_data.get('DELETE'):
+                                continue
+                            for conf in grupo.ordenamentos_grupo.all():
+                                val_f = f.cleaned_data.get(f'campo_personalizado_{conf.campo.id}')
+                                if val_f not in (None, ''):
+                                    dados_titulo.setdefault(
+                                        conf.campo.nome_variavel.lower(),
+                                        str(val_f)
+                                    )
+
+                    add_system_title_fields(dados_titulo, cliente=cliente, produto=produto, caso=caso, cleaned=dados_limpos)
+                    if produto.padrao_titulo:
+                        titulo_final = render_titulo_caso(produto.padrao_titulo or "", dados_titulo)
+                        if not titulo_final.strip():
+                            titulo_final = f"Caso {cliente.nome}"
+                        caso.titulo = titulo_final
+                    else:
+                        titulo_manual = dados_limpos.get('titulo_manual', '').strip()
+                        if titulo_manual:
+                            caso.titulo = titulo_manual
+
+                    caso.save()
 
                     for eco in estrutura.ordenamentos_simples.all():
                         val = form.cleaned_data.get(f'campo_personalizado_{eco.campo.id}')
