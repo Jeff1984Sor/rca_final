@@ -6,7 +6,7 @@ from django import template
 from datetime import date, datetime
 import locale
 from django.utils.safestring import mark_safe
-from django.utils.html import linebreaksbr
+from django.template.defaultfilters import linebreaksbr
 
 register = template.Library()
 
