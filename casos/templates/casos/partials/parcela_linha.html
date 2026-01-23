@@ -6,19 +6,21 @@
     <td>R$ {{ parcela.valor_parcela }}</td>
     <td>{{ parcela.get_status_display }}</td>
     <td class="text-right">
-        <form method="post" action="{% url 'casos:pagar_parcela' pk=parcela.pk %}" class="d-inline">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-sm action-btn btn-edit">Pagar</button>
-        </form>
-        <form method="post" action="{% url 'casos:upload_comprovante_parcela' pk=parcela.pk %}" enctype="multipart/form-data" class="d-inline">
-            {% csrf_token %}
-            <label class="btn btn-sm action-btn btn-info">
-                Incluir Comprovante
-                <input type="file" name="comprovante" class="d-none" onchange="this.form.submit()">
-            </label>
-        </form>
-        {% if parcela.comprovante %}
-            <a href="{% url 'casos:baixar_comprovante_parcela' pk=parcela.pk %}" class="btn btn-sm action-btn btn-info">Visualizar</a>
-        {% endif %}
+        <div class="d-flex gap-2 justify-content-end flex-wrap">
+            <form method="post" action="{% url 'casos:pagar_parcela' pk=parcela.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm action-btn btn-edit">Pagar</button>
+            </form>
+            <form method="post" action="{% url 'casos:upload_comprovante_parcela' pk=parcela.pk %}" enctype="multipart/form-data" class="d-inline">
+                {% csrf_token %}
+                <label class="btn btn-sm action-btn btn-info">
+                    Incluir Comprovante
+                    <input type="file" name="comprovante" style="display:none" onchange="this.form.submit()">
+                </label>
+            </form>
+            {% if parcela.comprovante %}
+                <a href="{% url 'casos:baixar_comprovante_parcela' pk=parcela.pk %}" class="btn btn-sm action-btn btn-info">Visualizar</a>
+            {% endif %}
+        </div>
     </td>
 </tr>
