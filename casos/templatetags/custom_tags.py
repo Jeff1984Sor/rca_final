@@ -68,14 +68,18 @@ def get_event_icon(event_type):
 
 @register.filter(name='format_dynamic_value')
 def format_dynamic_value(value, field_type):
-    if value is None or value == '': return "-"
+    if value is None:
+        return "-"
+    value_str = str(value).strip()
+    if value_str == '' or value_str.lower() in ('none', 'null'):
+        return "-"
     if field_type == 'BOOLEANO':
-        value_str = str(value).strip().lower()
-        if value_str in ('true', '1', 'sim', 'yes', 'on'):
+        value_lower = value_str.lower()
+        if value_lower in ('true', '1', 'sim', 'yes', 'on'):
             return "Sim"
         if value_str in ('false', '0', 'nao', 'não', 'no', 'off'):
             return "Não"
-        return value
+        return value_str
     if field_type == 'MOEDA':
         try:
             return locale.currency(float(value), grouping=True)
@@ -88,7 +92,7 @@ def format_dynamic_value(value, field_type):
             return date_obj.strftime('%d/%m/%Y')
         except (ValueError, TypeError):
             if hasattr(value, 'strftime'): return value.strftime('%d/%m/%Y')
-            return value
+            return value_str
     if field_type == 'TEXTO_LONGO':
         return linebreaksbr(value)
     return value
