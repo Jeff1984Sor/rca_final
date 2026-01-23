@@ -401,10 +401,13 @@ class AcordoForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         if 'advogado_acordo' in self.fields:
+            self.fields['advogado_acordo'].label = "Advogado ResponsÃ¡vel"
             self.fields['advogado_acordo'].queryset = User.objects.all().order_by('first_name', 'username')
+            self.fields['advogado_acordo'].label_from_instance = (
+                lambda u: u.get_full_name() or u.username
+            )
         if user:
             self.fields['advogado_acordo'].initial = user
-            self.fields['advogado_acordo'].queryset = User.objects.filter(id=user.id)
     class Meta:
         model = Acordo
         fields = ['valor_total', 'numero_parcelas', 'data_primeira_parcela', 'advogado_acordo']

@@ -7,6 +7,7 @@ import logging
 import re
 from decimal import Decimal, InvalidOperation
 from datetime import datetime, timedelta, date
+from dateutil.relativedelta import relativedelta
 from django.db.models import ProtectedError
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -1044,8 +1045,47 @@ def lista_casos(request):
 @login_required
 def detalhe_caso(request, pk):
     caso = get_object_or_404(Caso, pk=pk)
-    
+    form_acordo = AcordoForm(user=request.user)
+
     if request.method == 'POST':
+        if 'submit_acordo' in request.POST:
+            data = request.POST.copy()
+            valor_total = normalize_currency_input(data.get('valor_total', ''))
+            if valor_total:
+                data['valor_total'] = valor_total
+            form_acordo = AcordoForm(data, user=request.user)
+            if form_acordo.is_valid():
+                with transaction.atomic():
+                    acordo = form_acordo.save(commit=False)
+                    acordo.caso = caso
+                    acordo.save()
+
+                    valor_total_calc = acordo.valor_total
+                    num_parcelas = acordo.numero_parcelas
+                    if num_parcelas and valor_total_calc is not None:
+                        valor_parcela = (valor_total_calc / num_parcelas).quantize(Decimal('0.01'))
+                        for i in range(num_parcelas):
+                            data_vencimento = acordo.data_primeira_parcela + relativedelta(months=i)
+                            Parcela.objects.create(
+                                acordo=acordo,
+                                numero_parcela=i + 1,
+                                valor_parcela=valor_parcela,
+                                data_vencimento=data_vencimento
+                            )
+                        total_calculado = valor_parcela * num_parcelas
+                        diff = valor_total_calc - total_calculado
+                        if diff:
+                            ultima_parcela = acordo.parcelas.order_by('-numero_parcela').first()
+                            if ultima_parcela:
+                                ultima_parcela.valor_parcela += diff
+                                ultima_parcela.save()
+
+                messages.success(request, 'Acordo criado com sucesso.')
+                return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})}?aba=acordos")
+            else:
+                messages.error(request, 'Corrija os erros do acordo.')
+
+        edit_modal = request.POST.get('edit_modal')
         edit_modal = request.POST.get('edit_modal')
         
         if edit_modal == 'info-basicas':
@@ -1121,7 +1161,7 @@ def detalhe_caso(request, pk):
         'caso': caso,
         'form_andamento': AndamentoForm(),
         'form_timesheet': TimesheetForm(user=request.user),
-        'form_acordo': AcordoForm(user=request.user),
+        'form_acordo': form_acordo,
         'form_despesa': DespesaForm(user=request.user),
         'andamentos': caso.andamentos.all().order_by('-data_andamento'),
         'timesheets': caso.timesheets.all(),
