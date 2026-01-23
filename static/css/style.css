@@ -76,9 +76,9 @@ body {
     --info-solid: #0ea5e9;
     
     /* ========== BACKGROUNDS (ATUALIZADOS) ========== */
-    --bg-main: #F28500; /* FUNDO PRINCIPAL AGORA É TANGERINA */
+    --bg-main: #FFFFFF; /* FUNDO PRINCIPAL AGORA É TANGERINA */
     --bg-card: #FFFFFF; /* CARDS AGORA SÃO BRANCOS para contraste */
-    --bg-subtle: #FFF8F0; /* Um tom sutil de laranja para highlights */
+    --bg-subtle: #F8F8F8; /* Um tom sutil de laranja para highlights */
     --bg-input: #F5F5F5; /* Inputs com fundo cinza claro */
     
     /* ========== TEXTOS (ATUALIZADOS) ========== */
@@ -4807,4 +4807,11 @@ td.actions {
     text-align: right;
     white-space: nowrap;
     width: 1%;
+}
+
+
+/* GLOBAL OVERRIDE: WHITE BACKGROUND */
+body {
+    background: #FFFFFF !important;
+    color: #000000 !important;
 }

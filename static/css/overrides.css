@@ -1,0 +1,32 @@
+/* Global visual reset to white background and black text. */
+body {
+    background: #ffffff !important;
+    color: #000000 !important;
+}
+
+.hero-header,
+.form-card,
+.card,
+.tabs-container,
+.summary-box,
+.summary-grid,
+.data-table-container {
+    background: #ffffff !important;
+    color: #000000 !important;
+}
+
+.hero-header .hero-title,
+.hero-header .hero-meta,
+.hero-header .hero-meta i,
+.tabs-container .tab-btn,
+.tabs-container .tab-btn.active,
+.card-title,
+.card-title-icon,
+.detail-label,
+.detail-value {
+    color: #000000 !important;
+}
+
+.text-muted {
+    color: #333333 !important;
+}
