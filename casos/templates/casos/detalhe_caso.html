@@ -207,52 +207,131 @@
         </div>
     </div>
     
+    
     <!-- ABA: TIMESHEET -->
     <div id="timesheet" class="tab-content">
         <div class="card">
-            <h2 class="card-title"><i class="fa-solid fa-plus-circle"></i> Novo Lançamento</h2>
-            <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
-                {% csrf_token %}
-                <div class="form-row">{% include "_form_field.html" with field=form_timesheet.data_execucao %}{% include "_form_field.html" with field=form_timesheet.tempo %}</div>
-                {% include "_form_field.html" with field=form_timesheet.advogado classes="full-width" %}
-                {% include "_form_field.html" with field=form_timesheet.descricao classes="full-width" %}
-                <button type="submit" name="submit_timesheet" class="btn btn-primary mt-3"><i class="fa-solid fa-save"></i> Salvar</button>
-            </form>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 class="card-title"><i class="fa-solid fa-clock"></i> Timesheet</h2>
+                <button type="button" class="btn btn-sm action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#modalNovoTimesheet">
+                    <i class="fa-solid fa-plus"></i> Novo Lan?amento
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="summary-grid">
+                    <div class="summary-box animated-gradient saldo-devedor-card">
+                        <div class="summary-label"><i class="fa-solid fa-clock"></i> Tempo Total Gasto</div>
+                        <div class="summary-value">{{ tempo_total|format_timedelta }}</div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="summary-grid"><div class="summary-box animated-gradient"><div class="summary-label"><i class="fa-solid fa-clock"></i> Tempo Total Gasto</div><div class="summary-value">{{ tempo_total|format_timedelta }}</div></div></div>
+
         <div class="card mt-4">
-            <div class="card-header-with-edit">
-                <h2 class="card-title-icon card-title"><i class="fa-solid fa-list"></i> Histórico</h2>
-                <div class="d-flex gap-12">
-                    <a href="{% url 'casos:exportar_timesheet_excel' pk=caso.pk %}" class="btn btn-sm btn-export"><i class="fa-solid fa-file-excel"></i> Excel</a>
-                    <a href="{% url 'casos:exportar_timesheet_pdf' pk=caso.pk %}" class="btn btn-sm btn-pdf"><i class="fa-solid fa-file-pdf"></i> PDF</a>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 class="card-title"><i class="fa-solid fa-list"></i> Hist?rico</h2>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'casos:exportar_timesheet_excel' pk=caso.pk %}" class="btn btn-sm action-btn btn-export"><i class="fa-solid fa-file-excel"></i> Excel</a>
+                    <a href="{% url 'casos:exportar_timesheet_pdf' pk=caso.pk %}" class="btn btn-sm action-btn btn-pdf"><i class="fa-solid fa-file-pdf"></i> PDF</a>
                 </div>
             </div>
             <div class="card-body">
-                <table class="data-table">
-                    <thead><tr><th>Data</th><th>Tempo</th><th>Advogado</th><th>Descrição</th><th class="text-right">Ações</th></tr></thead>
-                    <tbody>
-                        {% for ts in timesheets %}
-                        <tr>
-                            <td><strong>{{ ts.data_execucao|date:"d/m/Y" }}</strong></td>
-                            <td><span class="badge bg-info">{{ ts.tempo }}</span></td>
-                            <td>{% if ts.advogado %}{{ ts.advogado.get_full_name|default:ts.advogado.username }}{% else %}-{% endif %}</td>
-                            <td style="max-width: 300px;">{{ ts.descricao|linebreaksbr }}</td>
-                            <td class="text-right">
-                                <a href="{% url 'casos:editar_timesheet' pk=ts.pk %}" class="btn btn-sm action-btn btn-edit"><i class="fa-solid fa-pen"></i></a>
-                                <a href="{% url 'casos:deletar_timesheet' pk=ts.pk %}" class="btn btn-sm action-btn btn-delete"><i class="fa-solid fa-trash"></i></a>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="5"><div class="empty-state"><i class="fa-solid fa-clock"></i><h3>Nenhum lançamento</h3></div></td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Tempo</th>
+                                <th>Advogado Respons?vel</th>
+                                <th>Descri??o</th>
+                                <th class="actions-cell">A??es</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ts in timesheets %}
+                            <tr>
+                                <td><strong>{{ ts.data_execucao|date:"d/m/Y" }}</strong></td>
+                                <td><span class="badge bg-info">{{ ts.tempo }}</span></td>
+                                <td>{% if ts.advogado %}{{ ts.advogado.get_full_name|default:ts.advogado.username }}{% else %}-{% endif %}</td>
+                                <td>{{ ts.descricao|linebreaksbr }}</td>
+                                <td class="actions-cell">
+                                    <div class="d-flex gap-2 justify-content-end flex-wrap">
+                                        <button type="button" class="btn btn-sm action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#modalEditarTimesheet-{{ ts.pk }}">Editar</button>
+                                        <form method="post" action="{% url 'casos:deletar_timesheet' pk=ts.pk %}" class="d-inline" onsubmit="return confirm('Excluir este lan?amento?')">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm action-btn btn-delete">Excluir</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5"><div class="empty-state"><i class="fa-solid fa-clock"></i><h3>Nenhum lan?amento</h3></div></td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- ABA: ACORDOS -->
+    <!-- MODAL NOVO TIMESHEET -->
+    <div class="modal fade" id="modalNovoTimesheet" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa-solid fa-clock"></i> Novo Lan?amento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
+                        {% csrf_token %}
+                        <div class="form-row">
+                            {% include "_form_field.html" with field=form_timesheet.data_execucao %}
+                            {% include "_form_field.html" with field=form_timesheet.tempo %}
+                        </div>
+                        {% include "_form_field.html" with field=form_timesheet.advogado classes="full-width" %}
+                        {% include "_form_field.html" with field=form_timesheet.descricao classes="full-width" %}
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" name="submit_timesheet" class="btn btn-primary"><i class="fa-solid fa-save"></i> Salvar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% for ts in timesheets %}
+    <div class="modal fade" id="modalEditarTimesheet-{{ ts.pk }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa-solid fa-pen"></i> Editar Lan?amento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="timesheet_id" value="{{ ts.pk }}">
+                        {% with form=timesheet_forms|get_item:ts.pk %}
+                            <div class="form-row">
+                                {% include "_form_field.html" with field=form.data_execucao %}
+                                {% include "_form_field.html" with field=form.tempo %}
+                            </div>
+                            {% include "_form_field.html" with field=form.advogado classes="full-width" %}
+                            {% include "_form_field.html" with field=form.descricao classes="full-width" %}
+                        {% endwith %}
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" name="submit_timesheet_edit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Salvar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+<!-- ABA: ACORDOS -->
     
     <!-- ABA: ACORDOS -->
     <div id="acordos" class="tab-content">

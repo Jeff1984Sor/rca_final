@@ -1062,7 +1062,17 @@ def detalhe_caso(request, pk):
                 return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})}?aba=despesas")
             messages.error(request, 'Corrija os erros da despesa.')
 
-        if 'submit_despesa_edit' in request.POST:
+                if 'submit_timesheet_edit' in request.POST:
+            ts_id = request.POST.get('timesheet_id')
+            ts_obj = get_object_or_404(Timesheet, pk=ts_id, caso=caso)
+            form_edit = TimesheetForm(request.POST, instance=ts_obj, user=request.user)
+            if form_edit.is_valid():
+                form_edit.save()
+                messages.success(request, 'Timesheet atualizado com sucesso.')
+                return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})}?aba=timesheet")
+            messages.error(request, 'Corrija os erros do timesheet.')
+
+if 'submit_despesa_edit' in request.POST:
             despesa_id = request.POST.get('despesa_id')
             despesa = get_object_or_404(Despesa, pk=despesa_id, caso=caso)
             data = request.POST.copy()
@@ -1075,6 +1085,16 @@ def detalhe_caso(request, pk):
                 messages.success(request, 'Despesa atualizada com sucesso.')
                 return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})}?aba=despesas")
             messages.error(request, 'Corrija os erros da despesa.')
+
+        if 'submit_timesheet' in request.POST:
+            form_ts = TimesheetForm(request.POST, user=request.user)
+            if form_ts.is_valid():
+                ts = form_ts.save(commit=False)
+                ts.caso = caso
+                ts.save()
+                messages.success(request, 'Timesheet registrado com sucesso.')
+                return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})}?aba=timesheet")
+            messages.error(request, 'Corrija os erros do timesheet.')
 
         if 'submit_acordo' in request.POST:
             data = request.POST.copy()
@@ -1191,6 +1211,7 @@ def detalhe_caso(request, pk):
         'caso': caso,
         'form_andamento': AndamentoForm(),
         'form_timesheet': TimesheetForm(user=request.user),
+        'timesheet_forms': {t.pk: TimesheetForm(instance=t, user=request.user) for t in caso.timesheets.all()},
         'form_acordo': form_acordo,
         'form_despesa': DespesaForm(user=request.user),
         'despesa_forms': {d.pk: DespesaForm(instance=d, user=request.user) for d in caso.despesas.all()},

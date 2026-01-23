@@ -382,10 +382,13 @@ class TimesheetForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         if 'advogado' in self.fields:
+            self.fields['advogado'].label = "Advogado Responsável"
             self.fields['advogado'].queryset = User.objects.all().order_by('first_name', 'username')
+            self.fields['advogado'].label_from_instance = (
+                lambda u: u.get_full_name() or u.username
+            )
         if user:
             self.fields['advogado'].initial = user
-            self.fields['advogado'].queryset = User.objects.filter(id=user.id)
     class Meta:
         model = Timesheet
         fields = ['data_execucao', 'advogado', 'tempo', 'descricao']
