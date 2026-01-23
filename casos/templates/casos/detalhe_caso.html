@@ -381,10 +381,150 @@
             </div>
         </div>
     </div>
-<!-- ABA: DESPESAS -->
-    <div id="despesas" class="tab-content"><div class="card"><h2 class="card-title"><i class="fa-solid fa-plus-circle"></i> Nova Despesa</h2><form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">{% csrf_token %}<div class="form-row">{% include "_form_field.html" with field=form_despesa.data_despesa %}{% include "_form_field.html" with field=form_despesa.valor %}</div>{% include "_form_field.html" with field=form_despesa.descricao classes="full-width" %}{% include "_form_field.html" with field=form_despesa.advogado classes="full-width" %}<button type="submit" name="submit_despesa" class="btn btn-primary mt-3"><i class="fa-solid fa-save"></i> Salvar</button></form></div><div class="summary-grid"><div class="summary-box animated-gradient"><div class="summary-label"><i class="fa-solid fa-dollar-sign"></i> Total de Despesas</div><div class="summary-value">{{ total_despesas|currency }}</div></div></div><div class="card mt-4"><h2 class="card-title"><i class="fa-solid fa-list"></i> Histórico</h2><table class="data-table"><thead><tr><th>Data</th><th>Advogado</th><th>Descrição</th><th>Valor</th><th class="text-right">Ações</th></tr></thead><tbody>{% for d in despesas %}<tr><td><strong>{{ d.data_despesa|date:"d/m/Y" }}</strong></td><td>{% if d.advogado %}{{ d.advogado.get_full_name|default:d.advogado.username }}{% else %}-{% endif %}</td><td>{{ d.descricao|linebreaksbr }}</td><td><strong>{{ d.valor|currency }}</strong></td><td class="text-right"><a href="{% url 'casos:editar_despesa' pk=d.pk %}" class="btn btn-sm action-btn btn-edit ms-auto">Editar</a></td></tr>{% empty %}<tr><td colspan="5"><div class="empty-state"><i class="fa-solid fa-dollar-sign"></i><h3>Nenhuma despesa</h3></div></td></tr>{% endfor %}</tbody></table></div></div>
-    
-    <!-- ABA: ANEXOS (HTMX) -->
+
+    <!-- ABA: DESPESAS -->
+    <div id="despesas" class="tab-content">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 class="card-title"><i class="fa-solid fa-dollar-sign"></i> Despesas</h2>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#modalNovaDespesa">
+                        <i class="fa-solid fa-plus"></i> Nova Despesa
+                    </button>
+                    <a href="{% url 'casos:exportar_despesas_pdf' pk=caso.pk %}" class="btn btn-sm action-btn btn-pdf"><i class="fa-solid fa-file-pdf"></i> PDF</a>
+                    <a href="{% url 'casos:exportar_despesas_excel' pk=caso.pk %}" class="btn btn-sm action-btn btn-export"><i class="fa-solid fa-file-excel"></i> Excel</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 class="card-title"><i class="fa-solid fa-list"></i> Hist?rico</h2>
+            </div>
+            <div class="card-body">
+                <div class="data-table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Advogado Respons?vel</th>
+                                <th>Descri??o</th>
+                                <th>Valor</th>
+                                <th>Comprovante</th>
+                                <th class="actions-cell">A??es</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in despesas %}
+                            <tr>
+                                <td><strong>{{ d.data_despesa|date:"d/m/Y" }}</strong></td>
+                                <td>{% if d.advogado %}{{ d.advogado.get_full_name|default:d.advogado.username }}{% else %}-{% endif %}</td>
+                                <td>{{ d.descricao|linebreaksbr }}</td>
+                                <td><strong>{{ d.valor|currency }}</strong></td>
+                                <td>
+                                    {% if d.comprovante %}
+                                        <a href="{% url 'casos:baixar_comprovante_despesa' pk=d.pk %}" class="btn btn-sm action-btn btn-info">Visualizar</a>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="actions-cell">
+                                    <div class="d-flex gap-2 justify-content-end flex-wrap">
+                                        <button type="button" class="btn btn-sm action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#modalEditarDespesa-{{ d.pk }}">Editar</button>
+                                        <form method="post" action="{% url 'casos:deletar_despesa' pk=d.pk %}" class="d-inline" onsubmit="return confirm('Excluir esta despesa?')">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm action-btn btn-delete">Excluir</button>
+                                        </form>
+                                        <form method="post" action="{% url 'casos:upload_comprovante_despesa' pk=d.pk %}" enctype="multipart/form-data" class="d-inline">
+                                            {% csrf_token %}
+                                            <label class="btn btn-sm action-btn btn-success">
+                                                Incluir Comprovante
+                                                <input type="file" name="comprovante" style="display:none" onchange="this.form.submit()">
+                                            </label>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6"><div class="empty-state"><i class="fa-solid fa-dollar-sign"></i><h3>Nenhuma despesa</h3></div></td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NOVA DESPESA -->
+    <div class="modal fade" id="modalNovaDespesa" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa-solid fa-dollar-sign"></i> Nova Despesa</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="form-row">
+                            {% include "_form_field.html" with field=form_despesa.data_despesa %}
+                            {% include "_form_field.html" with field=form_despesa.valor %}
+                        </div>
+                        {% include "_form_field.html" with field=form_despesa.descricao classes="full-width" %}
+                        {% include "_form_field.html" with field=form_despesa.advogado classes="full-width" %}
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Comprovante</label>
+                                <input type="file" name="comprovante" class="form-control">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" name="submit_despesa" class="btn btn-primary"><i class="fa-solid fa-save"></i> Salvar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% for d in despesas %}
+    <div class="modal fade" id="modalEditarDespesa-{{ d.pk }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa-solid fa-pen"></i> Editar Despesa</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" name="despesa_id" value="{{ d.pk }}">
+                        <div class="form-row">
+                            {% with form=despesa_forms|get_item:d.pk %}
+                                {% include "_form_field.html" with field=form.data_despesa %}
+                                {% include "_form_field.html" with field=form.valor %}
+                                {% include "_form_field.html" with field=form.descricao classes="full-width" %}
+                                {% include "_form_field.html" with field=form.advogado classes="full-width" %}
+                            {% endwith %}
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Comprovante</label>
+                                <input type="file" name="comprovante" class="form-control">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" name="submit_despesa_edit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Salvar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+<!-- ABA: ANEXOS (HTMX) -->
     <div id="anexos" class="tab-content">
         <div class="card">
             <div class="card-header-with-edit">

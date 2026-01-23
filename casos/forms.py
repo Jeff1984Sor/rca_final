@@ -429,12 +429,13 @@ class DespesaForm(forms.ModelForm):
             self.fields['advogado'].queryset = User.objects.filter(id=user.id)
     class Meta:
         model = Despesa
-        fields = ['data_despesa', 'descricao', 'valor', 'advogado']
+        fields = ['data_despesa', 'descricao', 'valor', 'advogado', 'comprovante']
         widgets = {
             'data_despesa': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'descricao': forms.TextInput(attrs={'class': 'form-control'}),
             'valor': forms.TextInput(attrs={'class': 'form-control money'}),
             'advogado': forms.Select(attrs={'class': 'form-select'}),
+            'comprovante': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }
 
 class CasoInfoBasicasForm(forms.ModelForm):

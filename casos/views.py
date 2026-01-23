@@ -1048,6 +1048,34 @@ def detalhe_caso(request, pk):
     form_acordo = AcordoForm(user=request.user)
 
     if request.method == 'POST':
+        if 'submit_despesa' in request.POST:
+            data = request.POST.copy()
+            valor = normalize_currency_input(data.get('valor', ''))
+            if valor:
+                data['valor'] = valor
+            form_despesa = DespesaForm(data, request.FILES, user=request.user)
+            if form_despesa.is_valid():
+                despesa = form_despesa.save(commit=False)
+                despesa.caso = caso
+                despesa.save()
+                messages.success(request, 'Despesa registrada com sucesso.')
+                return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})}?aba=despesas")
+            messages.error(request, 'Corrija os erros da despesa.')
+
+        if 'submit_despesa_edit' in request.POST:
+            despesa_id = request.POST.get('despesa_id')
+            despesa = get_object_or_404(Despesa, pk=despesa_id, caso=caso)
+            data = request.POST.copy()
+            valor = normalize_currency_input(data.get('valor', ''))
+            if valor:
+                data['valor'] = valor
+            form_edit = DespesaForm(data, request.FILES, instance=despesa, user=request.user)
+            if form_edit.is_valid():
+                form_edit.save()
+                messages.success(request, 'Despesa atualizada com sucesso.')
+                return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso.pk})}?aba=despesas")
+            messages.error(request, 'Corrija os erros da despesa.')
+
         if 'submit_acordo' in request.POST:
             data = request.POST.copy()
             valor_total = normalize_currency_input(data.get('valor_total', ''))
@@ -1165,6 +1193,7 @@ def detalhe_caso(request, pk):
         'form_timesheet': TimesheetForm(user=request.user),
         'form_acordo': form_acordo,
         'form_despesa': DespesaForm(user=request.user),
+        'despesa_forms': {d.pk: DespesaForm(instance=d, user=request.user) for d in caso.despesas.all()},
         'andamentos': caso.andamentos.all().order_by('-data_andamento'),
         'timesheets': caso.timesheets.all(),
         'acordos': caso.acordos.all(),
@@ -1746,6 +1775,111 @@ def editar_acordo(request, pk):
 
 
 @login_required
+
+@login_required
+@require_POST
+def deletar_despesa(request, pk):
+    despesa = get_object_or_404(Despesa, pk=pk)
+    caso_pk = despesa.caso.pk
+    despesa.delete()
+    messages.success(request, 'Despesa excluida com sucesso.')
+    return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso_pk})}?aba=despesas")
+
+
+@login_required
+@require_POST
+def upload_comprovante_despesa(request, pk):
+    despesa = get_object_or_404(Despesa, pk=pk)
+    arquivo = request.FILES.get('comprovante')
+    if arquivo:
+        despesa.comprovante = arquivo
+        despesa.save()
+        messages.success(request, 'Comprovante anexado com sucesso.')
+    else:
+        messages.error(request, 'Selecione um arquivo para anexar.')
+    return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': despesa.caso.pk})}?aba=despesas")
+
+
+@login_required
+def baixar_comprovante_despesa(request, pk):
+    despesa = get_object_or_404(Despesa, pk=pk)
+    if not despesa.comprovante:
+        messages.error(request, 'Nenhum comprovante encontrado.')
+        return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': despesa.caso.pk})}?aba=despesas")
+    response = FileResponse(despesa.comprovante.open('rb'), as_attachment=False)
+    response['Content-Type'] = 'application/octet-stream'
+    return response
+
+
+@login_required
+def exportar_despesas_excel(request, pk):
+    caso = get_object_or_404(Caso, pk=pk)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f"Despesas_Caso_{caso.pk}"
+    headers = ['Caso ID', 'Data', 'Advogado', 'Descricao', 'Valor', 'Comprovante']
+    ws.append(headers)
+
+    for d in caso.despesas.all().order_by('-data_despesa'):
+        advogado = '-'
+        if d.advogado:
+            advogado = d.advogado.get_full_name() or d.advogado.username
+        ws.append([
+            caso.pk,
+            d.data_despesa.strftime('%d/%m/%Y') if d.data_despesa else '-',
+            advogado,
+            d.descricao,
+            str(d.valor),
+            d.comprovante.name if d.comprovante else '-'
+        ])
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="despesas_caso_{caso.pk}.xlsx"'
+    wb.save(response)
+    return response
+
+
+@login_required
+def exportar_despesas_pdf(request, pk):
+    caso = get_object_or_404(Caso, pk=pk)
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="despesas_caso_{caso.pk}.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=landscape(A4))
+    elements = []
+    styles = getSampleStyleSheet()
+
+    elements.append(Paragraph(f"Despesas - Caso #{caso.pk}", styles['Title']))
+    elements.append(Spacer(1, 12))
+
+    data = [['Data', 'Advogado', 'Descricao', 'Valor', 'Comprovante']]
+    for d in caso.despesas.all().order_by('-data_despesa'):
+        advogado = '-'
+        if d.advogado:
+            advogado = d.advogado.get_full_name() or d.advogado.username
+        data.append([
+            d.data_despesa.strftime('%d/%m/%Y') if d.data_despesa else '-',
+            advogado,
+            d.descricao,
+            f"R$ {d.valor}",
+            d.comprovante.name if d.comprovante else '-'
+        ])
+
+    table = Table(data, colWidths=[90, 120, 240, 80, 140])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.orange),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+
+    elements.append(table)
+    doc.build(elements)
+    return response
+
+
 def editar_despesa(request, pk):
     despesa = get_object_or_404(Despesa, pk=pk)
     caso = despesa.caso

@@ -426,6 +426,13 @@ class Despesa(models.Model):
     valor = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Valor da Despesa")
     descricao = models.CharField(max_length=255, verbose_name="Descrição da Despesa")
     
+    comprovante = models.FileField(
+        upload_to='comprovantes_despesa/%Y/%m',
+        blank=True,
+        null=True,
+        verbose_name="Comprovante"
+    )
+    
     advogado = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

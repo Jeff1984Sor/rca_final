@@ -65,6 +65,11 @@ urlpatterns = [
     path('acordo/exportar/excel/<int:pk>/', views.exportar_acordo_excel, name='exportar_acordo_excel'),
     path('acordo/exportar/pdf/<int:pk>/', views.exportar_acordo_pdf, name='exportar_acordo_pdf'),
     path('despesa/editar/<int:pk>/', views.editar_despesa, name='editar_despesa'),
+    path('despesa/excluir/<int:pk>/', views.deletar_despesa, name='deletar_despesa'),
+    path('despesa/comprovante/<int:pk>/', views.upload_comprovante_despesa, name='upload_comprovante_despesa'),
+    path('despesa/comprovante/ver/<int:pk>/', views.baixar_comprovante_despesa, name='baixar_comprovante_despesa'),
+    path('despesas/exportar/excel/<int:pk>/', views.exportar_despesas_excel, name='exportar_despesas_excel'),
+    path('despesas/exportar/pdf/<int:pk>/', views.exportar_despesas_pdf, name='exportar_despesas_pdf'),
 
     # --- SHAREPOINT / ARQUIVOS ---
     path('pasta/criar-raiz/', views.criar_pasta_raiz_sharepoint, name='criar_pasta_raiz_sharepoint'),
