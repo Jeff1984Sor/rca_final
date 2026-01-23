@@ -4761,3 +4761,17 @@ td.actions {
     min-width: 90px;
     justify-content: center;
 }
+
+.detalhe-caso-full {
+    width: 100%;
+    max-width: none;
+    padding: 0 24px 48px;
+}
+
+.detalhe-caso-full .card {
+    width: 100%;
+}
+
+.detalhe-caso-full .data-table {
+    width: 100%;
+}
