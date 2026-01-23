@@ -23,8 +23,9 @@
     .form-control:focus { background-color: #fff; border-color: #fd7e14; box-shadow: 0 0 0 4px rgba(253,126,20,0.1); outline: none; }
     .contact-box { background-color: #fcfcfd; border: 1px solid #edf2f7; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid #fd7e14; }
     .contact-list { list-style: none; padding: 0; margin-bottom: 15px; }
-    .contact-item { padding: 10px; background: white; border: 1px solid #f1f5f9; border-radius: 8px; margin-bottom: 5px; color: #475569; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
-    .contact-item input { border: none; background: transparent; flex: 1; padding: 0; font-size: 0.9rem; color: #475569; }
+    .contact-item { padding: 10px; background: white; border: 1px solid #f1f5f9; border-radius: 8px; margin-bottom: 5px; color: #475569; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; flex-wrap: wrap; }
+    .contact-item select { min-width: 190px; }
+    .contact-item input { border: none; background: transparent; flex: 1 1 260px; min-width: 240px; padding: 0; font-size: 0.9rem; color: #475569; }
     .contact-item input:focus { outline: none; background: #fff7ed; }
     .btn-item { border: none; background: transparent; color: #64748b; padding: 4px 6px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
     .btn-item:hover { background: #f1f5f9; color: #0f172a; }
@@ -42,8 +43,8 @@
     .table-clean td:first-child { border-radius: 10px 0 0 10px; }
     .table-clean td:last-child { border-radius: 0 10px 10px 0; }
     .phone-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .phone-row select { width: 160px; }
-    .phone-row input { flex: 1; min-width: 180px; }
+    .phone-row select { width: 200px; }
+    .phone-row input { flex: 1 1 260px; min-width: 240px; }
 </style>
 {% endblock %}
 
@@ -95,7 +96,7 @@
 
                     <div class="section-title"><i class="fa-solid fa-comment-dots"></i> Canais de Comunicacao</div>
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <div class="contact-box">
                                 <label class="form-label mb-3"><i class="fa-solid fa-envelope me-2 text-muted"></i>E-mails</label>
                                 <div class="contact-list">
@@ -123,14 +124,14 @@
                                 <button type="button" class="btn-add-mini" onclick="addEmail()">+ Adicionar</button>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <div class="contact-box">
                                 <label class="form-label mb-3"><i class="fa-solid fa-phone me-2 text-muted"></i>Telefones</label>
                                 <div class="contact-list">
                                     {% for fone in telefones %}
                                         <div class="contact-item" data-item="telefone" data-id="{{ fone.id }}">
                                             <i class="fa-solid fa-phone text-muted"></i>
-                                            <select name="telefone_tipo_{{ fone.id }}" class="form-select form-select-sm" style="max-width: 140px;">
+                                            <select name="telefone_tipo_{{ fone.id }}" class="form-select form-select-sm" style="max-width: 220px;">
                                                 <option value="COMERCIAL" {% if fone.tipo == 'COMERCIAL' %}selected{% endif %}>Comercial</option>
                                                 <option value="RESIDENCIAL" {% if fone.tipo == 'RESIDENCIAL' %}selected{% endif %}>Residencial</option>
                                                 <option value="CELULAR" {% if fone.tipo == 'CELULAR' %}selected{% endif %}>Celular</option>
