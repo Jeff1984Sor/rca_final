@@ -478,7 +478,7 @@ a:hover {
 }
 
 .action-btn.btn-edit {
-    background: var(--warning);
+    background: var(--primary);
     color: white;
 }
 
