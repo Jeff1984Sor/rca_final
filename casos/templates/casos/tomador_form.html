@@ -154,6 +154,7 @@
         font-size: 0.9rem;
     }
     .contact-item input {
+        min-width: 160px;
         border: none;
         background: transparent;
         flex: 1;
@@ -337,7 +338,7 @@
                                     {% for fone in telefones %}
                                         <div class="contact-item" data-item="telefone" data-id="{{ fone.id }}">
                                             <i class="fa-solid fa-phone text-muted"></i>
-                                            <select name="telefone_tipo_{{ fone.id }}" class="form-select form-select-sm" style="max-width: 140px;">
+                                            <select name="telefone_tipo_{{ fone.id }}" class="form-select form-select-sm" style="max-width: 170px;">
                                                 <option value="COMERCIAL" {% if fone.tipo == 'COMERCIAL' %}selected{% endif %}>Comercial</option>
                                                 <option value="RESIDENCIAL" {% if fone.tipo == 'RESIDENCIAL' %}selected{% endif %}>Residencial</option>
                                                 <option value="CELULAR" {% if fone.tipo == 'CELULAR' %}selected{% endif %}>Celular</option>
@@ -354,7 +355,7 @@
                                 </div>
                                 <div id="divFones">
                                     <div class="d-flex gap-2 mb-2">
-                                        <select name="lista_telefones_tipo" class="form-select" style="max-width: 140px;">
+                                        <select name="lista_telefones_tipo" class="form-select" style="max-width: 170px;">
                                             <option value="COMERCIAL">Comercial</option>
                                             <option value="RESIDENCIAL">Residencial</option>
                                             <option value="CELULAR" selected>Celular</option>
@@ -499,7 +500,7 @@
     function addFone() { 
         $('#divFones').append(
             '<div class="d-flex gap-2 mb-2">' +
-                '<select name="lista_telefones_tipo" class="form-select" style="max-width: 140px;">' +
+                '<select name="lista_telefones_tipo" class="form-select" style="max-width: 170px;">' +
                     '<option value="COMERCIAL">Comercial</option>' +
                     '<option value="RESIDENCIAL">Residencial</option>' +
                     '<option value="CELULAR" selected>Celular</option>' +
