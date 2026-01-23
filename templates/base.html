@@ -50,7 +50,7 @@
     </header>
 
     <!-- ✅ A CLASSE "container" FOI ADICIONADA DE VOLTA AQUI -->
-    <main class="container">
+    <main class="{% block main_class %}container{% endblock %}">
         {% block content %}
         {% endblock %}
     </main>
