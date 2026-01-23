@@ -77,7 +77,7 @@ def format_dynamic_value(value, field_type):
         value_lower = value_str.lower()
         if value_lower in ('true', '1', 'sim', 'yes', 'on'):
             return "Sim"
-        if value_str in ('false', '0', 'nao', 'não', 'no', 'off'):
+        if value_lower in ('false', '0', 'nao', 'não', 'no', 'off'):
             return "Não"
         return value_str
     if field_type == 'MOEDA':

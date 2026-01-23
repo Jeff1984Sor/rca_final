@@ -103,6 +103,19 @@ def normalize_currency_input(value):
     value = value.replace('.', '').replace(',', '.')
     return value
 
+def _extract_campo_id(key):
+    match = re.search(r'campo_personalizado_(\d+)', key)
+    return int(match.group(1)) if match else None
+
+def _build_campo_tipo_map(estrutura):
+    campo_tipo = {}
+    for conf in estrutura.ordenamentos_simples.select_related('campo'):
+        campo_tipo[conf.campo_id] = conf.campo.tipo_campo
+    for grupo in estrutura.grupos_repetiveis.all():
+        for conf in grupo.ordenamentos_grupo.select_related('campo'):
+            campo_tipo[conf.campo_id] = conf.campo.tipo_campo
+    return campo_tipo
+
 def render_titulo_caso(padrao, dados):
     if not padrao:
         return ''
@@ -788,9 +801,11 @@ def criar_caso(request, cliente_id, produto_id):
         if post_data.get('valor_apurado'):
             post_data['valor_apurado'] = normalize_currency_input(post_data['valor_apurado'])
 
+        campo_tipo_map = _build_campo_tipo_map(estrutura)
         for key, value in post_data.items():
             if 'campo_personalizado' in key and value and isinstance(value, str):
-                if ',' in value or 'R$' in value:
+                campo_id = _extract_campo_id(key)
+                if campo_id and campo_tipo_map.get(campo_id) == 'MOEDA' and (',' in value or 'R$' in value):
                     post_data[key] = normalize_currency_input(value)
 
         form = CasoDinamicoForm(post_data, cliente=cliente, produto=produto)
@@ -897,9 +912,11 @@ def editar_caso(request, pk):
         if post_data.get('valor_apurado'):
             post_data['valor_apurado'] = normalize_currency_input(post_data['valor_apurado'])
 
+        campo_tipo_map = _build_campo_tipo_map(estrutura)
         for key, value in post_data.items():
             if 'campo_personalizado' in key and value and isinstance(value, str):
-                if ',' in value or 'R$' in value:
+                campo_id = _extract_campo_id(key)
+                if campo_id and campo_tipo_map.get(campo_id) == 'MOEDA' and (',' in value or 'R$' in value):
                     post_data[key] = normalize_currency_input(value)
 
         form = CasoDinamicoForm(post_data, instance=caso, cliente=cliente, produto=produto)
@@ -1168,9 +1185,12 @@ def detalhe_caso(request, pk):
             for key, value in request.POST.items():
                 if key.startswith('campo_'):
                     c_id = key.replace('campo_', '')
-                    # Limpeza rápida se for moeda (detectado por vírgula)
                     if isinstance(value, str) and (',' in value or 'R$' in value):
-                        value = normalize_currency_input(value)
+                        campo_tipo = CampoPersonalizado.objects.filter(
+                            id=c_id
+                        ).values_list('tipo_campo', flat=True).first()
+                        if campo_tipo == 'MOEDA':
+                            value = normalize_currency_input(value)
                     
                     val_obj, _ = ValorCampoPersonalizado.objects.get_or_create(
                         caso=caso, campo_id=c_id, instancia_grupo__isnull=True

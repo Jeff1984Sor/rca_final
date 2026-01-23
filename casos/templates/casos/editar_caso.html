@@ -498,6 +498,15 @@
         });
     }
 
+    function normalizeBooleanSelectLabels(scope) {
+        const root = scope || document;
+        root.querySelectorAll('select option').forEach((option) => {
+            const text = option.text.trim();
+            if (text === 'True') option.text = 'Sim';
+            if (text === 'False') option.innerHTML = 'N&atilde;o';
+        });
+    }
+
     function addFormsetRow(grupoId, prefix) {
         const totalFormsInput = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
         const currentCount = parseInt(totalFormsInput.value, 10);
@@ -511,6 +520,7 @@
 
         totalFormsInput.value = currentCount + 1;
         aplicarMascaras();
+        normalizeBooleanSelectLabels(container);
     }
 
     function removeFormsetRow(button) {
@@ -523,6 +533,7 @@
 
     $(document).ready(function() {
         aplicarMascaras();
+        normalizeBooleanSelectLabels();
 
         // 1. SELECT2
         $('.select2-segurado').select2({
