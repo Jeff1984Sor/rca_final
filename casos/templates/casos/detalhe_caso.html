@@ -3,6 +3,10 @@
 
 {% block title %}Caso #{{ caso.id }} | {{ caso.titulo }}{% endblock %}
 
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+{% endblock %}
+
 {% block main_class %}{% endblock %}
 
 {% block content %}
@@ -251,9 +255,133 @@
     </div>
 
     <!-- ABA: ACORDOS -->
-    <div id="acordos" class="tab-content"><div class="card"><h2 class="card-title"><i class="fa-solid fa-plus-circle"></i> Novo Acordo</h2><form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">{% csrf_token %}<div class="form-row">{% include "_form_field.html" with field=form_acordo.valor_total %}{% include "_form_field.html" with field=form_acordo.numero_parcelas %}</div><div class="form-row">{% include "_form_field.html" with field=form_acordo.data_primeira_parcela %}{% include "_form_field.html" with field=form_acordo.advogado_acordo %}</div><button type="submit" name="submit_acordo" class="btn btn-primary mt-3"><i class="fa-solid fa-save"></i> Salvar</button></form></div><div class="summary-grid"><div class="summary-box animated-gradient"><div class="summary-label"><i class="fa-solid fa-money-bill-wave"></i> Saldo Devedor</div><div class="summary-value">{{ saldo_devedor_total|currency|default:"R$ 0,00" }}</div></div></div><div class="card mt-4"><h2 class="card-title"><i class="fa-solid fa-handshake"></i> Acordos Registrados</h2>{% for acordo in acordos %}<div class="card mt-3"><div class="card-header d-flex justify-content-between align-items-center w-100"><div><h3 class="h5">Acordo de {{ acordo.valor_total|currency }} em {{ acordo.numero_parcelas }}x</h3><p class="text-muted small m-0">Criado em {{ acordo.data_criacao|date:"d/m/Y" }} por {% if acordo.advogado_acordo %}{{ acordo.advogado_acordo.get_full_name|default:acordo.advogado_acordo.username }}{% else %}-{% endif %}</p></div><div class="acordo-actions d-flex gap-2 ms-auto ps-3"><a href="{% url 'casos:editar_acordo' pk=acordo.pk %}" class="btn btn-sm action-btn btn-edit">Editar</a><form method="post" action="{% url 'casos:deletar_acordo' pk=acordo.pk %}" class="d-inline" onsubmit="return confirm('Excluir este acordo?')">{% csrf_token %}<button type="submit" class="btn btn-sm action-btn btn-delete">Excluir</button></form><a href="{% url 'casos:exportar_acordo_pdf' pk=acordo.pk %}" class="btn btn-sm action-btn btn-pdf"><i class="fa-solid fa-file-pdf"></i> PDF</a><a href="{% url 'casos:exportar_acordo_excel' pk=acordo.pk %}" class="btn btn-sm action-btn btn-export"><i class="fa-solid fa-file-excel"></i> Excel</a></div></div><div class="card-body"><table class="data-table"><thead><tr><th>Nº</th><th>Vencimento</th><th>Pagamento</th><th>Valor</th><th>Status</th></tr></thead><tbody>{% for p in acordo.parcelas.all %}{% include 'casos/partials/parcela_linha.html' with parcela=p %}{% endfor %}</tbody></table></div></div>{% empty %}<div class="empty-state"><i class="fa-solid fa-handshake"></i><h3>Nenhum acordo</h3></div>{% endfor %}</div></div>
     
-    <!-- ABA: DESPESAS -->
+    <!-- ABA: ACORDOS -->
+    <div id="acordos" class="tab-content">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 class="card-title"><i class="fa-solid fa-handshake"></i> Acordos</h2>
+                <button type="button" class="btn btn-sm action-btn btn-edit" data-bs-toggle="modal" data-bs-target="#modalNovoAcordo">
+                    <i class="fa-solid fa-plus"></i> Novo Acordo
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="summary-grid">
+                    <div class="summary-box animated-gradient">
+                        <div class="summary-label"><i class="fa-solid fa-money-bill-wave"></i> Saldo Devedor</div>
+                        <div class="summary-value">{{ saldo_devedor_total|currency|default:"R$ 0,00" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 class="card-title"><i class="fa-solid fa-list"></i> Acordos Registrados</h2>
+            </div>
+
+            {% for acordo in acordos %}
+            <div class="card mt-3 acordo-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="h5">Acordo de {{ acordo.valor_total|currency }} em {{ acordo.numero_parcelas }}x</h3>
+                        <p class="text-muted small m-0">Criado em {{ acordo.data_criacao|date:"d/m/Y" }} por {% if acordo.advogado_acordo %}{{ acordo.advogado_acordo.get_full_name|default:acordo.advogado_acordo.username }}{% else %}-{% endif %}</p>
+                    </div>
+                    <div class="acordo-actions d-flex gap-2 ms-auto">
+                        <a href="{% url 'casos:editar_acordo' pk=acordo.pk %}" class="btn btn-sm action-btn btn-edit">Editar</a>
+                        <form method="post" action="{% url 'casos:deletar_acordo' pk=acordo.pk %}" class="d-inline" onsubmit="return confirm('Excluir este acordo?')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm action-btn btn-delete">Excluir</button>
+                        </form>
+                        <a href="{% url 'casos:exportar_acordo_pdf' pk=acordo.pk %}" class="btn btn-sm action-btn btn-pdf"><i class="fa-solid fa-file-pdf"></i> PDF</a>
+                        <a href="{% url 'casos:exportar_acordo_excel' pk=acordo.pk %}" class="btn btn-sm action-btn btn-export"><i class="fa-solid fa-file-excel"></i> Excel</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="data-table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Parcela</th>
+                                    <th>Data do Vencimento</th>
+                                    <th>Data do Pagamento</th>
+                                    <th>Valor</th>
+                                    <th>Status da Parcela</th>
+                                    <th>Advogado Respons?vel</th>
+                                    <th class="actions-cell">A??es</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in acordo.parcelas.all %}
+                                <tr class="{% if p.status == 'QUITADA' %}parcela-quitada{% endif %}">
+                                    <td>{{ p.numero_parcela }}</td>
+                                    <td>{{ p.data_vencimento|date:"d/m/Y" }}</td>
+                                    <td>{{ p.data_pagamento|date:"d/m/Y"|default:"-" }}</td>
+                                    <td>{{ p.valor_parcela|currency }}</td>
+                                    <td>{{ p.get_status_display }}</td>
+                                    <td>{% if acordo.advogado_acordo %}{{ acordo.advogado_acordo.get_full_name|default:acordo.advogado_acordo.username }}{% else %}-{% endif %}</td>
+                                    <td class="actions-cell">
+                                        <div class="d-flex gap-2 justify-content-end flex-wrap">
+                                            <form method="post" action="{% url 'casos:pagar_parcela' pk=p.pk %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm action-btn btn-danger">Pagar</button>
+                                            </form>
+                                            <form method="post" action="{% url 'casos:upload_comprovante_parcela' pk=p.pk %}" enctype="multipart/form-data" class="d-inline">
+                                                {% csrf_token %}
+                                                <label class="btn btn-sm action-btn btn-success">
+                                                    Incluir Comprovante
+                                                    <input type="file" name="comprovante" style="display:none" onchange="this.form.submit()">
+                                                </label>
+                                            </form>
+                                            {% if p.comprovante %}
+                                                <a href="{% url 'casos:baixar_comprovante_parcela' pk=p.pk %}" class="btn btn-sm action-btn btn-info">Visualizar</a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="7"><div class="empty-state"><i class="fa-solid fa-handshake"></i><h3>Nenhuma parcela</h3></div></td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="card-body"><div class="empty-state"><i class="fa-solid fa-handshake"></i><h3>Nenhum acordo</h3></div></div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- MODAL NOVO ACORDO -->
+    <div class="modal fade" id="modalNovoAcordo" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa-solid fa-handshake"></i> Novo Acordo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">
+                        {% csrf_token %}
+                        <div class="form-row">
+                            {% include "_form_field.html" with field=form_acordo.valor_total %}
+                            {% include "_form_field.html" with field=form_acordo.numero_parcelas %}
+                        </div>
+                        <div class="form-row">
+                            {% include "_form_field.html" with field=form_acordo.data_primeira_parcela %}
+                            {% include "_form_field.html" with field=form_acordo.advogado_acordo %}
+                        </div>
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" name="submit_acordo" class="btn btn-primary"><i class="fa-solid fa-save"></i> Salvar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+<!-- ABA: DESPESAS -->
     <div id="despesas" class="tab-content"><div class="card"><h2 class="card-title"><i class="fa-solid fa-plus-circle"></i> Nova Despesa</h2><form method="POST" action="{% url 'casos:detalhe_caso' pk=caso.pk %}">{% csrf_token %}<div class="form-row">{% include "_form_field.html" with field=form_despesa.data_despesa %}{% include "_form_field.html" with field=form_despesa.valor %}</div>{% include "_form_field.html" with field=form_despesa.descricao classes="full-width" %}{% include "_form_field.html" with field=form_despesa.advogado classes="full-width" %}<button type="submit" name="submit_despesa" class="btn btn-primary mt-3"><i class="fa-solid fa-save"></i> Salvar</button></form></div><div class="summary-grid"><div class="summary-box animated-gradient"><div class="summary-label"><i class="fa-solid fa-dollar-sign"></i> Total de Despesas</div><div class="summary-value">{{ total_despesas|currency }}</div></div></div><div class="card mt-4"><h2 class="card-title"><i class="fa-solid fa-list"></i> Histórico</h2><table class="data-table"><thead><tr><th>Data</th><th>Advogado</th><th>Descrição</th><th>Valor</th><th class="text-right">Ações</th></tr></thead><tbody>{% for d in despesas %}<tr><td><strong>{{ d.data_despesa|date:"d/m/Y" }}</strong></td><td>{% if d.advogado %}{{ d.advogado.get_full_name|default:d.advogado.username }}{% else %}-{% endif %}</td><td>{{ d.descricao|linebreaksbr }}</td><td><strong>{{ d.valor|currency }}</strong></td><td class="text-right"><a href="{% url 'casos:editar_despesa' pk=d.pk %}" class="btn btn-sm action-btn btn-edit ms-auto">Editar</a></td></tr>{% empty %}<tr><td colspan="5"><div class="empty-state"><i class="fa-solid fa-dollar-sign"></i><h3>Nenhuma despesa</h3></div></td></tr>{% endfor %}</tbody></table></div></div>
     
     <!-- ABA: ANEXOS (HTMX) -->
@@ -325,6 +453,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 {{ modelos_andamento_json|json_script:"modelos-andamento-data" }}
 <script src="{% static 'js/detalhe_caso.js' %}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>

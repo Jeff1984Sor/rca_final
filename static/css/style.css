@@ -4781,3 +4781,26 @@ td.actions {
 .detalhe-caso-full .data-table {
     width: 100%;
 }
+
+.acordo-card {
+    border: 2px solid var(--primary-solid);
+}
+
+.acordo-actions .btn {
+    min-width: 110px;
+}
+
+.data-table-container {
+    width: 100%;
+}
+
+.data-table th,
+.data-table td {
+    vertical-align: middle;
+}
+
+.actions-cell {
+    text-align: right;
+    white-space: nowrap;
+    width: 1%;
+}
