@@ -4758,13 +4758,19 @@ td.actions {
 }
 
 .acordo-actions .btn {
-    min-width: 90px;
+    min-width: 110px;
     justify-content: center;
 }
 
+.acordo-actions .btn-edit {
+    background: var(--primary) !important;
+    color: #fff;
+}
+
 .detalhe-caso-full {
-    width: 100%;
+    width: calc(100% + 80px);
     max-width: none;
+    margin-left: -40px;
     padding: 0 24px 48px;
 }
 
