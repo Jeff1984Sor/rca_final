@@ -61,6 +61,9 @@ urlpatterns = [
     path('parcela/<int:pk>/comprovante/', views.upload_comprovante_parcela, name='upload_comprovante_parcela'),
     path('parcela/<int:pk>/comprovante/ver/', views.baixar_comprovante_parcela, name='baixar_comprovante_parcela'),
     path('acordo/editar/<int:pk>/', views.editar_acordo, name='editar_acordo'),
+    path('acordo/excluir/<int:pk>/', views.deletar_acordo, name='deletar_acordo'),
+    path('acordo/exportar/excel/<int:pk>/', views.exportar_acordo_excel, name='exportar_acordo_excel'),
+    path('acordo/exportar/pdf/<int:pk>/', views.exportar_acordo_pdf, name='exportar_acordo_pdf'),
     path('despesa/editar/<int:pk>/', views.editar_despesa, name='editar_despesa'),
 
     # --- SHAREPOINT / ARQUIVOS ---

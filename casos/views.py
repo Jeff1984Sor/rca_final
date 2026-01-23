@@ -1618,6 +1618,103 @@ def baixar_comprovante_parcela(request, pk):
 
 
 @login_required
+
+@login_required
+@require_POST
+def deletar_acordo(request, pk):
+    acordo = get_object_or_404(Acordo, pk=pk)
+    caso_pk = acordo.caso.pk
+    acordo.delete()
+    messages.success(request, 'Acordo excluido com sucesso.')
+    return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': caso_pk})}?aba=acordos")
+
+
+@login_required
+def exportar_acordo_excel(request, pk):
+    acordo = get_object_or_404(Acordo, pk=pk)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f"Acordo_{acordo.pk}"
+    headers = [
+        'Acordo ID', 'Caso ID', 'Valor Total', 'Numero Parcelas',
+        'Data Primeira Parcela', 'Advogado Responsavel', 'Data Criacao',
+        'Parcela', 'Vencimento', 'Pagamento', 'Valor Parcela', 'Status'
+    ]
+    ws.append(headers)
+
+    advogado = '-'
+    if acordo.advogado_acordo:
+        advogado = acordo.advogado_acordo.get_full_name() or acordo.advogado_acordo.username
+
+    for parcela in acordo.parcelas.all().order_by('numero_parcela'):
+        ws.append([
+            acordo.pk,
+            acordo.caso.pk,
+            str(acordo.valor_total),
+            acordo.numero_parcelas,
+            acordo.data_primeira_parcela.strftime('%d/%m/%Y') if acordo.data_primeira_parcela else '-',
+            advogado,
+            acordo.data_criacao.strftime('%d/%m/%Y') if acordo.data_criacao else '-',
+            parcela.numero_parcela,
+            parcela.data_vencimento.strftime('%d/%m/%Y') if parcela.data_vencimento else '-',
+            parcela.data_pagamento.strftime('%d/%m/%Y') if parcela.data_pagamento else '-',
+            str(parcela.valor_parcela),
+            parcela.get_status_display(),
+        ])
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="acordo_{acordo.pk}.xlsx"'
+    wb.save(response)
+    return response
+
+
+@login_required
+def exportar_acordo_pdf(request, pk):
+    acordo = get_object_or_404(Acordo, pk=pk)
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="acordo_{acordo.pk}.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=landscape(A4))
+    elements = []
+    styles = getSampleStyleSheet()
+
+    advogado = '-'
+    if acordo.advogado_acordo:
+        advogado = acordo.advogado_acordo.get_full_name() or acordo.advogado_acordo.username
+
+    elements.append(Paragraph(f"Acordo #{acordo.pk} - Caso #{acordo.caso.pk}", styles['Title']))
+    elements.append(Spacer(1, 12))
+    elements.append(Paragraph(f"Valor Total: R$ {acordo.valor_total}", styles['Normal']))
+    elements.append(Paragraph(f"Numero de Parcelas: {acordo.numero_parcelas}", styles['Normal']))
+    elements.append(Paragraph(f"Data Primeira Parcela: {acordo.data_primeira_parcela.strftime('%d/%m/%Y') if acordo.data_primeira_parcela else '-'}", styles['Normal']))
+    elements.append(Paragraph(f"Advogado Responsavel: {advogado}", styles['Normal']))
+    elements.append(Spacer(1, 12))
+
+    data = [['Parcela', 'Vencimento', 'Pagamento', 'Valor', 'Status']]
+    for parcela in acordo.parcelas.all().order_by('numero_parcela'):
+        data.append([
+            str(parcela.numero_parcela),
+            parcela.data_vencimento.strftime('%d/%m/%Y') if parcela.data_vencimento else '-',
+            parcela.data_pagamento.strftime('%d/%m/%Y') if parcela.data_pagamento else '-',
+            f"R$ {parcela.valor_parcela}",
+            parcela.get_status_display(),
+        ])
+
+    table = Table(data, colWidths=[60, 100, 100, 90, 90])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.orange),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+
+    elements.append(table)
+    doc.build(elements)
+    return response
+
+
 def editar_acordo(request, pk):
     acordo = get_object_or_404(Acordo, pk=pk)
     caso = acordo.caso
