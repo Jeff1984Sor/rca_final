@@ -9,7 +9,7 @@
         <div class="d-flex gap-2 justify-content-end flex-wrap">
             <form method="post" action="{% url 'casos:pagar_parcela' pk=parcela.pk %}" class="d-inline">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-sm action-btn btn-edit">Pagar</button>
+                <button type="submit" class="btn btn-sm action-btn btn-danger">Pagar</button>
             </form>
             <form method="post" action="{% url 'casos:upload_comprovante_parcela' pk=parcela.pk %}" enctype="multipart/form-data" class="d-inline">
                 {% csrf_token %}
@@ -19,7 +19,7 @@
                 </label>
             </form>
             {% if parcela.comprovante %}
-                <a href="{% url 'casos:baixar_comprovante_parcela' pk=parcela.pk %}" class="btn btn-sm action-btn btn-info">Visualizar</a>
+                <a href="{% url 'casos:baixar_comprovante_parcela' pk=parcela.pk %}" class="btn btn-sm action-btn btn-success">Visualizar</a>
             {% endif %}
         </div>
     </td>
