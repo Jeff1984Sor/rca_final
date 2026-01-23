@@ -102,9 +102,9 @@
                     </div>
 
                     <div class="col-12 mt-2">
-                        <a href="{% url 'casos:criar_segurado' %}" class="btn btn-sm btn-orange">
+                        <button type="button" class="btn btn-sm btn-orange" data-bs-toggle="modal" data-bs-target="#modalNovoSegurado">
                             <i class="fa-solid fa-plus"></i> Cadastrar Novo Segurado
-                        </a>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -159,9 +159,9 @@
                     </div>
 
                     <div class="col-12 mt-2">
-                        <a href="{% url 'casos:criar_corretor' %}" class="btn btn-sm btn-orange">
+                        <button type="button" class="btn btn-sm btn-orange" data-bs-toggle="modal" data-bs-target="#modalNovoCorretor">
                             <i class="fa-solid fa-plus"></i> Cadastrar Novo Corretor
-                        </a>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -295,6 +295,132 @@
     </div>
 </div>
 
+<!-- MODAL NOVO SEGURADO -->
+<div class="modal fade" id="modalNovoSegurado" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-orange text-white" style="background-color: #fd7e14;">
+                <h5 class="modal-title">Novo Segurado</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formSeguradoAjax">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Nome *</label>
+                        <input type="text" name="nome" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo</label>
+                        <select name="tipo" class="form-select js-tipo-segurado">
+                            <option value="PF" selected>Pessoa Fisica</option>
+                            <option value="PJ">Pessoa Juridica</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="seguradoCpfField">
+                        <label class="form-label">CPF</label>
+                        <input type="text" name="cpf" class="form-control custom-mask" data-mask="000.000.000-00">
+                    </div>
+                    <div class="mb-3" id="seguradoCnpjField" style="display:none;">
+                        <label class="form-label">CNPJ</label>
+                        <input type="text" name="cnpj" class="form-control custom-mask" data-mask="00.000.000/0000-00">
+                    </div>
+                    <hr>
+                    <div class="mb-2">
+                        <label class="form-label">E-mails</label>
+                        <div id="divSeguradoEmails">
+                            <input type="email" name="lista_emails" class="form-control mb-2" placeholder="Email principal">
+                        </div>
+                        <button type="button" class="btn btn-sm btn-light border" onclick="addSeguradoEmail()">+ Outro</button>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Telefones</label>
+                        <div id="divSeguradoFones">
+                            <div class="d-flex gap-2 mb-2">
+                                <select name="lista_telefones_tipo" class="form-select" style="max-width: 160px;">
+                                    <option value="COMERCIAL">Comercial</option>
+                                    <option value="RESIDENCIAL">Residencial</option>
+                                    <option value="CELULAR" selected>Celular</option>
+                                </select>
+                                <input type="text" name="lista_telefones" class="form-control phone-input" placeholder="(00) 00000-0000" data-tipo="CELULAR">
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-light border" onclick="addSeguradoFone()">+ Outro</button>
+                    </div>
+                    <div id="msgErroSegurado" class="alert alert-danger d-none mt-3"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-orange" onclick="salvarSegurado()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL NOVO CORRETOR -->
+<div class="modal fade" id="modalNovoCorretor" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-orange text-white" style="background-color: #fd7e14;">
+                <h5 class="modal-title">Novo Corretor</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formCorretorAjax">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Nome *</label>
+                        <input type="text" name="nome" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo</label>
+                        <select name="tipo" class="form-select js-tipo-corretor">
+                            <option value="PF" selected>Pessoa Fisica</option>
+                            <option value="PJ">Pessoa Juridica</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="corretorCpfField">
+                        <label class="form-label">CPF</label>
+                        <input type="text" name="cpf" class="form-control custom-mask" data-mask="000.000.000-00">
+                    </div>
+                    <div class="mb-3" id="corretorCnpjField" style="display:none;">
+                        <label class="form-label">CNPJ</label>
+                        <input type="text" name="cnpj" class="form-control custom-mask" data-mask="00.000.000/0000-00">
+                    </div>
+                    <hr>
+                    <div class="mb-2">
+                        <label class="form-label">E-mails</label>
+                        <div id="divCorretorEmails">
+                            <input type="email" name="lista_emails" class="form-control mb-2" placeholder="Email principal">
+                        </div>
+                        <button type="button" class="btn btn-sm btn-light border" onclick="addCorretorEmail()">+ Outro</button>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Telefones</label>
+                        <div id="divCorretorFones">
+                            <div class="d-flex gap-2 mb-2">
+                                <select name="lista_telefones_tipo" class="form-select" style="max-width: 160px;">
+                                    <option value="COMERCIAL">Comercial</option>
+                                    <option value="RESIDENCIAL">Residencial</option>
+                                    <option value="CELULAR" selected>Celular</option>
+                                </select>
+                                <input type="text" name="lista_telefones" class="form-control phone-input" placeholder="(00) 00000-0000" data-tipo="CELULAR">
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-light border" onclick="addCorretorFone()">+ Outro</button>
+                    </div>
+                    <div id="msgErroCorretor" class="alert alert-danger d-none mt-3"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-orange" onclick="salvarCorretor()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -357,6 +483,16 @@
             }
         };
 
+        const toggleModalDocFields = (tipo, cpfField, cnpjField) => {
+            if (tipo === 'PJ') {
+                cnpjField.show();
+                cpfField.hide();
+            } else {
+                cpfField.show();
+                cnpjField.hide();
+            }
+        };
+
         toggleDocumentoFields($('select[name="tipo"]').val());
         $('select[name="tipo"]').on('change', function() {
             toggleDocumentoFields($(this).val());
@@ -408,10 +544,50 @@
                 });
             } else { $('#painelDetalhes').slideUp(); }
         });
+
+        toggleModalDocFields($('.js-tipo-segurado').val(), $('#seguradoCpfField'), $('#seguradoCnpjField'));
+        toggleModalDocFields($('.js-tipo-corretor').val(), $('#corretorCpfField'), $('#corretorCnpjField'));
+
+        $('.js-tipo-segurado').on('change', function() {
+            toggleModalDocFields($(this).val(), $('#seguradoCpfField'), $('#seguradoCnpjField'));
+            aplicarMascaras();
+        });
+        $('.js-tipo-corretor').on('change', function() {
+            toggleModalDocFields($(this).val(), $('#corretorCpfField'), $('#corretorCnpjField'));
+            aplicarMascaras();
+        });
     });
 
     function addEmail() { $('#divEmails').append('<input type="email" name="lista_emails" class="form-control mb-2" placeholder="Outro Email">'); }
     function addFone() { $('#divFones').append('<input type="text" name="lista_telefones" class="form-control mb-2" placeholder="Outro Telefone">'); }
+    function addSeguradoEmail() { $('#divSeguradoEmails').append('<input type="email" name="lista_emails" class="form-control mb-2" placeholder="Outro Email">'); }
+    function addSeguradoFone() {
+        $('#divSeguradoFones').append(
+            '<div class="d-flex gap-2 mb-2">' +
+                '<select name="lista_telefones_tipo" class="form-select" style="max-width: 160px;">' +
+                    '<option value="COMERCIAL">Comercial</option>' +
+                    '<option value="RESIDENCIAL">Residencial</option>' +
+                    '<option value="CELULAR" selected>Celular</option>' +
+                '</select>' +
+                '<input type="text" name="lista_telefones" class="form-control phone-input" placeholder="(00) 00000-0000" data-tipo="CELULAR">' +
+            '</div>'
+        );
+        aplicarMascaraTelefone();
+    }
+    function addCorretorEmail() { $('#divCorretorEmails').append('<input type="email" name="lista_emails" class="form-control mb-2" placeholder="Outro Email">'); }
+    function addCorretorFone() {
+        $('#divCorretorFones').append(
+            '<div class="d-flex gap-2 mb-2">' +
+                '<select name="lista_telefones_tipo" class="form-select" style="max-width: 160px;">' +
+                    '<option value="COMERCIAL">Comercial</option>' +
+                    '<option value="RESIDENCIAL">Residencial</option>' +
+                    '<option value="CELULAR" selected>Celular</option>' +
+                '</select>' +
+                '<input type="text" name="lista_telefones" class="form-control phone-input" placeholder="(00) 00000-0000" data-tipo="CELULAR">' +
+            '</div>'
+        );
+        aplicarMascaraTelefone();
+    }
 
     function salvarTomador() {
         $.ajax({
@@ -428,5 +604,54 @@
             }
         });
     }
+
+    function salvarSegurado() {
+        $.ajax({
+            url: "{% url 'casos:ajax_criar_segurado' %}",
+            type: "POST",
+            data: $('#formSeguradoAjax').serialize(),
+            success: function(resp) {
+                if(resp.success) {
+                    var newOption = new Option(resp.text, resp.id, true, true);
+                    $('.select2-segurado').append(newOption).trigger('change');
+                    bootstrap.Modal.getInstance(document.getElementById('modalNovoSegurado')).hide();
+                    $('#formSeguradoAjax')[0].reset();
+                } else { $('#msgErroSegurado').text('Erro: ' + JSON.stringify(resp.errors)).removeClass('d-none'); }
+            }
+        });
+    }
+
+    function salvarCorretor() {
+        $.ajax({
+            url: "{% url 'casos:ajax_criar_corretor' %}",
+            type: "POST",
+            data: $('#formCorretorAjax').serialize(),
+            success: function(resp) {
+                if(resp.success) {
+                    var newOption = new Option(resp.text, resp.id, true, true);
+                    $('.select2-corretor').append(newOption).trigger('change');
+                    bootstrap.Modal.getInstance(document.getElementById('modalNovoCorretor')).hide();
+                    $('#formCorretorAjax')[0].reset();
+                } else { $('#msgErroCorretor').text('Erro: ' + JSON.stringify(resp.errors)).removeClass('d-none'); }
+            }
+        });
+    }
+
+    function aplicarMascaraTelefone() {
+        $('.phone-input').each(function() {
+            var tipo = $(this).attr('data-tipo') || 'CELULAR';
+            if (tipo === 'COMERCIAL' || tipo === 'RESIDENCIAL') {
+                $(this).mask('(00) 0000-0000');
+            } else {
+                $(this).mask('(00) 00000-0000');
+            }
+        });
+    }
+
+    $(document).on('change', 'select[name="lista_telefones_tipo"]', function() {
+        var input = $(this).closest('div').find('input.phone-input');
+        input.attr('data-tipo', $(this).val());
+        aplicarMascaraTelefone();
+    });
 </script>
 {% endblock %}

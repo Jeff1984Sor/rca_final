@@ -44,6 +44,8 @@ urlpatterns = [
 
     # --- AJAX ---
     path('ajax/criar-tomador/', views.criar_tomador_ajax, name='ajax_criar_tomador'),
+    path('ajax/criar-segurado/', views.criar_segurado_ajax, name='ajax_criar_segurado'),
+    path('ajax/criar-corretor/', views.criar_corretor_ajax, name='ajax_criar_corretor'),
     path('ajax/segurado/<int:pk>/detalhes/', views.obter_detalhes_segurado, name='ajax_segurado_detalhes'),
     path('ajax/corretor/<int:pk>/detalhes/', views.obter_detalhes_corretor, name='ajax_corretor_detalhes'),
 

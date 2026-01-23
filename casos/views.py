@@ -707,6 +707,44 @@ def criar_tomador_ajax(request):
             return JsonResponse({'success': True, 'id': tomador.id, 'text': tomador.nome})
     return JsonResponse({'success': False, 'errors': form.errors})
 
+@require_POST
+@login_required
+def criar_segurado_ajax(request):
+    form = SeguradoForm(request.POST)
+    if form.is_valid():
+        with transaction.atomic():
+            segurado = form.save()
+            for email in request.POST.getlist('lista_emails'):
+                if email.strip():
+                    SeguradoEmail.objects.create(segurado=segurado, email=email.strip())
+            fones = request.POST.getlist('lista_telefones')
+            tipos = request.POST.getlist('lista_telefones_tipo')
+            for idx, fone in enumerate(fones):
+                if fone.strip():
+                    tipo = tipos[idx] if idx < len(tipos) and tipos[idx] else 'CELULAR'
+                    SeguradoTelefone.objects.create(segurado=segurado, telefone=fone.strip(), tipo=tipo)
+            return JsonResponse({'success': True, 'id': segurado.id, 'text': segurado.nome})
+    return JsonResponse({'success': False, 'errors': form.errors})
+
+@require_POST
+@login_required
+def criar_corretor_ajax(request):
+    form = CorretorForm(request.POST)
+    if form.is_valid():
+        with transaction.atomic():
+            corretor = form.save()
+            for email in request.POST.getlist('lista_emails'):
+                if email.strip():
+                    CorretorEmail.objects.create(corretor=corretor, email=email.strip())
+            fones = request.POST.getlist('lista_telefones')
+            tipos = request.POST.getlist('lista_telefones_tipo')
+            for idx, fone in enumerate(fones):
+                if fone.strip():
+                    tipo = tipos[idx] if idx < len(tipos) and tipos[idx] else 'CELULAR'
+                    CorretorTelefone.objects.create(corretor=corretor, telefone=fone.strip(), tipo=tipo)
+            return JsonResponse({'success': True, 'id': corretor.id, 'text': corretor.nome})
+    return JsonResponse({'success': False, 'errors': form.errors})
+
 # ==============================================================================
 # CRIAR CASO (LOGICA DE MOEDA ATUALIZADA)
 # ==============================================================================

@@ -6,6 +6,7 @@ from django import template
 from datetime import date, datetime
 import locale
 from django.utils.safestring import mark_safe
+from django.utils.html import linebreaksbr
 
 register = template.Library()
 
@@ -88,6 +89,8 @@ def format_dynamic_value(value, field_type):
         except (ValueError, TypeError):
             if hasattr(value, 'strftime'): return value.strftime('%d/%m/%Y')
             return value
+    if field_type == 'TEXTO_LONGO':
+        return linebreaksbr(value)
     return value
 
 def _format_currency_br(value):
