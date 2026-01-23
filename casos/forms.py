@@ -423,17 +423,24 @@ class DespesaForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         if 'advogado' in self.fields:
+            self.fields['advogado'].label = "Advogado Responsável"
             self.fields['advogado'].queryset = User.objects.all().order_by('first_name', 'username')
+            self.fields['advogado'].label_from_instance = (
+                lambda u: u.get_full_name() or u.username
+            )
         if user:
             self.fields['advogado'].initial = user
-            self.fields['advogado'].queryset = User.objects.filter(id=user.id)
     class Meta:
         model = Despesa
         fields = ['data_despesa', 'descricao', 'valor', 'advogado', 'comprovante']
         widgets = {
             'data_despesa': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'descricao': forms.TextInput(attrs={'class': 'form-control'}),
-            'valor': forms.TextInput(attrs={'class': 'form-control money'}),
+            'valor': forms.TextInput(attrs={
+                'class': 'form-control money',
+                'inputmode': 'decimal',
+                'placeholder': 'R$ 0,00'
+            }),
             'advogado': forms.Select(attrs={'class': 'form-select'}),
             'comprovante': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }
