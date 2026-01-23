@@ -19,7 +19,7 @@ from django.db.models import Sum, Q
 from django.views.decorators.http import require_POST
 from django.forms import formset_factory
 from django.db import transaction
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, FileResponse
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
@@ -1157,6 +1157,8 @@ def detalhe_caso(request, pk):
                 instancias_context.append({'valores': valores_render, 'placeholder': True})
             grupos_repetiveis_context.append({'grupo': grupo, 'instancias': instancias_context})
 
+        saldo_devedor_total = Parcela.objects.filter(acordo__caso=caso, status='EMITIDA').aggregate(total=Sum('valor_parcela'))['total']
+
     context = {
         'caso': caso,
         'form_andamento': AndamentoForm(),
@@ -1172,6 +1174,7 @@ def detalhe_caso(request, pk):
         'valores_personalizados': caso.valores_personalizados.filter(instancia_grupo__isnull=True).select_related('campo'),
         'grupos_de_valores_salvos': caso.grupos_de_valores.all().prefetch_related('valores__campo'),
         'grupos_repetiveis_context': grupos_repetiveis_context,
+        'saldo_devedor_total': saldo_devedor_total,
     }
     return render(request, 'casos/detalhe_caso.html', context)
 
@@ -1575,6 +1578,43 @@ def quitar_parcela(request, pk):
         parcela.data_pagamento = date.today()
     parcela.save()
     return render(request, 'casos/partials/parcela_linha.html', {'parcela': parcela})
+
+@login_required
+@require_POST
+def pagar_parcela(request, pk):
+    parcela = get_object_or_404(Parcela, pk=pk)
+    if parcela.status != 'QUITADA':
+        parcela.status = 'QUITADA'
+        parcela.data_pagamento = date.today()
+        parcela.save()
+        messages.success(request, 'Parcela quitada com sucesso.')
+    return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': parcela.acordo.caso.pk})}?aba=acordos")
+
+
+@login_required
+@require_POST
+def upload_comprovante_parcela(request, pk):
+    parcela = get_object_or_404(Parcela, pk=pk)
+    arquivo = request.FILES.get('comprovante')
+    if arquivo:
+        parcela.comprovante = arquivo
+        parcela.save()
+        messages.success(request, 'Comprovante anexado com sucesso.')
+    else:
+        messages.error(request, 'Selecione um arquivo para anexar.')
+    return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': parcela.acordo.caso.pk})}?aba=acordos")
+
+
+@login_required
+def baixar_comprovante_parcela(request, pk):
+    parcela = get_object_or_404(Parcela, pk=pk)
+    if not parcela.comprovante:
+        messages.error(request, 'Nenhum comprovante encontrado.')
+        return redirect(f"{reverse('casos:detalhe_caso', kwargs={'pk': parcela.acordo.caso.pk})}?aba=acordos")
+    response = FileResponse(parcela.comprovante.open('rb'), as_attachment=False)
+    response['Content-Type'] = 'application/octet-stream'
+    return response
+
 
 
 @login_required

@@ -57,6 +57,9 @@ urlpatterns = [
     path('timesheet/editar/<int:pk>/', views.editar_timesheet, name='editar_timesheet'),
     path('timesheet/deletar/<int:pk>/', views.deletar_timesheet, name='deletar_timesheet'),
     path('parcela/<int:pk>/quitar/', views.quitar_parcela, name='quitar_parcela'),
+    path('parcela/<int:pk>/pagar/', views.pagar_parcela, name='pagar_parcela'),
+    path('parcela/<int:pk>/comprovante/', views.upload_comprovante_parcela, name='upload_comprovante_parcela'),
+    path('parcela/<int:pk>/comprovante/ver/', views.baixar_comprovante_parcela, name='baixar_comprovante_parcela'),
     path('acordo/editar/<int:pk>/', views.editar_acordo, name='editar_acordo'),
     path('despesa/editar/<int:pk>/', views.editar_despesa, name='editar_despesa'),
 

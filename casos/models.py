@@ -397,6 +397,13 @@ class Parcela(models.Model):
         null=True, # Permite que o campo seja nulo
         blank=True # Permite que seja vazio
     )
+
+    comprovante = models.FileField(
+        upload_to='comprovantes_parcela/%Y/%m',
+        blank=True,
+        null=True,
+        verbose_name="Comprovante"
+    )
     
     status = models.CharField(
         max_length=10,

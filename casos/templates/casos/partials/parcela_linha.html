@@ -1,14 +1,24 @@
 <!-- casos/templates/casos/partials/parcela_linha.html -->
-<tr hx-post="{% url 'casos:quitar_parcela' pk=parcela.pk %}"
-    hx-trigger="dblclick"
-    hx-target="this"
-    hx-swap="outerHTML"
-    class="{% if parcela.status == 'QUITADA' %}parcela-quitada{% endif %}"
-    title="Clique duas vezes para quitar esta parcela">
-    
+<tr class="{% if parcela.status == 'QUITADA' %}parcela-quitada{% endif %}">
     <td>{{ parcela.numero_parcela }}</td>
     <td>{{ parcela.data_vencimento|date:"d/m/Y" }}</td>
     <td>{{ parcela.data_pagamento|date:"d/m/Y"|default:"-" }}</td>
     <td>R$ {{ parcela.valor_parcela }}</td>
     <td>{{ parcela.get_status_display }}</td>
+    <td class="text-right">
+        <form method="post" action="{% url 'casos:pagar_parcela' pk=parcela.pk %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm action-btn btn-edit">Pagar</button>
+        </form>
+        <form method="post" action="{% url 'casos:upload_comprovante_parcela' pk=parcela.pk %}" enctype="multipart/form-data" class="d-inline">
+            {% csrf_token %}
+            <label class="btn btn-sm action-btn btn-info">
+                Incluir Comprovante
+                <input type="file" name="comprovante" class="d-none" onchange="this.form.submit()">
+            </label>
+        </form>
+        {% if parcela.comprovante %}
+            <a href="{% url 'casos:baixar_comprovante_parcela' pk=parcela.pk %}" class="btn btn-sm action-btn btn-info">Visualizar</a>
+        {% endif %}
+    </td>
 </tr>
