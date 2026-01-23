@@ -5,7 +5,7 @@
     <td>{{ parcela.data_pagamento|date:"d/m/Y"|default:"-" }}</td>
     <td>R$ {{ parcela.valor_parcela }}</td>
     <td>{{ parcela.get_status_display }}</td>
-    <td class="text-right">
+    <td class="actions-cell">
         <div class="d-flex gap-2 justify-content-end flex-wrap">
             <form method="post" action="{% url 'casos:pagar_parcela' pk=parcela.pk %}" class="d-inline">
                 {% csrf_token %}

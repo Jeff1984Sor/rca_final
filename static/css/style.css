@@ -478,7 +478,7 @@ a:hover {
 }
 
 .action-btn.btn-edit {
-    background: var(--primary);
+    background: var(--primary) !important;
     color: white;
 }
 
@@ -543,6 +543,18 @@ a:hover {
     color: var(--text-inverse);
     background-color: var(--bg-input);
 }
+.data-table th.actions-cell,
+.data-table td.actions-cell {
+    text-align: right;
+    white-space: nowrap;
+    width: 1%;
+}
+
+.action-btn.btn-edit-orange {
+    background: var(--primary) !important;
+    color: white;
+}
+
 
 .data-table tbody tr {
     transition: all var(--transition-base);
