@@ -48,9 +48,7 @@
         <button class="tab-btn" data-tab="timesheet"><i class="fa-solid fa-clock"></i> Timesheet</button>
         <button class="tab-btn" data-tab="acordos"><i class="fa-solid fa-handshake"></i> Acordos</button>
         <button class="tab-btn" data-tab="despesas"><i class="fa-solid fa-dollar-sign"></i> Despesas</button>
-        <button class="tab-btn" data-tab="anexos" hx-get="{% url 'casos:carregar_painel_anexos' pk=caso.pk %}" hx-target="#anexos-content" hx-swap="innerHTML" hx-trigger="click once"><i class="fa-solid fa-paperclip"></i> Anexos</button>
-        <button class="tab-btn" data-tab="analyser" hx-get="{% url 'casos:carregar_painel_analyser' pk=caso.pk %}" hx-target="#analyser-content" hx-swap="innerHTML" hx-trigger="click once"><i class="fa-solid fa-robot"></i> Analyser IA</button>
-    </div>
+            </div>
 
     <!-- 📋 ABA: DETALHES -->
     <div id="detalhes" class="tab-content active">
